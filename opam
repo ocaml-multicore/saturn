@@ -12,7 +12,7 @@ depends: [
   "ocamlfind" {build}
   "ocamlbuild" {build}
   "topkg" {build} 
-	"kcas" {>= "0.1.1"}
+	"kcas" {>= "0.1.2"}
 ]
 depopts: []
 build: [
