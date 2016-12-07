@@ -1,6 +1,6 @@
 description = "Lock-free data structures for Multicore OCaml"
 version = "%%VERSION_NUM%%"
-requires = ""
+requires = "kcas"
 archive(byte) = "lockfree.cma"
 archive(native) = "lockfree.cmxa"
 plugin(byte) = "lockfree.cma"
