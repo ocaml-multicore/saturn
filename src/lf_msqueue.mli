@@ -29,7 +29,7 @@ module type S = sig
   (** [push q v] pushes [v] to the back of the queue. *)
 
   val pop         : 'a t -> 'a option
-  (** [pop q] pops an element [e] from the front of the queue and returns 
+  (** [pop q] pops an element [e] from the front of the queue and returns
       [Some v] if the queue is non-empty. Otherwise, returns [None]. *)
 
   val clean_until : 'a t -> ('a -> bool) -> unit
