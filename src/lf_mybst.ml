@@ -137,7 +137,7 @@ module Make(Ord : OrderedType) : S with type key = Ord.t = struct
   let insert t k v =
     let rec do_insert t k hk v =
       let (_, (parent, vparent), dir, (term, vterm)) = seek t hk in
-      print_endline (sprintf "INSERT : Seek found (%s %s) %s (%s %s)" (keystr vparent.true_key) (keystr vparent.key) (dirstr dir) (keystr vterm.true_key) (keystr vterm.key));
+      (*print_endline (sprintf "INSERT : Seek found (%s %s) %s (%s %s)" (keystr vparent.true_key) (keystr vparent.key) (dirstr dir) (keystr vterm.true_key) (keystr vterm.key));*)
       let new_node = create_node hk k v [] in
       if compare vterm.key hk = 0 then
         ()
@@ -171,13 +171,13 @@ module Make(Ord : OrderedType) : S with type key = Ord.t = struct
 
   let rec do_delete t k hk =
     let (anchor, (parent, vparent), dir, (term, vterm)) = seek t hk in
-    print_endline (sprintf "DELETE : Seek found (%s %s) %s (%s %s)" (keystr vparent.true_key) (keystr vparent.key) (dirstr dir) (keystr vterm.true_key) (keystr vterm.key));
+    print_endline (sprintf "TH%d : DELETE : Seek found (%s %s) %s (%s %s)" (Domain.self ()) (keystr vparent.true_key) (keystr vparent.key) (dirstr dir) (keystr vterm.true_key) (keystr vterm.key));
     if compare vterm.key hk = 0 then try
       let ((min_parent, vmin_parent), (min_term, vmin_term)) = min_tree (term, vterm) (List.assoc RIGHT (get_child vterm)) in
       if min_parent = term then (* Direct child to the RIGHT *)
         let new_child = List.append (List.remove_assoc RIGHT (get_child vterm)) (get_child vmin_term) in
         let nvterm = create_node vmin_term.key vmin_term.true_key vmin_term.value new_child in
-(*        print_endline "BREAK1";*)
+        print_endline (sprintf "TH%d : BREAK1" (Domain.self ()));
         if Kcas.kCAS [Kcas.mk_cas parent vparent vparent ;
                       Kcas.mk_cas min_term vmin_term vmin_term ;
                       Kcas.mk_cas term vterm nvterm] then
@@ -188,7 +188,7 @@ module Make(Ord : OrderedType) : S with type key = Ord.t = struct
         try (* General case *)
           let nvterm = create_node vmin_term.key vmin_term.true_key vmin_term.value (get_child vterm) in
           let nvmin_term = Kcas.get (List.assoc RIGHT (get_child vmin_term)) in
-(*        print_endline "BREAK2";*)
+        print_endline (sprintf "TH%d : BREAK2" (Domain.self ()));
           if Kcas.kCAS [Kcas.mk_cas parent vparent vparent ;
                         Kcas.mk_cas term vterm nvterm ;
                         Kcas.mk_cas min_parent vmin_parent vmin_parent ;
@@ -200,7 +200,7 @@ module Make(Ord : OrderedType) : S with type key = Ord.t = struct
           let nvterm = create_node vmin_term.key vmin_term.true_key vmin_term.value (get_child vterm) in
           let min_parent_child = get_child vmin_parent in
           let nmin_parent_child = List.remove_assoc LEFT min_parent_child in
-(*        print_endline "BREAK3";*)
+        print_endline (sprintf "TH%d : BREAK3" (Domain.self ()));
           if Kcas.kCAS [Kcas.mk_cas parent vparent vparent ;
                         Kcas.mk_cas term vterm nvterm ;
                         Kcas.mk_cas vmin_parent.child min_parent_child nmin_parent_child] then
@@ -211,7 +211,7 @@ module Make(Ord : OrderedType) : S with type key = Ord.t = struct
       try
         let n = List.assoc LEFT (get_child vterm) in
         let vn = Kcas.get n in
-(*        print_endline "BREAK4";*)
+        print_endline (sprintf "TH%d : BREAK4" (Domain.self ()));
         if Kcas.kCAS [Kcas.mk_cas parent vparent vparent ;
                       Kcas.mk_cas term vterm vn ;
                       Kcas.mk_cas n vn vn] then
@@ -221,7 +221,7 @@ module Make(Ord : OrderedType) : S with type key = Ord.t = struct
       with Not_found -> (* The node to delete is a leef *)
         let parent_child = get_child vparent in
         let nparent_child = List.remove_assoc dir parent_child in
-(*        print_endline "BREAK5";*)
+        print_endline (sprintf "TH%d : BREAK5     nombre enfant : %d   (%d ==> %d)" (Domain.self ()) (List.length (get_child vterm)) (List.length parent_child) (List.length nparent_child));
         if Kcas.kCAS [Kcas.mk_cas parent vparent vparent ;
                       Kcas.mk_cas vparent.child parent_child nparent_child ;
                       Kcas.mk_cas term vterm vterm] then
@@ -243,7 +243,7 @@ module Make(Ord : OrderedType) : S with type key = Ord.t = struct
         loop left out
       with Not_found -> out in
       let out2 =
-        print_endline (sprintf "Val examine %s %s" (keystr vt.true_key) (keystr vt.key));
+        (*print_endline (sprintf "Val examine %s %s" (keystr vt.true_key) (keystr vt.key));*)
         match vt.key, vt.true_key, vt.value with
         |Key(hk), Key(k), Value(v) -> (hk, k, v)::out1
         |_ -> out1
