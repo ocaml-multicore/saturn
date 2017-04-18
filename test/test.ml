@@ -76,7 +76,7 @@ let test_bag () =
 let print_l l str =
   let rec loop l =
     match l with
-    |(k, v)::t -> print_string (sprintf str k v); loop t
+    |(hk, k, v)::t -> print_string (sprintf str hk k v); loop t
     |[] -> print_endline "]"
   in
   print_string "[";
@@ -118,10 +118,12 @@ let test_bst () =
   let h_delete = Bst.heigh t in
 *)
 
-  let l = List.sort (fun (k, v) (k', v') -> compare k k') (Bst.to_list t) in
-  print_l l "(%d, %d) ; ";
+  let l = Bst.to_list t in
+  let nature = Bst.still_bst t in
+  print_l l "(%d, %d, %d) ; ";
   (*print_endline (sprintf "Init : %d  Insert : %d  Delete : %d" h_init h_insert h_delete);*)
   print_endline (sprintf "Heigh: %d" h);
+  print_endline (sprintf "Still a BST : %b" nature);
   ()
 ;;
 

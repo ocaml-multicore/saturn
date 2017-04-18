@@ -26,9 +26,11 @@ module type S = sig
 
   val delete : 'a t -> key -> unit;;
 
-  val to_list : 'a t -> (key * 'a) list;;
+  val to_list : 'a t -> (key * key * 'a) list;;
 
   val heigh : 'a t -> int;;
+
+  val still_bst :'a t -> bool;;
 end;;
 
 module Make(Ord : OrderedType) : S with type key = Ord.t;;

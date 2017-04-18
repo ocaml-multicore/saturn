@@ -20,8 +20,9 @@ module type S = sig
   val search : 'a t -> key -> 'a option;;
   val insert : 'a t -> key -> 'a -> unit;;
   val delete : 'a t -> key -> unit;;
-  val to_list : 'a t -> (key * 'a) list;;
+  val to_list : 'a t -> (key * key * 'a) list;;
   val heigh : 'a t -> int;;
+  val still_bst :'a t -> bool;;
 end;;
 
 module Make(Ord : OrderedType) : S with type key = Ord.t = struct
@@ -243,8 +244,8 @@ module Make(Ord : OrderedType) : S with type key = Ord.t = struct
       with Not_found -> out in
       let out2 =
         print_endline (sprintf "Val examine %s %s" (keystr vt.true_key) (keystr vt.key));
-        match vt.true_key, vt.value with
-        |Key(k), Value(v) -> (k, v)::out1
+        match vt.key, vt.true_key, vt.value with
+        |Key(hk), Key(k), Value(v) -> (hk, k, v)::out1
         |_ -> out1
       in
       let out3 = try
@@ -270,5 +271,17 @@ module Make(Ord : OrderedType) : S with type key = Ord.t = struct
       else
         h_right
     in loop t 0
+  ;;
+
+  let still_bst t =
+    let l = to_list t in
+    let rec loop p l =
+      match l with
+      |(hk, k, v)::t -> Ord.compare p hk < 0 && loop hk t
+      |[] -> true
+    in
+    match l with
+    |(hk, k, v)::t -> loop hk t
+    |[] -> true
   ;;
 end;;
