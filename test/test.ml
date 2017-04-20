@@ -35,6 +35,7 @@ module Bst = Lf_mybst.Make(struct
   type t = int;;
   let compare = compare;;
   let hash_t x = (x * 104743) mod 1299721;;
+  (*let hash_t x = x;;*)
   let str k = sprintf "%d" k;;
 end);;
 
@@ -115,10 +116,10 @@ let gen_queue l =
   in loop l; out
 ;;
 
-let print_l l str =
+let print_l l f =
   let rec loop l =
     match l with
-    |(hk, k, v)::t -> print_string (sprintf str hk k v); loop t
+    |h::t -> print_string (f h); loop t
     |[] -> print_endline "]"
   in
   print_string "[";
@@ -143,7 +144,6 @@ let delete_bst t q =
 
 let check_elem tree_elems elems_in_s elems_out_s =
   let rec loop l =
-    print_endline (sprintf "LOOP %d" (List.length l));
     match l with
     |h::t ->
       if not (MySet.mem h elems_out_s) then
@@ -192,7 +192,7 @@ let test_bst () =
   let nature = Bst.still_bst t in
   let test_success = check_elem tree_elems elems_s elems_out_s in
 
-  (*print_l l "(%d, %d, %d) ; ";*)
+  print_l l (fun (hk, k, v) -> sprintf "%d ; " hk);
   print_endline (sprintf "Heigh: %d" h);
   print_endline (sprintf "Still a BST : %b    Queue IN Empty : %b    Queue OUT Empty : %b" nature (Queue.is_empty queue_in) (Queue.is_empty queue_out));
   print_endline (sprintf "Test succeed : %b" test_success);
