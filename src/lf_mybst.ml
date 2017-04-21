@@ -65,7 +65,7 @@ module Make(Ord : OrderedType) : S with type key = Ord.t = struct
     value      : 'a vmap;
     key        : real_key;
     true_key   : real_key;
-    child      : 'a edge list Kcas.ref;
+    child      : 'a edge list;
   };;
 
   let compare x y =
@@ -88,17 +88,15 @@ module Make(Ord : OrderedType) : S with type key = Ord.t = struct
     |_ -> None
   ;;
 
-  let get_child t = Kcas.get t.child;;
-
   let get_vmin_of t = t;;
 
-  let get_vmax_of t = List.assoc RIGHT (get_child (Kcas.get (get_vmin_of t)));;
+  let get_vmax_of t = List.assoc RIGHT (Kcas.get (get_vmin_of t)).child;;
 
   let create_node hk k v child = {
       value    = v;
       key      = hk;
       true_key = k;
-      child    = Kcas.ref child;
+      child    = child;
   };;
 
   let create () =
@@ -116,9 +114,9 @@ module Make(Ord : OrderedType) : S with type key = Ord.t = struct
         (anchor, gparent, gdir, parent, dir, (t, vt))
       else try
         if compare vt.key k < 0 then
-          do_seek k anchor parent dir (t, vt) LEFT (List.assoc LEFT (get_child vt))
+          do_seek k anchor parent dir (t, vt) LEFT (List.assoc LEFT vt.child)
         else
-          do_seek k t parent dir (t, vt) RIGHT (List.assoc RIGHT (get_child vt))
+          do_seek k t parent dir (t, vt) RIGHT (List.assoc RIGHT vt.child)
       with Not_found -> (anchor, gparent, gdir, parent, dir, (t, vt))
     in do_seek k sent2 (sent1, Kcas.get sent1) RIGHT (sent1, Kcas.get sent1) RIGHT sent2
   ;;
@@ -143,9 +141,9 @@ module Make(Ord : OrderedType) : S with type key = Ord.t = struct
       else
         let nvterm =
           if compare vterm.key hk < 0 then
-            create_node vterm.key vterm.true_key vterm.value ((LEFT, Kcas.ref new_node)::(get_child vterm))
+            create_node vterm.key vterm.true_key vterm.value ((LEFT, Kcas.ref new_node)::(vterm.child))
           else
-            create_node vterm.key vterm.true_key vterm.value ((RIGHT, Kcas.ref new_node)::(get_child vterm))
+            create_node vterm.key vterm.true_key vterm.value ((RIGHT, Kcas.ref new_node)::(vterm.child))
         in
         if Kcas.kCAS [Kcas.mk_cas parent vparent vparent ; Kcas.mk_cas term vterm nvterm] then begin
           ()
@@ -157,14 +155,14 @@ module Make(Ord : OrderedType) : S with type key = Ord.t = struct
   let rec min_tree gparent parent t =
     let vt = Kcas.get t in
     try
-      min_tree parent (t, vt) (List.assoc LEFT (get_child vt))
+      min_tree parent (t, vt) (List.assoc LEFT vt.child)
     with Not_found -> (gparent, parent, (t, vt))
   ;;
 
   let rec max_tree parent t =
     let vt = Kcas.get t in
     try
-      max_tree (t, vt) (List.assoc RIGHT (get_child vt))
+      max_tree (t, vt) (List.assoc RIGHT vt.child)
     with Not_found -> (parent, (t, vt))
   ;;
 
@@ -173,10 +171,10 @@ module Make(Ord : OrderedType) : S with type key = Ord.t = struct
     print_endline (sprintf "TH%d : DELETE : Seek found (%s %s) %s (%s %s) %s (%s %s)" (Domain.self ()) (keystr vgparent.true_key) (keystr vgparent.key) (dirstr gdir) (keystr vparent.true_key) (keystr vparent.key) (dirstr dir) (keystr vterm.true_key) (keystr vterm.key));
     if compare vterm.key hk = 0 then try
       let ((min_gparent, vmin_gparent), (min_parent, vmin_parent), (min_term, vmin_term)) =
-        min_tree (parent, vparent) (term, vterm) (List.assoc RIGHT (get_child vterm))
+        min_tree (parent, vparent) (term, vterm) (List.assoc RIGHT vterm.child)
       in
       if min_parent = term then (* Direct child to the RIGHT *)
-        let new_child = List.append (List.remove_assoc RIGHT (get_child vterm)) (get_child vmin_term) in
+        let new_child = List.append (List.remove_assoc RIGHT vterm.child) vmin_term.child in
         let nvterm = create_node vmin_term.key vmin_term.true_key vmin_term.value new_child in
         print_endline (sprintf "TH%d : BREAK1" (Domain.self ()));
         if Kcas.kCAS [Kcas.mk_cas parent vparent vparent ;
@@ -187,8 +185,8 @@ module Make(Ord : OrderedType) : S with type key = Ord.t = struct
           do_delete t k hk
       else
         try (* General case *)
-          let nvterm = create_node vmin_term.key vmin_term.true_key vmin_term.value (get_child vterm) in
-          let nvmin_term = Kcas.get (List.assoc RIGHT (get_child vmin_term)) in
+          let nvterm = create_node vmin_term.key vmin_term.true_key vmin_term.value vterm.child in
+          let nvmin_term = Kcas.get (List.assoc RIGHT vmin_term.child) in
         print_endline (sprintf "TH%d : BREAK2" (Domain.self ()));
           if Kcas.kCAS [Kcas.mk_cas parent vparent vparent ;
                         Kcas.mk_cas term vterm nvterm ;
@@ -198,8 +196,8 @@ module Make(Ord : OrderedType) : S with type key = Ord.t = struct
           else
             do_delete t k hk
         with Not_found -> (* The replacement node is a leef *)
-          let nvterm = create_node vmin_term.key vmin_term.true_key vmin_term.value (get_child vterm) in
-          let nvmin_parent_child = List.remove_assoc LEFT (get_child vmin_parent) in
+          let nvterm = create_node vmin_term.key vmin_term.true_key vmin_term.value vterm.child in
+          let nvmin_parent_child = List.remove_assoc LEFT vmin_parent.child in
           let nvmin_parent = create_node vmin_parent.key vmin_parent.true_key vmin_parent.value nvmin_parent_child in
         print_endline (sprintf "TH%d : BREAK3" (Domain.self ()));
           if min_gparent = term && Kcas.kCAS [Kcas.mk_cas parent vparent vparent ;
@@ -215,7 +213,7 @@ module Make(Ord : OrderedType) : S with type key = Ord.t = struct
             do_delete t k hk
     with Not_found -> (* No node to the right *)
       try
-        let n = List.assoc LEFT (get_child vterm) in
+        let n = List.assoc LEFT vterm.child in
         let vn = Kcas.get n in
         print_endline (sprintf "TH%d : BREAK4" (Domain.self ()));
         if Kcas.kCAS [Kcas.mk_cas parent vparent vparent ;
@@ -225,9 +223,9 @@ module Make(Ord : OrderedType) : S with type key = Ord.t = struct
         else
           do_delete t k hk
       with Not_found -> (* The node to delete is a leef *)
-        let nvparent_child = List.remove_assoc dir (get_child vparent) in
+        let nvparent_child = List.remove_assoc dir vparent.child in
         let nvparent = create_node vparent.key vparent.true_key vparent.value nvparent_child in
-        print_endline (sprintf "TH%d : BREAK5     nombre enfant : %d   ( ==> %d)" (Domain.self ()) (List.length (get_child vterm)) (List.length nvparent_child));
+        print_endline (sprintf "TH%d : BREAK5     nombre enfant : %d   ( ==> %d)" (Domain.self ()) (List.length vterm.child) (List.length nvparent_child));
         if Kcas.kCAS [Kcas.mk_cas gparent vgparent vgparent ;
                       Kcas.mk_cas parent vparent nvparent ;
                       Kcas.mk_cas term vterm vterm] then begin
@@ -243,9 +241,8 @@ module Make(Ord : OrderedType) : S with type key = Ord.t = struct
   let to_list t =
     let rec loop t out =
       let vt = Kcas.get t in
-      let child = get_child vt in
       let out1 = try
-        let left = List.assoc LEFT child in
+        let left = List.assoc LEFT vt.child in
         loop left out
       with Not_found -> out in
       let out2 =
@@ -255,7 +252,7 @@ module Make(Ord : OrderedType) : S with type key = Ord.t = struct
         |_ -> out1
       in
       let out3 = try
-        let right = List.assoc RIGHT child in
+        let right = List.assoc RIGHT vt.child in
         loop right out2
       with Not_found -> out2 in
       out3
@@ -265,12 +262,11 @@ module Make(Ord : OrderedType) : S with type key = Ord.t = struct
   let heigh t =
     let rec loop t out =
       let vt = Kcas.get t in
-      let child = get_child vt in
       let h_left = try
-        let left = List.assoc LEFT child in loop left (out+1)
+        let left = List.assoc LEFT vt.child in loop left (out+1)
       with Not_found -> out in
       let h_right = try
-        let right = List.assoc RIGHT child in loop right (out+1)
+        let right = List.assoc RIGHT vt.child in loop right (out+1)
       with Not_found -> out in
       if h_left > h_right then
         h_left
