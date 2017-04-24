@@ -8,7 +8,7 @@ module type S = sig
   type 'a t;;
   (** The type of lock-free queue. *)
 
-  val create : 'a -> 'a t;;
+  val create : unit -> 'a t;;
   (** Create a new queue, which is initially empty. *)
 
   val is_empty : 'a t -> bool;;

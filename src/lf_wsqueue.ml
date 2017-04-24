@@ -30,7 +30,7 @@ module Cas = Kcas.W1;;
 
 module type S = sig
   type 'a t;;
-  val create : 'a -> 'a t;;
+  val create : unit -> 'a t;;
   val is_empty : 'a t -> bool;;
   val size : 'a t -> int;;
   val push : 'a t -> 'a -> unit;;
@@ -83,10 +83,10 @@ module M : S = struct
     tab : 'a CArray.t Cas.ref
   };;
 
-  let create v = {
+  let create () = {
     top = Cas.ref 0;
     bottom = Cas.ref 0;
-    tab = Cas.ref (CArray.create min_size v)
+    tab = Cas.ref (CArray.create min_size (Obj.magic ()))
   };;
 
   let is_empty q =

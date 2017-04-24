@@ -72,7 +72,7 @@ end;;
 module BST_test = struct
   module Queue = Lf_msqueue.M;;
 
-  module Bst = Lf_mybst.Make(struct
+  module Bst = Lf_bst.Make(struct
     type t = int;;
     let compare = compare;;
     let hash_t x = (x * 104743) mod 1299721;;
@@ -253,7 +253,7 @@ module Wsqueue_test = struct
   ;;
 
   let easy_test () =
-    let q = Wsqueue.create 0 in
+    let q = Wsqueue.create () in
     let n = 40 in
     push_n q n;
     pop_n q (n/2);
@@ -261,7 +261,7 @@ module Wsqueue_test = struct
   ;;
 
   let run () =
-    let q = Wsqueue.create 0 in
+    let q = Wsqueue.create () in
     let n = 100000 in
     let prob_m = 1 in
     let prob_n = 2 in
