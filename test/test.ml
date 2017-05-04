@@ -29,43 +29,51 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 open Printf;;
 
 module Bag_test = struct
-  module Bag = Lf_bag.M;;
+  module Bag = Lf_bag.Make(struct let nb_domains = 3 end);;
+  module Cas = Kcas.W1;;
 
-  let push_test b n init =
+  let content = Cas.ref 0;;
+
+  let push_test b n =
     let rec loop i =
       if i < n then begin
-        Bag.push b i; loop (i+2)
+        Bag.push b i; Cas.incr content; loop (i+1)
       end
-    in loop init
+    in loop 0
   ;;
 
   let rec pop_test b n =
     if n > 0 then
       match Bag.pop b with
-      |Some(out) -> print_endline (sprintf "TH%d : %d" (Domain.self ()) out); pop_test b (n-1)
-      |None -> print_endline (sprintf "TH%d : Vide" (Domain.self ())); pop_test b (n-1)
+      |Some(out) -> Cas.decr content; pop_test b (n-1)
+      |None -> assert false
   ;;
 
-  let rec push_and_pop b n init =
-    let rand1 = Random.int n in
-    let rand2 = Random.int n in
-    push_test b (n + rand1) init;
-    pop_test b (n + rand2);
-    push_and_pop b n init
+  let rec push_and_pop b n max_it =
+    let rec loop i =
+      if i < max_it then begin
+        print_endline (sprintf "TH%d iteration %d" (Domain.self ()) i);
+        let r = Random.int n in
+        push_test b r;
+        pop_test b r;
+        loop (i+1)
+      end
+    in loop 0
   ;;
 
   let run () =
     let b = Bag.create () in
-    let n1 = 10 in
-    let n2 = 20 in
+    let n = 5000 in
+    let max_it = 2000 in
 
     Random.self_init ();
 
-    Domain.spawn (fun () -> push_and_pop b n1 0);
-    Domain.spawn (fun () -> push_and_pop b n2 1);
+    Domain.spawn (fun () -> push_and_pop b n max_it);
+    Domain.spawn (fun () -> push_and_pop b n max_it);
 
-    Unix.sleep 10
-  ;;
+    Unix.sleep 17;
+    let c = Cas.get content in
+    print_endline (sprintf "Content %d elements (success : %b)" c (c = 0))
 end;;
 
 
@@ -280,7 +288,62 @@ end;;
 
 
 
+module Hash_test = struct
+  module Hash = Lf_hash.M;;
+  module Queue = Lf_msqueue.M;;
+
+  let print t = print_endline (Hash.to_string t);;
+
+  let gen_elem nb m =
+    Random.self_init ();
+    let rec loop i out =
+      if i < nb then begin
+        let new_elem = Random.int m in
+        loop (i+1) (new_elem::out)
+      end else
+        out
+    in loop 0 []
+  ;;
+
+  let gen_queue l =
+    let out = Queue.create () in
+    let rec loop l =
+      match l with
+      |h::t -> Queue.push out h; loop t
+      |[] -> out
+    in loop l; out
+  ;;
+
+  let insert_hash t q =
+    let rec loop () =
+      match Queue.pop q with
+      |Some(v) -> Hash.add t v v; loop ()
+      |None -> ()
+    in loop ()
+  ;;
+
+  let run () =
+    let t = Hash.create () in
+    let nb_thread = 1 in
+    let nb = 10 in
+    let m = 1000 in
+    let elem = gen_elem nb m in
+    let q = gen_queue elem in
+
+    print t;
+
+    for i = 1 to nb_thread do
+      Domain.spawn (fun () -> insert_hash t q)
+    done;
+
+    Unix.sleep 5;
+
+    print t;
+    ()
+  ;;
+end;;
+
 let () =
   (* Bag_test.run () *)
-  Wsqueue_test.run ()
+  Hash_test.run ()
 ;;
