@@ -322,23 +322,58 @@ module Hash_test = struct
     in loop ()
   ;;
 
-  let run () =
-    let t = Hash.create () in
-    let nb_thread = 1 in
-    let nb = 10 in
-    let m = 1000 in
-    let elem = gen_elem nb m in
-    let q = gen_queue elem in
+  let remove_hash t q =
+    let rec loop () =
+      match Queue.pop q with
+      |Some(v) -> Hash.remove t v; loop ()
+      |None -> ()
+    in loop ()
+  ;;
 
-    print t;
+  let run () =
+    let t1 = Hash.create () in
+    let t2 = Hash.create () in
+    let nb_thread = 8 in
+    let nb_init = 2000 in
+    let nb_end = 2000 in
+    let m = 10000 in
+    let elem_init = gen_elem nb_init m in
+    let elem_end  = gen_elem nb_end m in
+    let q_init1 = gen_queue elem_init in
+    let q_init2 = gen_queue elem_init in
+    let q_end1 = gen_queue elem_end in
+    let q_end2 = gen_queue elem_end in
+    let q_remove1 = gen_queue elem_init in
+    let q_remove2 = gen_queue elem_init in
+
+    print t1;
 
     for i = 1 to nb_thread do
-      Domain.spawn (fun () -> insert_hash t q)
+      Domain.spawn (fun () -> insert_hash t1 q_init1)
     done;
 
-    Unix.sleep 5;
+    for i = 1 to nb_thread do
+      if i mod 2 = 0 then
+        Domain.spawn (fun () -> insert_hash t1 q_end1)
+      else
+        Domain.spawn (fun () -> remove_hash t1 q_remove1)
+    done;
 
-    print t;
+    insert_hash t2 q_init2;
+    insert_hash t2 q_end2;
+    print t2;
+    remove_hash t2 q_remove2;
+
+    Unix.sleep 2;
+
+    print t1;
+    print t2;
+    print_endline "Elem Init :";
+    List.iter (fun i -> printf "%d, " i) elem_init; print_endline "";
+    print_endline "Elem End :";
+    List.iter (fun i -> printf "%d, " i) elem_end; print_endline "";
+    print_endline (sprintf "Are they equal ? %b" (Hash.equal t1 t2));
+    print_endline (sprintf "Still valid split order ? %b" (Hash.still_split_order t2));
     ()
   ;;
 end;;
