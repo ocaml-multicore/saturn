@@ -13,6 +13,8 @@ module type S = sig
 
   val to_string : 'a t -> string;;
 
+  val to_string_clean : 'a t -> string;;
+
   val create : unit -> 'a t;;
 
   val find : 'a t -> int -> 'a option;;

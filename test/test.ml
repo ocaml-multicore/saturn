@@ -294,6 +294,8 @@ module Hash_test = struct
 
   let print t = print_endline (Hash.to_string t);;
 
+  let cprint t = print_endline (Hash.to_string_clean t);;
+
   let gen_elem nb m =
     Random.self_init ();
     let rec loop i out =
@@ -334,8 +336,8 @@ module Hash_test = struct
     let t1 = Hash.create () in
     let t2 = Hash.create () in
     let nb_thread = 8 in
-    let nb_init = 2000 in
-    let nb_end = 2000 in
+    let nb_init = 10000 in
+    let nb_end = 1000 in
     let m = 10000 in
     let elem_init = gen_elem nb_init m in
     let elem_end  = gen_elem nb_end m in
@@ -352,6 +354,8 @@ module Hash_test = struct
       Domain.spawn (fun () -> insert_hash t1 q_init1)
     done;
 
+    Unix.sleep 2;
+
     for i = 1 to nb_thread do
       if i mod 2 = 0 then
         Domain.spawn (fun () -> insert_hash t1 q_end1)
@@ -361,10 +365,9 @@ module Hash_test = struct
 
     insert_hash t2 q_init2;
     insert_hash t2 q_end2;
-    print t2;
     remove_hash t2 q_remove2;
 
-    Unix.sleep 2;
+    Unix.sleep 4;
 
     print t1;
     print t2;
@@ -372,8 +375,10 @@ module Hash_test = struct
     List.iter (fun i -> printf "%d, " i) elem_init; print_endline "";
     print_endline "Elem End :";
     List.iter (fun i -> printf "%d, " i) elem_end; print_endline "";
+    cprint t1;
+    cprint t2;
     print_endline (sprintf "Are they equal ? %b" (Hash.equal t1 t2));
-    print_endline (sprintf "Still valid split order ? %b" (Hash.still_split_order t2));
+    print_endline (sprintf "Still valid split order ? %b" (Hash.still_split_order t1));
     ()
   ;;
 end;;
