@@ -44,12 +44,13 @@ module M : S = struct
   ;;
 
   type 'a t = {
-    access  : 'a bucket Cas.ref array Cas.ref;
-    store   : 'a node_ptr;
-    size    : int Cas.ref;
-    content : int Cas.ref;
-    resize  : bool Cas.ref;
-    tmp     : 'a bucket Cas.ref array Cas.ref
+    access   : 'a bucket Cas.ref array Cas.ref;
+    store    : 'a node_ptr;
+    size     : int Cas.ref;
+    content  : int Cas.ref;
+    resize   : bool Cas.ref;
+    new_size : int option Cas.ref;
+    tmp      : 'a bucket Cas.ref array Cas.ref
   };;
 
   let load = 3;;
@@ -237,29 +238,45 @@ module M : S = struct
     in loop ()
   ;;
 
-  let help_resize t s =
+  let help_resize t old_access s =
     print_endline (sprintf "TH%d : HELP_RESIZE (size : (%d, %d)    content : %d)" (Domain.self ()) s (Array.length (Cas.get t.access)) (Cas.get t.content));
     let rec loop i =
-      if Cas.get t.resize then
-        if i >= 0 then begin
-          (Cas.get t.tmp).(i) <- (Cas.get t.access).(i);
-          loop (i-1)
-        end else
-          if Cas.cas t.resize true false then begin
-            let new_size = Array.length (Cas.get t.tmp) in
-            Cas.set t.access (Cas.get t.tmp);
-            Cas.cas t.size s new_size; print_endline (sprintf "TH%d : RESIZE %d ---> %d FINISHED" (Domain.self ()) s new_size)
+      match Cas.get t.new_size with
+      |Some(new_size) as vnew_size when 2*s = new_size ->
+        if Cas.get t.resize then
+          if i >= 0 then begin
+            (Cas.get t.tmp).(i) <- (Cas.get t.access).(i);
+            loop (i-1)
           end else
-            loop i
-    in loop ((Array.length (Cas.get t.access)) - 1)
+            let new_size = Array.length (Cas.get t.tmp) in
+            if Cas.cas t.new_size vnew_size None &&
+               Cas.cas t.access old_access (Cas.get t.tmp) &&
+               Cas.cas t.size s new_size &&
+               Cas.cas t.resize true false then
+              print_endline (sprintf "TH%d : RESIZE %d ---> %d FINISHED" (Domain.self ()) s new_size)
+            else
+              loop i
+      |_ -> ()
+    in loop (s-1)
   ;;
 
-  let resize t s =
-  print_endline (sprintf "TH%d : RESIZE %d" (Domain.self ()) s);
+  let resize t old_access s =
+    print_endline (sprintf "TH%d : RESIZE %d" (Domain.self ()) s);
     let new_size = s * 2 in
     Cas.set t.tmp (Array.init new_size (fun i -> Cas.ref Uninitialized));
-    Cas.set t.resize true;
-    help_resize t s
+    Cas.set t.new_size (Some(new_size));
+    help_resize t old_access s
+  ;;
+
+  let check_size t =
+    let old_access = Cas.get t.access in
+    let s = Cas.get t.size in
+    let c = Cas.get t.content in
+    print_endline (sprintf "TH%d : CHECK_SIZE    s : %d    c : %d" (Domain.self ()) s c);
+    if c / s > load && Cas.cas t.resize false true then
+      resize t old_access s
+    else
+      help_resize t old_access s
   ;;
 
   let create () =
@@ -268,12 +285,13 @@ module M : S = struct
     let n1 = Cas.ref (false, Node(true, 1, Obj.magic (), nil)) in
     let n0 = Cas.ref (false, Node(true, 0, Obj.magic (), n1)) in
     let tab = [|Cas.ref (Initialized(true, 0, Obj.magic (), n1)) ; Cas.ref (Initialized(true, 1, Obj.magic (), nil))|] in {
-    access  = Cas.ref tab;
-    store   = n0;
-    size    = Cas.ref 2;
-    content = Cas.ref 0;
-    resize  = Cas.ref false;
-    tmp     = Cas.ref tab
+    access   = Cas.ref tab;
+    store    = n0;
+    size     = Cas.ref 2;
+    content  = Cas.ref 0;
+    resize   = Cas.ref false;
+    new_size = Cas.ref None;
+    tmp      = Cas.ref tab
   };;
 
   let hash t k =
@@ -307,16 +325,6 @@ module M : S = struct
     let (s, k, v, next) = list_insert prev_s true hk (Obj.magic ()) in
     Cas.cas (Cas.get t.access).(hk) Uninitialized (Initialized(s, k, v, next));
     ()
-  ;;
-
-  let check_size t =
-    let s = Cas.get t.size in
-    let c = Cas.get t.content in
-    print_endline (sprintf "TH%d : CHECK_SIZE    s : %d    c : %d" (Domain.self ()) s c);
-    if Cas.get t.resize then
-      help_resize t s
-    else if c / s > load then
-      resize t s
   ;;
 
   let find t k =
