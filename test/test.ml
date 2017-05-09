@@ -291,6 +291,7 @@ end;;
 module Hash_test = struct
   module Hash = Lf_hash.M;;
   module Queue = Lf_msqueue.M;;
+  module Cas = Kcas.W1;;
 
   let print t = print_endline (Hash.to_string t);;
 
@@ -336,9 +337,9 @@ module Hash_test = struct
     let t1 = Hash.create () in
     let t2 = Hash.create () in
     let nb_thread = 8 in
-    let nb_init = 10000 in
+    let nb_init = 100000 in
     let nb_end = 1000 in
-    let m = 10000 in
+    let m = 1000000 in
     let elem_init = gen_elem nb_init m in
     let elem_end  = gen_elem nb_end m in
     let q_init1 = gen_queue elem_init in
@@ -347,27 +348,41 @@ module Hash_test = struct
     let q_end2 = gen_queue elem_end in
     let q_remove1 = gen_queue elem_init in
     let q_remove2 = gen_queue elem_init in
+    let finish = Cas.ref 0 in
 
     print t1;
 
+    print_endline (sprintf "Parallele insertion of %d elements" (List.length elem_init));
+
     for i = 1 to nb_thread do
-      Domain.spawn (fun () -> insert_hash t1 q_init1)
+      Cas.incr finish;
+      Domain.spawn (fun () -> insert_hash t1 q_init1; Cas.decr finish)
     done;
 
+    while Cas.get finish > 0 do print_endline (sprintf "Thread %d" (Cas.get finish)) done;
+
+    print_endline (sprintf "Parallele insertion of %d elements and deletion of %d elements" (List.length elem_end) (List.length elem_init));
     Unix.sleep 2;
 
     for i = 1 to nb_thread do
+      Cas.incr finish;
       if i mod 2 = 0 then
-        Domain.spawn (fun () -> insert_hash t1 q_end1)
+        Domain.spawn (fun () -> insert_hash t1 q_end1; Cas.decr finish)
       else
-        Domain.spawn (fun () -> remove_hash t1 q_remove1)
+        Domain.spawn (fun () -> remove_hash t1 q_remove1; Cas.decr finish)
     done;
 
-    insert_hash t2 q_init2;
-    insert_hash t2 q_end2;
-    remove_hash t2 q_remove2;
+    while Cas.get finish > 0 do print_endline (sprintf "Aqui %d" (Cas.get finish)) done;
 
-    Unix.sleep 4;
+    print_endline (sprintf "Insertion of %d elements" (List.length elem_init));
+
+    insert_hash t2 q_init2;
+
+    print_endline (sprintf "Insertion of %d elements" (List.length elem_end));
+    insert_hash t2 q_end2;
+
+    print_endline (sprintf "Deletion of %d elements" (List.length elem_init));
+    remove_hash t2 q_remove2;
 
     print t1;
     print t2;

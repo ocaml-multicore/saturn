@@ -153,7 +153,7 @@ module M : S = struct
         if split_compare k nk <= 0 then
           loop nk next
         else begin
-          print_endline (sprintf "STILL_SPLIT_ORDER FAUX : %d !< %d" k nk);
+          (*print_endline (sprintf "STILL_SPLIT_ORDER FAUX : %d !< %d" k nk);*)
           false
         end
       |_ -> true
@@ -210,19 +210,19 @@ module M : S = struct
   ;;
 
   let list_delete sentinel k =
-    print_endline "LIST_DELETE";
+    (*print_endline "LIST_DELETE";*)
     let b = Kcas.Backoff.create () in
     let rec loop () =
-      print_endline "LIST_DELETE_LOOP";
+      (*print_endline "LIST_DELETE_LOOP";*)
       let (prev, next) = list_find sentinel k in
       match prev, next with
       |Node(ps, pk, pv, pnext), (nm, (Node(ns, nk, nv, nnext))) when not ns && nk = k ->
-        print_endline (sprintf "ns = %b && nk = %d ?= %d = k" ns nk k);
+        (*print_endline (sprintf "ns = %b && nk = %d ?= %d = k" ns nk k);
 (*        if not ns && nk = k then begin*)
-        print_endline (sprintf "Delete, noeud trouve prev : (%b, %d)    n : (%b, %d)" ps pk ns nk);
+        print_endline (sprintf "Delete, noeud trouve prev : (%b, %d)    n : (%b, %d)" ps pk ns nk);*)
         let vnnext = Cas.get nnext in
         if Cas.cas nnext vnnext (true, snd vnnext) then begin
-          print_endline "1er CAS OK";
+          (*print_endline "1er CAS OK";*)
           if not (Cas.cas pnext next (false, snd vnnext)) then
             (Cas.set nnext vnnext; Kcas.Backoff.once b; loop ())
           else
@@ -231,48 +231,52 @@ module M : S = struct
           (Kcas.Backoff.once b; loop ())
 (*        end else ()*)
       |_ ->
-        print_endline "Non déso";
+        (*print_endline "Non déso";
         if snd next = Nil then print_endline "next encore nil";
-        if prev = Nil then print_endline "prev encore nil";
+        if prev = Nil then print_endline "prev encore nil";*)
         false
     in loop ()
   ;;
 
   let help_resize t old_access s =
-    print_endline (sprintf "TH%d : HELP_RESIZE (size : (%d, %d)    content : %d)" (Domain.self ()) s (Array.length (Cas.get t.access)) (Cas.get t.content));
+    (*print_endline (sprintf "TH%d : HELP_RESIZE (size : (%d, %d)    content : %d)" (Domain.self ()) s (Array.length (Cas.get t.access)) (Cas.get t.content));*)
+    let b = Kcas.Backoff.create () in
     let rec loop i =
-      match Cas.get t.new_size with
-      |Some(new_size) as vnew_size when 2*s = new_size ->
-        if Cas.get t.resize then
+      if Cas.get t.resize then
+        match Cas.get t.new_size with
+        |Some(new_size) as vnew_size when 2*s = new_size ->
           if i >= 0 then begin
             (Cas.get t.tmp).(i) <- (Cas.get t.access).(i);
             loop (i-1)
           end else
             let new_size = Array.length (Cas.get t.tmp) in
-            if Cas.cas t.new_size vnew_size None &&
-               Cas.cas t.access old_access (Cas.get t.tmp) &&
-               Cas.cas t.size s new_size &&
-               Cas.cas t.resize true false then
-              print_endline (sprintf "TH%d : RESIZE %d ---> %d FINISHED" (Domain.self ()) s new_size)
+            if ((*print_endline (sprintf "TH%d : FINISHING_EXP 1 %d ---> %d (%b)" (Domain.self ()) s new_size (Cas.get t.resize));*) Cas.cas t.access old_access (Cas.get t.tmp)) &&
+               ((*print_endline (sprintf "TH%d : FINISHING_EXP 2 %d ---> %d (%b)" (Domain.self ()) s new_size (Cas.get t.resize));*) Cas.cas t.size s new_size) &&
+               ((*print_endline (sprintf "TH%d : FINISHING_EXP 3 %d ---> %d (%b)" (Domain.self ()) s new_size (Cas.get t.resize));*) Cas.cas t.new_size vnew_size None) &&
+               ((*print_endline (sprintf "TH%d : FINISHING_EXP 4 %d ---> %d (%b)" (Domain.self ()) s new_size (Cas.get t.resize));*) Cas.cas t.resize true false) then
+              (*print_endline (sprintf "TH%d : RESIZE_FINISHED %d ---> %d (%b)" (Domain.self ()) s new_size (Cas.get t.resize))*)()
             else
-              loop i
-      |_ -> ()
+              (Kcas.Backoff.once b; loop i)
+        |_ -> ()
     in loop (s-1)
   ;;
 
   let resize t old_access s =
-    print_endline (sprintf "TH%d : RESIZE %d" (Domain.self ()) s);
-    let new_size = s * 2 in
-    Cas.set t.tmp (Array.init new_size (fun i -> Cas.ref Uninitialized));
-    Cas.set t.new_size (Some(new_size));
-    help_resize t old_access s
+    if s = (Cas.get t.size) then begin
+      (*print_endline (sprintf "TH%d : RESIZE %d" (Domain.self ()) s);*)
+      let new_size = s * 2 in
+      Cas.set t.tmp (Array.init new_size (fun i -> Cas.ref Uninitialized));
+      Cas.set t.new_size (Some(new_size));
+      help_resize t old_access s
+    end else
+      Cas.set t.resize false
   ;;
 
   let check_size t =
     let old_access = Cas.get t.access in
     let s = Cas.get t.size in
     let c = Cas.get t.content in
-    print_endline (sprintf "TH%d : CHECK_SIZE    s : %d    c : %d" (Domain.self ()) s c);
+    (*print_endline (sprintf "TH%d : CHECK_SIZE    s : %d    c : %d" (Domain.self ()) s c);*)
     if c / s > load && Cas.cas t.resize false true then
       resize t old_access s
     else
@@ -313,14 +317,14 @@ module M : S = struct
   let rec get_bucket t hk =
     try_get_bucket t hk
   and try_get_bucket t hk =
-    print_endline (sprintf "TH%d : TRY_GET_BUCKET %d  (size : (%d, %d)    content : %d)" (Domain.self ()) hk (Cas.get t.size) (Array.length (Cas.get t.access)) (Cas.get t.content));
+    (*print_endline (sprintf "TH%d : TRY_GET_BUCKET %d  (size : (%d, %d)    content : %d)" (Domain.self ()) hk (Cas.get t.size) (Array.length (Cas.get t.access)) (Cas.get t.content));*)
     (*print_endline (to_string t);*)
     match Cas.get (Cas.get t.access).(hk) with
     |Uninitialized -> initialise_bucket t hk; try_get_bucket t hk
     |Initialized(s) -> s
   and initialise_bucket t hk =
     let prev_hk = hk mod (get_closest_power hk) in
-    print_endline (sprintf "TH%d : INITIALISE_BUCKET %d    prev_hk : %d" (Domain.self ()) hk prev_hk);
+    (*print_endline (sprintf "TH%d : INITIALISE_BUCKET %d    prev_hk : %d" (Domain.self ()) hk prev_hk);*)
     let prev_s = try_get_bucket t prev_hk in
     let (s, k, v, next) = list_insert prev_s true hk (Obj.magic ()) in
     Cas.cas (Cas.get t.access).(hk) Uninitialized (Initialized(s, k, v, next));
@@ -360,6 +364,7 @@ module M : S = struct
   ;;
 
   let remove t k =
+    print_endline (sprintf "TH%d : REMOVE %d" (Domain.self ()) k);
     (*print_endline "REMOVE";*)
     check_size t;
     let hk = hash t k in
