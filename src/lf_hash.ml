@@ -238,7 +238,7 @@ module M : S = struct
   ;;
 
   let help_resize t s =
-    print_endline (sprintf "TH%d : HELP_RESIZE (size : %d    content : %d)" (Domain.self ()) s (Cas.get t.content));
+    print_endline (sprintf "TH%d : HELP_RESIZE (size : (%d, %d)    content : %d)" (Domain.self ()) s (Array.length (Cas.get t.access)) (Cas.get t.content));
     let rec loop i =
       if Cas.get t.resize then
         if i >= 0 then begin
@@ -297,7 +297,7 @@ module M : S = struct
   let rec get_bucket t hk =
     try_get_bucket t hk
   and try_get_bucket t hk =
-    print_endline (sprintf "TH%d : TRY_GET_BUCKET %d  (size : %d    content : %d)" (Domain.self ()) hk (Cas.get t.size) (Cas.get t.content));
+    print_endline (sprintf "TH%d : TRY_GET_BUCKET %d  (size : (%d, %d)    content : %d)" (Domain.self ()) hk (Cas.get t.size) (Array.length (Cas.get t.access)) (Cas.get t.content));
     (*print_endline (to_string t);*)
     match Cas.get (Cas.get t.access).(hk) with
     |Uninitialized -> initialise_bucket t hk; try_get_bucket t hk
