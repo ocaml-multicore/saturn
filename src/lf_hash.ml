@@ -244,15 +244,13 @@ module M : S = struct
         if i >= 0 then begin
           (Cas.get t.tmp).(i) <- (Cas.get t.access).(i);
           loop (i-1)
-        end else begin
-          Cas.set t.resize false;
-          loop (-1)
-        end
-      else begin
-        let new_size = Array.length (Cas.get t.tmp) in
-        Cas.set t.access (Cas.get t.tmp);
-        Cas.cas t.size s new_size; print_endline (sprintf "TH%d : RESIZE %d ---> %d FINISHED" (Domain.self ()) s new_size)
-      end
+        end else
+          if Cas.cas t.resize true false then begin
+            let new_size = Array.length (Cas.get t.tmp) in
+            Cas.set t.access (Cas.get t.tmp);
+            Cas.cas t.size s new_size; print_endline (sprintf "TH%d : RESIZE %d ---> %d FINISHED" (Domain.self ()) s new_size)
+          end else
+            loop i
     in loop ((Array.length (Cas.get t.access)) - 1)
   ;;
 
