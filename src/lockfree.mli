@@ -26,4 +26,11 @@
    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
   ---------------------------------------------------------------------------*)
 
-module MSQueue : Lf_msqueue.S
+(*
+########
+Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
+########
+*)
+
+module MSQueue : Lf_msqueue.S;;
+module WSQueue : Lf_wsqueue.S;;

@@ -20,4 +20,11 @@
    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
   ---------------------------------------------------------------------------*)
 
-module MSQueue : Lf_msqueue.S = Lf_msqueue.M
+(*
+########
+Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
+########
+*)
+
+module MSQueue : Lf_msqueue.S = Lf_msqueue.M;;
+module WSQueue : Lf_wsqueue.S = Lf_wsqueue.M;;
