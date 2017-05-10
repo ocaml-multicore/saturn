@@ -26,7 +26,7 @@ module Make(Desc : CoreDesc) : S = struct
 
   type 'a t = 'a Queue.t array;;
 
-  let nb_domains = Desc.nb_domains;;
+  let nb_domains = 1 + Desc.nb_domains;;
 
   let create () = Random.self_init (); Array.init nb_domains (fun i -> Queue.create ());;
 
