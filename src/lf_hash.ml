@@ -356,7 +356,7 @@ module M : S = struct
 
   let rec add t k v =
     check_size t;
-    print_endline (sprintf "TH%d : ADD %d" (Domain.self ()) k);
+    (*print_endline (sprintf "TH%d : ADD %d" (Domain.self ()) k);*)
     let hk = hash t k in
     let s = get_bucket t hk in
     let _ = list_insert s false k v in
@@ -364,7 +364,7 @@ module M : S = struct
   ;;
 
   let remove t k =
-    print_endline (sprintf "TH%d : REMOVE %d" (Domain.self ()) k);
+    (*print_endline (sprintf "TH%d : REMOVE %d" (Domain.self ()) k);*)
     (*print_endline "REMOVE";*)
     check_size t;
     let hk = hash t k in

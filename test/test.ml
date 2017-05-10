@@ -308,6 +308,15 @@ module Hash_test = struct
     in loop 0 []
   ;;
 
+  let gen_elem_bis nb m =
+    let rec loop i out =
+      if i < nb then begin
+        loop (i+1) (i::out)
+      end else
+        out
+    in loop 0 []
+  ;;
+
   let gen_queue l =
     let out = Queue.create () in
     let rec loop l =
@@ -336,11 +345,11 @@ module Hash_test = struct
   let run () =
     let t1 = Hash.create () in
     let t2 = Hash.create () in
-    let nb_thread = 8 in
+    let nb_thread = 4 in
     let nb_init = 100000 in
     let nb_end = 1000 in
     let m = 1000000 in
-    let elem_init = gen_elem nb_init m in
+    let elem_init = gen_elem_bis nb_init m in
     let elem_end  = gen_elem nb_end m in
     let q_init1 = gen_queue elem_init in
     let q_init2 = gen_queue elem_init in
@@ -348,31 +357,27 @@ module Hash_test = struct
     let q_end2 = gen_queue elem_end in
     let q_remove1 = gen_queue elem_init in
     let q_remove2 = gen_queue elem_init in
-    let finish = Cas.ref 0 in
 
     print t1;
 
     print_endline (sprintf "Parallele insertion of %d elements" (List.length elem_init));
 
     for i = 1 to nb_thread do
-      Cas.incr finish;
-      Domain.spawn (fun () -> insert_hash t1 q_init1; Cas.decr finish)
+      Domain.spawn (fun () -> insert_hash t1 q_init1; print_endline (sprintf "Insertion TH%d END" (Domain.self ())))
     done;
 
-    while Cas.get finish > 0 do print_endline (sprintf "Thread %d" (Cas.get finish)) done;
+    Unix.sleep 5;
 
     print_endline (sprintf "Parallele insertion of %d elements and deletion of %d elements" (List.length elem_end) (List.length elem_init));
-    Unix.sleep 2;
 
     for i = 1 to nb_thread do
-      Cas.incr finish;
       if i mod 2 = 0 then
-        Domain.spawn (fun () -> insert_hash t1 q_end1; Cas.decr finish)
+        Domain.spawn (fun () -> insert_hash t1 q_end1; print_endline (sprintf "Final insertion TH%d END" (Domain.self ())))
       else
-        Domain.spawn (fun () -> remove_hash t1 q_remove1; Cas.decr finish)
+        Domain.spawn (fun () -> remove_hash t1 q_remove1; print_endline (sprintf "Deletion TH%d END" (Domain.self ())))
     done;
 
-    while Cas.get finish > 0 do print_endline (sprintf "Aqui %d" (Cas.get finish)) done;
+    Unix.sleep 5;
 
     print_endline (sprintf "Insertion of %d elements" (List.length elem_init));
 
