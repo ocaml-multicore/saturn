@@ -12,6 +12,7 @@ end;;
 
 module type S = sig
   type 'a t;;
+  exception To_Many_Domain of string;;
   val create : unit -> 'a t;;
   val is_empty : 'a t -> bool;;
   val push : 'a t -> 'a -> unit;;
@@ -20,6 +21,8 @@ end;;
 
 module Make(Desc : CoreDesc) : S = struct
   module Queue = Lf_wsqueue.M;;
+
+  exception To_Many_Domain of string;;
 
   type 'a t = 'a Queue.t array;;
 
@@ -32,7 +35,17 @@ module Make(Desc : CoreDesc) : S = struct
     if out < Array.length b then
       out
     else
-      assert false
+      raise (To_Many_Domain(sprintf "Domain n°%d try to use a %d domains bag" out (Array.length b)))
+  ;;
+
+  let is_empty b =
+    let rec loop i =
+      if i >= Array.length b then
+        true
+      else
+        (Queue.is_empty b.(i)) && (loop (i+1))
+    in loop 0
+  ;;
 
   let push b v =
     let th_id = get_thread_id b in
@@ -57,10 +70,7 @@ module Make(Desc : CoreDesc) : S = struct
     |Some(_) as out -> out
     |None -> steal th_id b
   and steal th_id b =
-    print_endline (sprintf "Steal id %d" th_id);
     let rec loop l =
-      List.iter (fun i -> printf "%d, " i) l;
-      print_endline "";
       match l with
       |ind::tl -> begin
         match Queue.steal (b.(ind)) with
@@ -69,14 +79,5 @@ module Make(Desc : CoreDesc) : S = struct
       end
       |[] -> None
     in loop (make_steal_list th_id)
-  ;;
-
-  let is_empty b =
-    let rec loop i =
-      if i >= Array.length b then
-        true
-      else
-        (Queue.is_empty b.(i)) && (loop (i+1))
-    in loop 0
   ;;
 end;;

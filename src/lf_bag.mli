@@ -12,6 +12,8 @@ module type S = sig
   type 'a t;;
   (** The type of lock-free bag. *)
 
+  exception To_Many_Domain of string;;
+
   val create : unit -> 'a t;;
   (** Create a new bag, which is initially empty. *)
 
