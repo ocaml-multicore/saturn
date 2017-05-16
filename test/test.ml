@@ -361,8 +361,8 @@ module Hash_test = struct
   let run () =
     let t1 = Hash.create () in
     let t2 = Hash.create () in
-    let nb_thread = 8 in
-    let nb_init = 100000 in
+    let nb_thread = 32 in
+    let nb_init = 1000000 in
     let nb_end = 1000 in
     let m = 10000000 in
     let elem_init = gen_elem nb_init m in
@@ -373,7 +373,7 @@ module Hash_test = struct
     let q_end2 = gen_queue elem_end in
     let q_remove1 = gen_queue elem_init in
     let q_remove2 = gen_queue elem_init in
-    let sleep_time = 8 in
+    let sleep_time = 20 in
 
     print_endline (sprintf "NB Thread : %d" nb_thread);
     print_endline (sprintf "Parallele insertion of %d elements" (List.length elem_init));

@@ -31,7 +31,7 @@ end;;
 module M : S = struct
   module Cas = Kcas.W1;;
 
-  type 'a elem_list = bool * int * 'a * 'a node_ptr
+  type 'a elem_list = bool * int * 'a option * 'a node_ptr
   and 'a node_ptr = (bool * 'a node) Cas.ref
   and 'a node =
     |Node of 'a elem_list
@@ -148,18 +148,18 @@ module M : S = struct
   ;;
 
   let list_find sentinel new_k =
-    (*print_endline "LIST_FIND";*)
+    print_endline (sprintf "TH%d : LIST_FIND %d" (Domain.self()) new_k);
     let (_, sk, sv, snext) = sentinel in
     let rec loop prev n =
       (*print_endline "LIST_FIND_LOOP";*)
       match Cas.get n with
       |mark, (Node(s, k, v, next) as nnode) as vn ->
-        (*print_endline (sprintf "LIST_FIND_LOOP Cas 1    key: %d" k);*)
+        print_endline (sprintf "TH%d : LIST_FIND_LOOP Cas 1    key: %d" (Domain.self ()) k);
         if split_compare new_k k <= 0 then
           (prev, vn)
         else
           loop nnode next
-      |mark, Nil as vn -> (*print_endline "LIST_FIND_LOOP Cas 2";*) (prev, vn)
+      |mark, Nil as vn -> print_endline "LIST_FIND_LOOP Cas 2"; (prev, vn)
     in loop (Node(sentinel)) snext
   ;;
 
@@ -271,11 +271,11 @@ module M : S = struct
   let create () =
     (*print_endline "CREATE";*)
     let nil = Cas.ref (false, Nil) in
-    let n1 = Cas.ref (false, Node(true, 1, Obj.magic (), nil)) in
-    let n0 = Cas.ref (false, Node(true, 0, Obj.magic (), n1)) in
+    let n1 = Cas.ref (false, Node(true, 1, None, nil)) in
+    let n0 = Cas.ref (false, Node(true, 0, None, n1)) in
     let tab = Array.init nb_bucket (fun i -> Cas.ref Uninitialized) in
-    Cas.set tab.(0) (Initialized(true, 0, Obj.magic (), n1));
-    Cas.set tab.(1) (Initialized(true, 1, Obj.magic (), nil));
+    Cas.set tab.(0) (Initialized(true, 0, None, n1));
+    Cas.set tab.(1) (Initialized(true, 1, None, nil));
     {
       access      = Cas.ref tab;
       store       = n0;
@@ -322,7 +322,7 @@ module M : S = struct
           (*print_endline (sprintf "TH%d : INIT BUCKET SIZE = 1" (Domain.self ()));*)
           let prev_hk = hk mod (get_closest_power hk) in
           let prev_s = get_bucket t prev_hk in
-          let (s, k, v, next) = list_insert prev_s true hk (Obj.magic ()) in
+          let (s, k, v, next) = list_insert prev_s true hk None in
           Initialized(s, k, v, next)
         end else
           Allocated(Array.init nb_bucket (fun i -> Cas.ref Uninitialized))
@@ -341,7 +341,7 @@ module M : S = struct
     let s = get_bucket t hk in
     let (prev, next) = list_find s k in
     match snd next with
-    |Node(ns, nk, nv, _) when split_compare nk k = 0 -> Some(nv)
+    |Node(ns, nk, nv, _) when split_compare nk k = 0 -> nv
     |_ -> None
   ;;
 
@@ -362,7 +362,7 @@ module M : S = struct
     (*print_endline (sprintf "TH%d : ADD %d" (Domain.self ()) k);*)
     let hk = hash t k in
     let s = get_bucket t hk in
-    let _ = list_insert s false k v in
+    let _ = list_insert s false k (Some(v)) in
     Cas.incr t.content
   ;;
 
