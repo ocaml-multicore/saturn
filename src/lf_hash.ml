@@ -38,47 +38,33 @@ module M : S = struct
     |Nil
   ;;
 
-  type 'a bucket =
+  type 'a table = 'a bucket Cas.ref array
+  and 'a bucket =
     |Initialized of 'a elem_list
+    |Allocated of 'a table
     |Uninitialized
   ;;
 
   type 'a t = {
-    access   : 'a bucket Cas.ref array Cas.ref;
-    store    : 'a node_ptr;
-    size     : int Cas.ref;
-    content  : int Cas.ref;
-    resize   : bool Cas.ref;
-    new_size : int option Cas.ref;
-    tmp      : 'a bucket Cas.ref array Cas.ref
+    access      : 'a table Cas.ref;
+    store       : 'a node_ptr;
+    size        : int Cas.ref;
+    content     : int Cas.ref;
+    access_size : int Cas.ref;
+    resize      : int option Cas.ref;
   };;
 
   let load = 3;;
+  let nb_bucket = 512;;
 
   let equal t1 t2 =
     let rec loop_l n1 n2 =
       match Cas.get n1, Cas.get n2 with
-      |(m1, Node(s1, k1, v1, next1)), (m2, Node(s2, k2, v2, next2)) ->
-        if s1 && s2 then
-          loop_l next1 next2
-        else if s1 then
-          loop_l next1 n2
-        else if s2 then
-          loop_l n1 next2
-        else
-          k1 = k2 && v1 = v2 && m1 = m2 && (loop_l next1 next2)
+      |(m1, Node(s1, k1, v1, next1)), _  when s1 -> loop_l next1 n2
+      |_, (m2, Node(s2, k2, v2, next2))  when s2 -> loop_l n1 next2
+      |(m1, Node(s1, k1, v1, next1)), (m2, Node(s2, k2, v2, next2)) -> k1 = k2 && v1 = v2 && m1 = m2 && (loop_l next1 next2)
       |(_, Nil), (_, Nil) -> true
       |_ -> false
-    in
-    let loop_a a1 a2 =
-      let len = min (Array.length a1) (Array.length a2) in
-      let out = ref true in
-      for i = 0 to len-1 do
-        match Cas.get a1.(i), Cas.get a2.(i) with
-        |Initialized(_), Initialized(_) |Uninitialized, Uninitialized -> ()
-        |_ -> out := false
-      done;
-      !out
     in
     (*(Cas.get t1.size) = (Cas.get t2.size) &&*)
     (Cas.get t1.content) = (Cas.get t2.content) &&
@@ -90,12 +76,13 @@ module M : S = struct
     (*print_endline "TO_STRING";*)
     let buf = Buffer.create 20 in
     Buffer.add_string buf (sprintf "Size = %d and Content = %d\nAccess\n[" (Cas.get t.size) (Cas.get t.content));
-    Array.iter
-      (fun r ->
-        match Cas.get r with
-        |Uninitialized -> Buffer.add_string buf "x, "
-        |Initialized(s, k, v, next) -> Buffer.add_string buf (sprintf "(%d), " k))
-      (Cas.get t.access);
+    let rec loop r =
+      match Cas.get r with
+      |Uninitialized -> Buffer.add_string buf "x, "
+      |Allocated(a') -> Buffer.add_string buf "{"; Array.iter loop a'; Buffer.add_string buf "}"
+      |Initialized(s, k, v, next) -> Buffer.add_string buf (sprintf "(%d), " k)
+    in
+    Array.iter loop (Cas.get t.access);
     Buffer.add_string buf (sprintf "]\nStore\n");
     let rec loop n =
       (*print_endline "TO_STRING_LOOP";*)
@@ -238,49 +225,47 @@ module M : S = struct
     in loop ()
   ;;
 
-  let help_resize t old_access s =
-    (*print_endline (sprintf "TH%d : HELP_RESIZE (size : (%d, %d)    content : %d)" (Domain.self ()) s (Array.length (Cas.get t.access)) (Cas.get t.content));*)
-    let b = Kcas.Backoff.create () in
-    let rec loop i =
-      if Cas.get t.resize then
-        match Cas.get t.new_size with
-        |Some(new_size) as vnew_size when 2*s = new_size ->
-          if i >= 0 then begin
-            (Cas.get t.tmp).(i) <- (Cas.get t.access).(i);
-            loop (i-1)
-          end else
-            let new_size = Array.length (Cas.get t.tmp) in
-            if ((*print_endline (sprintf "TH%d : FINISHING_EXP 1 %d ---> %d (%b)" (Domain.self ()) s new_size (Cas.get t.resize));*) Cas.cas t.access old_access (Cas.get t.tmp)) &&
-               ((*print_endline (sprintf "TH%d : FINISHING_EXP 2 %d ---> %d (%b)" (Domain.self ()) s new_size (Cas.get t.resize));*) Cas.cas t.size s new_size) &&
-               ((*print_endline (sprintf "TH%d : FINISHING_EXP 3 %d ---> %d (%b)" (Domain.self ()) s new_size (Cas.get t.resize));*) Cas.cas t.new_size vnew_size None) &&
-               ((*print_endline (sprintf "TH%d : FINISHING_EXP 4 %d ---> %d (%b)" (Domain.self ()) s new_size (Cas.get t.resize));*) Cas.cas t.resize true false) then
-              (*print_endline (sprintf "TH%d : RESIZE_FINISHED %d ---> %d (%b)" (Domain.self ()) s new_size (Cas.get t.resize))*)()
-            else
-              (Kcas.Backoff.once b; loop i)
-        |_ -> ()
-    in loop (s-1)
+  let get_size_of_access a =
+    let rec loop a out =
+      match Cas.get a.(0) with
+      |Allocated(a') -> loop a' (nb_bucket * out)
+      |_ -> out
+    in loop a nb_bucket
   ;;
 
-  let resize t old_access s =
-    if s = (Cas.get t.size) then begin
-      (*print_endline (sprintf "TH%d : RESIZE %d" (Domain.self ()) s);*)
-      let new_size = s * 2 in
-      Cas.set t.tmp (Array.init new_size (fun i -> Cas.ref Uninitialized));
-      Cas.set t.new_size (Some(new_size));
-      help_resize t old_access s
-    end else
-      Cas.set t.resize false
-  ;;
-
-  let check_size t =
+  let rec help_resize t old_access old_access_size =
+    print_endline (sprintf "TH%d : HELP_RESIZE (size : (%d, %d)    content : %d)" (Domain.self ()) old_access_size (Cas.get t.access_size) (Cas.get t.content));
+    let new_a = Array.init nb_bucket (fun i -> Cas.ref Uninitialized) in
+    Cas.set new_a.(0) (Allocated(old_access));
+    let rec loop () =
+      match Cas.get t.resize with
+      |Some(new_access_size) as old_resize -> begin
+        if (get_size_of_access (Cas.get t.access) >= new_access_size || Cas.cas t.access old_access new_a) &&
+           ((Cas.get t.access_size) >= new_access_size || Cas.cas t.access_size old_access_size new_access_size) &&
+           ((Cas.get t.resize) <> old_resize || Cas.cas t.resize old_resize None) then
+          check_size t
+        else
+          loop ()
+      end
+      |None -> check_size t
+    in loop ()
+  and check_size t =
     let old_access = Cas.get t.access in
+    let old_access_size = Cas.get t.access_size in
     let s = Cas.get t.size in
     let c = Cas.get t.content in
-    (*print_endline (sprintf "TH%d : CHECK_SIZE    s : %d    c : %d" (Domain.self ()) s c);*)
-    if c / s > load && Cas.cas t.resize false true then
-      resize t old_access s
-    else
-      help_resize t old_access s
+    match Cas.get t.resize with
+    |Some(_) -> help_resize t old_access old_access_size
+    |None when c / s > load ->
+      if 2*s <= old_access_size then begin
+        print_endline (sprintf "TH%d : CHECK_SIZE OVERLOAD    access_size : %d    s : %d    c : %d" (Domain.self ()) old_access_size s c);
+        Cas.cas t.size s (2*s); check_size t
+      end else if Cas.cas t.resize None (Some(nb_bucket * old_access_size)) then begin
+        print_endline (sprintf "TH%d : CHECK_SIZE EXTEND    access_size : %d    s : %d    c : %d" (Domain.self ()) old_access_size s c);
+        help_resize t old_access old_access_size
+     end  else
+        check_size t
+    |_ -> ()
   ;;
 
   let create () =
@@ -288,15 +273,18 @@ module M : S = struct
     let nil = Cas.ref (false, Nil) in
     let n1 = Cas.ref (false, Node(true, 1, Obj.magic (), nil)) in
     let n0 = Cas.ref (false, Node(true, 0, Obj.magic (), n1)) in
-    let tab = [|Cas.ref (Initialized(true, 0, Obj.magic (), n1)) ; Cas.ref (Initialized(true, 1, Obj.magic (), nil))|] in {
-    access   = Cas.ref tab;
-    store    = n0;
-    size     = Cas.ref 2;
-    content  = Cas.ref 0;
-    resize   = Cas.ref false;
-    new_size = Cas.ref None;
-    tmp      = Cas.ref tab
-  };;
+    let tab = Array.init nb_bucket (fun i -> Cas.ref Uninitialized) in
+    Cas.set tab.(0) (Initialized(true, 0, Obj.magic (), n1));
+    Cas.set tab.(1) (Initialized(true, 1, Obj.magic (), nil));
+    {
+      access      = Cas.ref tab;
+      store       = n0;
+      size        = Cas.ref 2;
+      content     = Cas.ref 0;
+      access_size = Cas.ref nb_bucket;
+      resize      = Cas.ref None;
+    }
+  ;;
 
   let hash t k =
     (*print_endline (sprintf "HASH : %d mod %d = %d" k (Cas.get t.size) (k mod (Cas.get t.size)));*)
@@ -315,20 +303,35 @@ module M : S = struct
   ;;
 
   let rec get_bucket t hk =
-    try_get_bucket t hk
-  and try_get_bucket t hk =
-    (*print_endline (sprintf "TH%d : TRY_GET_BUCKET %d  (size : (%d, %d)    content : %d)" (Domain.self ()) hk (Cas.get t.size) (Array.length (Cas.get t.access)) (Cas.get t.content));*)
+    (*print_endline (sprintf "TH%d : GET_BUCKET %d  (size : (%d, %d)    content : %d)" (Domain.self ()) hk (Cas.get t.size) (Array.length (Cas.get t.access)) (Cas.get t.content));*)
     (*print_endline (to_string t);*)
-    match Cas.get (Cas.get t.access).(hk) with
-    |Uninitialized -> initialise_bucket t hk; try_get_bucket t hk
-    |Initialized(s) -> s
-  and initialise_bucket t hk =
-    let prev_hk = hk mod (get_closest_power hk) in
-    (*print_endline (sprintf "TH%d : INITIALISE_BUCKET %d    prev_hk : %d" (Domain.self ()) hk prev_hk);*)
-    let prev_s = try_get_bucket t prev_hk in
-    let (s, k, v, next) = list_insert prev_s true hk (Obj.magic ()) in
-    Cas.cas (Cas.get t.access).(hk) Uninitialized (Initialized(s, k, v, next));
-    ()
+    let rec access_bucket a ind size =
+      let tmp_ind = ind / size in
+      let new_ind = ind mod size in
+      let new_size = size / nb_bucket in
+      (*print_endline (sprintf "TH%d : ACCESS BUCKET (ind: %d, new_ind: %d, new_size: %d" (Domain.self ()) tmp_ind new_ind new_size);*)
+      match Cas.get a.(tmp_ind) with
+      |Uninitialized -> initialise_bucket a tmp_ind size; access_bucket a ind size
+      |Allocated(a') -> access_bucket a' new_ind new_size
+      |Initialized(s) -> s
+    and initialise_bucket a ind size =
+      (*print_endline (sprintf "TH%d : INIT_BUCKET" (Domain.self ()));*)
+      let new_elem =
+        (*print_endline (sprintf "TH%d : NEW_ELEM" (Domain.self ()));*)
+        if size = 1 then begin
+          (*print_endline (sprintf "TH%d : INIT BUCKET SIZE = 1" (Domain.self ()));*)
+          let prev_hk = hk mod (get_closest_power hk) in
+          let prev_s = get_bucket t prev_hk in
+          let (s, k, v, next) = list_insert prev_s true hk (Obj.magic ()) in
+          Initialized(s, k, v, next)
+        end else
+          Allocated(Array.init nb_bucket (fun i -> Cas.ref Uninitialized))
+      in
+      Cas.cas a.(ind) Uninitialized new_elem;
+      ()
+    in
+    let size = (Cas.get t.access_size) / nb_bucket in
+    access_bucket (Cas.get t.access) hk size
   ;;
 
   let find t k =
@@ -339,7 +342,7 @@ module M : S = struct
     let (prev, next) = list_find s k in
     match snd next with
     |Node(ns, nk, nv, _) when split_compare nk k = 0 -> Some(nv)
-    |Nil -> None
+    |_ -> None
   ;;
 
   let mem t k =
@@ -350,7 +353,7 @@ module M : S = struct
     let (prev, next) = list_find s k in
     match snd next with
     |Node(ns, nk, nv, _) when split_compare nk k = 0 -> true
-    |Nil -> false
+    |_ -> false
   ;;
 
 

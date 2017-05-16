@@ -344,14 +344,28 @@ module Hash_test = struct
     in loop ()
   ;;
 
+  let rec check_valid t elem_in elem_out =
+    let rec loop_in elem =
+      match elem with
+      |[] -> true
+      |hd::tl -> Hash.mem t hd && loop_in tl
+    in
+    let rec loop_out elem =
+      match elem with
+      |[] -> true
+      |hd::tl -> (not (Hash.mem t hd)) && loop_out tl
+    in
+    loop_in elem_in
+  ;;
+
   let run () =
     let t1 = Hash.create () in
     let t2 = Hash.create () in
-    let nb_thread = 4 in
+    let nb_thread = 8 in
     let nb_init = 100000 in
     let nb_end = 1000 in
-    let m = 1000000 in
-    let elem_init = gen_elem_bis nb_init m in
+    let m = 10000000 in
+    let elem_init = gen_elem nb_init m in
     let elem_end  = gen_elem nb_end m in
     let q_init1 = gen_queue elem_init in
     let q_init2 = gen_queue elem_init in
@@ -359,16 +373,16 @@ module Hash_test = struct
     let q_end2 = gen_queue elem_end in
     let q_remove1 = gen_queue elem_init in
     let q_remove2 = gen_queue elem_init in
+    let sleep_time = 8 in
 
-    print t1;
-
+    print_endline (sprintf "NB Thread : %d" nb_thread);
     print_endline (sprintf "Parallele insertion of %d elements" (List.length elem_init));
 
     for i = 1 to nb_thread do
       Domain.spawn (fun () -> insert_hash t1 q_init1; print_endline (sprintf "Insertion TH%d END" (Domain.self ())))
     done;
 
-    Unix.sleep 5;
+    Unix.sleep sleep_time;
 
     print_endline (sprintf "Parallele insertion of %d elements and deletion of %d elements" (List.length elem_end) (List.length elem_init));
 
@@ -379,7 +393,7 @@ module Hash_test = struct
         Domain.spawn (fun () -> remove_hash t1 q_remove1; print_endline (sprintf "Deletion TH%d END" (Domain.self ())))
     done;
 
-    Unix.sleep 5;
+    Unix.sleep sleep_time;
 
     print_endline (sprintf "Insertion of %d elements" (List.length elem_init));
 
@@ -393,19 +407,21 @@ module Hash_test = struct
 
     print t1;
     print t2;
-    print_endline "Elem Init :";
+    (*print_endline "Elem Init :";
     List.iter (fun i -> printf "%d, " i) elem_init; print_endline "";
     print_endline "Elem End :";
-    List.iter (fun i -> printf "%d, " i) elem_end; print_endline "";
+    List.iter (fun i -> printf "%d, " i) elem_end; print_endline "";*)
     cprint t1;
     cprint t2;
     print_endline (sprintf "Are they equal ? %b" (Hash.equal t1 t2));
     print_endline (sprintf "Still valid split order ? %b" (Hash.still_split_order t1));
+    print_endline (sprintf "T1 Elem valid ? %b" (check_valid t1 elem_end elem_init));
+    print_endline (sprintf "T2 Elem valid ? %b" (check_valid t2 elem_end elem_init));
     ()
   ;;
 end;;
 
 let () =
   (* Bag_test.run () *)
-  Bag_test.run ()
+  Hash_test.run ()
 ;;
