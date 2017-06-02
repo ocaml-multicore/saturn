@@ -21,7 +21,7 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 ########
 *)
 
-(* Michael-Scott queue *)
+(* Work Stealing Queue *)
 
 (* TODO KC: Replace with concurrent lock free bag --
  * http://dl.acm.org/citation.cfm?id=1989550 *)
@@ -138,19 +138,21 @@ module M : S = struct
 
   let rec steal q =
     let wait = Kcas.Backoff.create () in
-    let t = Cas.get q.top in
-    let b = Cas.get q.bottom in
-    let a = Cas.get q.tab in
-    let size = b - t in
-    if size <= 0 then
-      None
-    else
-      let out = Some(CArray.get a t) in
-      if Cas.cas q.top t (t+1) then
-        out
-      else begin
-        Kcas.Backoff.once wait;
-        steal q
-      end
+    let rec loop () =
+      let t = Cas.get q.top in
+      let b = Cas.get q.bottom in
+      let a = Cas.get q.tab in
+      let size = b - t in
+      if size <= 0 then
+        None
+      else
+        let out = Some(CArray.get a t) in
+        if Cas.cas q.top t (t+1) then
+          out
+        else begin
+          Kcas.Backoff.once wait;
+          loop ()
+        end
+    in loop ()
   ;;
 end;;

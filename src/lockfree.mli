@@ -34,3 +34,4 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 
 module MSQueue : Lf_msqueue.S;;
 module WSQueue : Lf_wsqueue.S;;
+module List    : Lf_list.S;;

@@ -28,3 +28,4 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 
 module MSQueue : Lf_msqueue.S = Lf_msqueue.M;;
 module WSQueue : Lf_wsqueue.S = Lf_wsqueue.M;;
+module List    : Lf_list.S    = Lf_list.M;;
