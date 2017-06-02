@@ -148,25 +148,26 @@ module M : S = struct
   ;;
 
   let list_find sentinel new_k =
-    print_endline (sprintf "TH%d : LIST_FIND %d" (Domain.self()) new_k);
+    (*print_endline (sprintf "TH%d : LIST_FIND %d" (Domain.self()) new_k);*)
     let (_, sk, sv, snext) = sentinel in
     let rec loop prev n =
       (*print_endline "LIST_FIND_LOOP";*)
       match Cas.get n with
       |mark, (Node(s, k, v, next) as nnode) as vn ->
-        print_endline (sprintf "TH%d : LIST_FIND_LOOP Cas 1    key: %d" (Domain.self ()) k);
+        (*print_endline (sprintf "TH%d : LIST_FIND_LOOP Cas 1    key: %d" (Domain.self ()) k);*)
         if split_compare new_k k <= 0 then
           (prev, vn)
         else
           loop nnode next
-      |mark, Nil as vn -> print_endline "LIST_FIND_LOOP Cas 2"; (prev, vn)
+      |mark, Nil as vn -> (*print_endline "LIST_FIND_LOOP Cas 2";*) (prev, vn)
     in loop (Node(sentinel)) snext
   ;;
 
   let list_insert sentinel new_s new_k new_v =
-    (*print_endline "LIST_INSERT";*)
+    (*print_endline (sprintf "TH%d : LIST_INSERT %d" (Domain.self()) new_k);*)
     let b = Kcas.Backoff.create () in
     let rec loop () =
+      (*print_endline (sprintf "TH%d : LIST_INSERT_LOOP %d" (Domain.self()) new_k);*)
       (*print_endline "LIST_INSERT_LOOP";*)
       let (prev, next) = list_find sentinel new_k in
       let new_node = (new_s, new_k, new_v, Cas.ref (false, snd next)) in
@@ -174,22 +175,22 @@ module M : S = struct
       |Node(ps, pk, pv, pnext), (nm, Node(ns, nk, nv, nnext)) ->
         if not (new_s && ns && new_k = nk) then (* New sentinel not inserted yet *)
           if not nm && Cas.cas pnext next (false, Node(new_node)) then
-    ((*print_endline "Branche 1";*)
+    ((*print_endline (sprintf "TH%d : INSERT_LOOP Branche 1" (Domain.self ()));*)
             new_node)
           else
-    ((*print_endline "Branche 2";*)
+    ((*print_endline (sprintf "TH%d : INSERT_LOOP Branche 2" (Domain.self ()));*)
             (Kcas.Backoff.once b; loop ()))
         else
-    ((*print_endline "Branche 3";*)
+    ((*print_endline (sprintf "TH%d : INSERT_LOOP Branche 3" (Domain.self ()));*)
           (ns, nk, nv, nnext))
       |Node(ps, pk, pv, pnext), (nm, Nil) ->
         if not nm && Cas.cas pnext next (false, Node(new_node)) then
-    ((*print_endline "Branche 4";*)
+    ((*print_endline (sprintf "TH%d : INSERT_LOOP Branche 4" (Domain.self ()));*)
           new_node)
         else begin
           let (m, n) = Cas.get pnext in
           if (m, n) == (false, snd next) then print_endline "Nil------------------";
-    ((*print_endline (sprintf "Branche 5 : (%b, %d, _, (%b, _))" ps pk m);*)
+    ((*print_endline (sprintf "TH%d : INSERT_LOOP Branche 5" (Domain.self ()));*)
           (Kcas.Backoff.once b; loop ()))
         end
       |_ -> raise Exit
@@ -234,7 +235,7 @@ module M : S = struct
   ;;
 
   let rec help_resize t old_access old_access_size =
-    print_endline (sprintf "TH%d : HELP_RESIZE (size : (%d, %d)    content : %d)" (Domain.self ()) old_access_size (Cas.get t.access_size) (Cas.get t.content));
+    (*print_endline (sprintf "TH%d : HELP_RESIZE (size : (%d, %d)    content : %d)" (Domain.self ()) old_access_size (Cas.get t.access_size) (Cas.get t.content));*)
     let new_a = Array.init nb_bucket (fun i -> Cas.ref Uninitialized) in
     Cas.set new_a.(0) (Allocated(old_access));
     let rec loop () =
@@ -258,10 +259,10 @@ module M : S = struct
     |Some(_) -> help_resize t old_access old_access_size
     |None when c / s > load ->
       if 2*s <= old_access_size then begin
-        print_endline (sprintf "TH%d : CHECK_SIZE OVERLOAD    access_size : %d    s : %d    c : %d" (Domain.self ()) old_access_size s c);
+        (*print_endline (sprintf "TH%d : CHECK_SIZE OVERLOAD    access_size : %d    s : %d    c : %d" (Domain.self ()) old_access_size s c);*)
         Cas.cas t.size s (2*s); check_size t
       end else if Cas.cas t.resize None (Some(nb_bucket * old_access_size)) then begin
-        print_endline (sprintf "TH%d : CHECK_SIZE EXTEND    access_size : %d    s : %d    c : %d" (Domain.self ()) old_access_size s c);
+        (*print_endline (sprintf "TH%d : CHECK_SIZE EXTEND    access_size : %d    s : %d    c : %d" (Domain.self ()) old_access_size s c);*)
         help_resize t old_access old_access_size
      end  else
         check_size t
