@@ -82,12 +82,6 @@ let rec remove_list l q =
   in loop ()
 ;;
 
-let rec check_consistency l elem_l =
-  match elem_l with
-  |h::t -> List.mem l h && check_consistency l t
-  |[] -> true
-;;
-
 let length l =
   let rec loop out =
     match List.pop l with
@@ -96,15 +90,110 @@ let length l =
   in loop 0
 ;;
 
+let to_list l =
+  let rec loop out =
+    match List.pop l with
+    |Some(v) -> loop (v::out)
+    |None -> STD_List.sort compare out
+  in loop []
+;;
+
+let rec check_consistency l elem_l = l = STD_List.sort compare elem_l;;
+
+let dif_list l1 l2 =
+  let rec loop l out =
+    match l with
+    |h::t ->
+      if STD_List.mem h l2 then
+        loop t out
+      else
+        loop t (h::out)
+    |[] -> out
+  in loop l1 []
+;;
+
+let benchmark f nb_thread message wait_time =
+  let t1 = Unix.gettimeofday () in
+  let t2 = ref (t1 *. 1000000.0) in
+  for i = 1 to nb_thread do
+    Domain.spawn (fun () ->
+      f (); t2 := min !t2 (Unix.gettimeofday () -. t1); print_endline (sprintf message (Domain.self ())))
+  done;
+  Unix.sleep wait_time;
+  !t2
+;;
+
+let benchmark_seq f =
+  let t1 = Unix.gettimeofday () in
+  f ();
+  Unix.gettimeofday () -. t1
+;;
+
+let run2 () =
+  let l1 = List.create () in
+  let l2 = List.create () in
+  let nb_thread = 16 in
+  let nb_init = 50 in
+  let nb_end = 5 in
+  let m = 1000 in
+  let wait_time = 1 in
+  let elem_init = gen_elem nb_init m in
+  let elem_end  = gen_elem nb_end m in
+
+  let elem_insert1 = gen_queue elem_init in
+  let elem_delete1 = gen_queue elem_init in
+  let elem_end1    = gen_queue elem_end in
+  let elem_insert2 = gen_queue elem_init in
+  let elem_delete2 = gen_queue elem_init in
+  let elem_end2    = gen_queue elem_end in
+
+  print_endline "Parallel Insertion Phase";
+  let t_par_ins1 = benchmark (fun () -> insert_list l1 elem_insert1) nb_thread "Insertion TH%d END" wait_time in
+
+  print_endline "Parallel Insertion/Deletion Phase";
+  let t_par_del = benchmark (fun () -> remove_list l1 elem_delete1) nb_thread "Deletion TH%d END" 0 in
+  let t_par_ins2 = benchmark (fun () -> insert_list l1 elem_end1) nb_thread "Deletion TH%d END" wait_time in
+
+  print_endline "Sequential Insertion Phase";
+  let t_seq_ins1 = benchmark_seq (fun () -> insert_list l2 elem_insert2) in
+
+  print_endline "Sequential Insertion/Deletion Phase";
+  let t_seq_del = benchmark_seq (fun () -> remove_list l2 elem_delete2) in
+  let t_seq_ins2 = benchmark_seq (fun () -> insert_list l2 elem_end2) in
+
+  let list_equal = List.equal l1 l2 in
+  let elem_l1 = to_list l1 in
+  let elem_l2 = to_list l2 in
+  let elem_dif = dif_list elem_l1 elem_l2 in
+  let consistency1 = check_consistency elem_l1 elem_end in
+  let consistency2 = check_consistency elem_l2 elem_end in
+  let len1 = STD_List.length elem_l1 in
+  let len2 = STD_List.length elem_l2 in
+
+  printf "["; STD_List.iter (printf "%d, ") elem_l1; print_endline "]";
+  printf "["; STD_List.iter (printf "%d, ") elem_l2; print_endline "]";
+  printf "["; STD_List.iter (printf "%d, ") elem_dif; print_endline "]";
+  print_endline (sprintf "Insertions/Deletions : %d    Remain : %d" (STD_List.length elem_init) (STD_List.length elem_end));
+  print_endline (sprintf "L1 equal L2 : %b" list_equal);
+  print_endline (sprintf "Length L1 : %d    Length L2 : %d" len1 len2);
+  print_endline (sprintf "Data consistency L1 : %b    Data consistency L2 : %b" consistency1 consistency2);
+  print_endline (sprintf "Parallel Time : %f (Insertion : %f) (Deletion : %f) (Remain : %f)" (t_par_ins1 +. t_par_del +. t_par_ins2) t_par_ins1 t_par_del t_par_ins2);
+  print_endline (sprintf "Sequential Time : %f (Insertion : %f) (Deletion : %f) (Remain : %f)" (t_seq_ins1 +. t_seq_del +. t_seq_ins2) t_seq_ins1 t_seq_del t_seq_ins2);
+
+
+
+  ()
+;;
+
 let run () =
   let l1 = List.create () in
   let l2 = List.create () in
   let nb_thread = 2 in
-  let n = 30000 in
-  let m = 100000 in
+  let n = 300 in
+  let m = 10000 in
   let prob_m = 1 in
   let prob_n = 2 in
-  let wait_time = 20 in
+  let wait_time = 2 in
   let elem_insert = gen_elem n m in
   let (elem_delete, elem_remain) = select_elem elem_insert prob_m prob_n in
   let elem_insert1 = gen_queue elem_insert in
@@ -138,7 +227,7 @@ let run () =
   lprint l2;
 
   let list_equal = List.equal l1 l2 in
-  let consistency = check_consistency l1 elem_remain in
+  let consistency = false(*check_consistency l1 elem_remain*) in
   let len1 = length l1 in
   let len2 = length l2 in
 
@@ -153,4 +242,4 @@ let run () =
   ()
 ;;
 
-let () = run ();;
+let () = run2 ();;
