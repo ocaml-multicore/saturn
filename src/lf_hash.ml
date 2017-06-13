@@ -19,8 +19,6 @@ module type S = sig
 
   val to_string : 'a t -> ('a -> string) -> string;;
 
-  val equal : 'a t -> 'a t -> bool * 'a list;;
-
   val create : unit -> 'a t;;
 
   val find : 'a t -> int -> 'a option;;
@@ -64,7 +62,7 @@ module M : S = struct
     let (k, v) = e in
     match v with
     |Some(x) -> sprintf "(%d, %s)" k (f x)
-    |None -> (*sprintf "{%d}" k*) ""
+    |None -> sprintf "{%d}" k (*""*)
   ;;
 
   let to_string t f =
@@ -88,33 +86,6 @@ module M : S = struct
     Buffer.contents buf
   ;;
 
-  let equal t1 t2 =
-    let rec elem_of l out =
-      match List.pop l with
-      |None -> out
-      |Some(_, Some(elem)) -> elem_of l (elem::out)
-      |_ -> elem_of l out
-    in
-    let rec find_and_remove v l out =
-      match l with
-      |h::t ->
-        if h = v then
-          STD_List.rev_append out t
-        else
-          find_and_remove v t (h::out)
-      |[] -> v::out
-    in
-    let rec set_equal l1 l2 =
-      match l1 with
-      |h::t -> set_equal t (find_and_remove h l2 [])
-      |[] -> l2
-    in
-    let elem_l1 = elem_of t1.store [] in
-    let elem_l2 = elem_of t2.store [] in
-    let elem_dif = set_equal elem_l1 elem_l2 in
-    (elem_dif = [], elem_dif)
-  ;;
-
   let rec split_compare x y =
     let rec loop a b =
     (*print_endline (Printf.sprintf "%d %d" a b);*)
@@ -129,7 +100,12 @@ module M : S = struct
           -1
         else
            1
-    in loop (fst x) (fst y)
+    in
+    match x, y with
+    |(k1, None), (k2, None) -> loop k1 k2
+    |(k1, None), (k2, Some(_)) -> let out = loop k1 k2 in if out = 0 then -1 else out
+    |(k1, Some(_)), (k2, None) -> let out = loop k1 k2 in if out = 0 then 1 else out
+    |(k1, Some(_)), (k2, Some(_)) -> loop k1 k2
   ;;
 
   let get_size_of_access a =
@@ -141,7 +117,8 @@ module M : S = struct
   ;;
 
   let rec help_resize t old_access old_access_size =
-    (*print_endline (sprintf "TH%d : HELP_RESIZE (size : (%d, %d)    content : %d)" (Domain.self ()) old_access_size (Cas.get t.access_size) (Cas.get t.content));*)
+(*    print_endline (sprintf "TH%d : HELP_RESIZE (size : (%d, %d)    content : %d)" (Domain.self ()) old_access_size (Cas.get t.access_size) (Cas.get t.content));*)
+    let b = Kcas.Backoff.create () in
     let new_a = Array.init nb_bucket (fun i -> Cas.ref Uninitialized) in
     Cas.set new_a.(0) (Allocated(old_access));
     let rec loop () =
@@ -152,7 +129,7 @@ module M : S = struct
            ((Cas.get t.resize) <> old_resize || Cas.cas t.resize old_resize None) then
           check_size t
         else
-          loop ()
+          (Kcas.Backoff.once b; loop ())
       end
       |None -> check_size t
     in loop ()
@@ -229,8 +206,12 @@ module M : S = struct
           (*print_endline (sprintf "TH%d : INIT BUCKET SIZE = 1" (Domain.self ()));*)
           let prev_hk = hk mod (get_closest_power hk) in
           let prev_s = get_bucket t prev_hk in
-          let s = List.sinsert prev_s (hk, None) split_compare in
-          Initialized(s)
+(*          print_endline (sprintf "TH%d : SENTINEL INSERTION %d" (Domain.self ()) hk);*)
+          match Cas.get a.(ind) with
+          |Initialized(s) as out -> out
+          |_ ->
+            let s = List.sinsert prev_s (hk, None) split_compare in
+            Initialized(s)
         end else
           Allocated(Array.init nb_bucket (fun i -> Cas.ref Uninitialized))
       in
@@ -246,7 +227,7 @@ module M : S = struct
     check_size t;
     let hk = hash t k in
     let s = get_bucket t hk in
-    let v = List.find s (k, None) split_compare in
+    let v = List.find s (k, Some(Obj.magic ())) split_compare in
     match v with
     |Some(k', out) -> out
     |None -> None
@@ -257,7 +238,7 @@ module M : S = struct
     check_size t;
     let hk = hash t k in
     let s = get_bucket t hk in
-    List.mem s (k, None) split_compare
+    List.mem s (k, Some(Obj.magic ())) split_compare
   ;;
 
 
@@ -272,14 +253,14 @@ module M : S = struct
   ;;
 
   let remove t k =
-    print_endline (sprintf "TH%d : REMOVE %d" (Domain.self ()) k);
+(*    print_endline (sprintf "TH%d : REMOVE %d" (Domain.self ()) k);*)
 (*    print_endline (sprintf "%s" (List.to_string t.store (string_of_elem (fun i -> sprintf "%d" (Obj.magic i)))));*)
     (*print_endline "REMOVE";*)
     check_size t;
     let hk = hash t k in
     let s = get_bucket t hk in
-    print_endline (sprintf "TH%d : REMOVE ALMOST %d" (Domain.self ()) k);
-    if List.sdelete s (k, None) split_compare then
+(*    print_endline (sprintf "TH%d : REMOVE ALMOST %d" (Domain.self ()) k);*)
+    if List.sdelete s (k, Some(Obj.magic ())) split_compare then
       (Cas.decr t.content; true)
     else false
   ;;

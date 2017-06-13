@@ -6,8 +6,9 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 
 open Printf;;
 
+module STD_List = List;;
 module Hash = Lf_hash.M;;
-module Queue = Lf_list.M;;
+module Queue = Lockfree.MSQueue;;
 module Cas = Kcas.W1;;
 
 let print t = print_endline (Hash.to_string t (sprintf "%d"));;
@@ -84,10 +85,11 @@ let split_odd_even l =
 
 let insert_hash t q =
   let rec loop () =
-    print_endline (sprintf "TH%d : POP DEB" (Domain.self ()));
+(*    print_endline (sprintf "TH%d : POP DEB" (Domain.self ()));*)
     match Queue.pop q with
     |Some(v) ->
-    print_endline (sprintf "TH%d : POP END" (Domain.self ()));
+(*      print_endline (sprintf "TH%d : Insertion %d" (Domain.self ()) v);*)
+(*    print_endline (sprintf "TH%d : POP END" (Domain.self ()));*)
     Hash.add t v v; loop ()
     |None -> ()
   in loop ()
@@ -97,7 +99,7 @@ let rec insert_hash_l t l =
   match l with
   |[] -> ()
   |hd::tl ->
-  print_endline (sprintf "Insertion of %d (TH%d)" hd (Domain.self ()));
+(*  print_endline (sprintf "Insertion of %d (TH%d)" hd (Domain.self ()));*)
   Hash.add t hd hd; insert_hash_l t tl
 ;;
 
@@ -105,25 +107,28 @@ let remove_hash t q =
   let rec loop () =
     match Queue.pop q with
     |Some(v) ->
-      print_endline (sprintf "Deletion of %d (TH%d)" v (Domain.self ()));
+(*      print_endline (sprintf "Deletion of %d (TH%d)" v (Domain.self ()));*)
       if Hash.remove t v then
         loop ()
       else
-        (print_endline (sprintf "Deletion FAILED of %d (TH%d), retry later" v (Domain.self ()));
+        (
+(*        print_endline (sprintf "Deletion FAILED of %d (TH%d), retry later" v (Domain.self ()));
+        print t;
+        Unix.sleep 2;*)
         Queue.push q v; loop ())
     |None -> ()
   in loop ()
 ;;
 
-let benchmark f nb_thread message wait_time =
+let benchmark f nb_thread message wait_time out =
   let t1 = Unix.gettimeofday () in
-  let t2 = ref (t1 *. 1000000.0) in
+  out := t1 *. 1000000.0;
   for i = 1 to nb_thread do
     Domain.spawn (fun () ->
-      f (); t2 := min !t2 (Unix.gettimeofday () -. t1); print_endline (sprintf message (Domain.self ())))
+      f (); out := min !out (Unix.gettimeofday () -. t1); print_endline (sprintf message (Domain.self ())))
   done;
   Unix.sleep wait_time;
-  !t2
+  ()
 ;;
 
 let benchmark_seq f =
@@ -132,30 +137,28 @@ let benchmark_seq f =
   Unix.gettimeofday () -. t1
 ;;
 
-let rec check_valid t elem_in elem_out =
-  let rec loop_in elem =
-    match elem with
-    |[] -> true
-    |hd::tl -> Hash.mem t hd && loop_in tl
-  in
-  let rec loop_out elem =
-    match elem with
-    |[] -> true
-    |hd::tl -> (not (Hash.mem t hd)) && loop_out tl
-  in
-  loop_in elem_in
+let dif_list l1 l2 =
+  let rec loop l out =
+    match l with
+    |h::t ->
+      if STD_List.mem h l2 then
+        loop t out
+      else
+        loop t (h::out)
+    |[] -> out
+  in loop l1 []
 ;;
 
 let run () =
   let t1 = Hash.create () in
   let t2 = Hash.create () in
-  let nb_thread = 16 in
-  let nb_init = 500 in
-  let nb_end = 10 in
-  let m = 1000 in
-  let wait_time = 1 in
+  let nb_thread = 4 in
+  let nb_init = 10000 in
+  let nb_end = 100 in
+  let m = 1000000 in
+  let wait_time = 2 in
   let elem_init = gen_elem nb_init m in
-  let elem_end  = gen_elem_same nb_end in
+  let elem_end  = gen_elem nb_end m in
 
 (*  let l_elem_init = gen_multi_list elem_init nb_thread in*)
   let (odd, even) = split_odd_even elem_init in
@@ -167,16 +170,20 @@ let run () =
   let q_remove1 = gen_queue elem_init in
   let q_remove2 = gen_queue elem_init in
 
+  let t_par_ins = ref 0.0 in
+  let t_par_ins2 = ref 0.0 in
+  let t_par_rem = ref 0.0 in
+
   print t1;
   print t2;
 
   print_endline (sprintf "NB Thread : %d" nb_thread);
   print_endline (sprintf "Parallele insertion of %d elements" (List.length elem_init));
-  let t_par_ins = benchmark (fun () -> insert_hash t1 q_init1) nb_thread "Insertion TH%d END" wait_time in
+  benchmark (fun () -> insert_hash t1 q_init1) nb_thread "Insertion TH%d END" wait_time t_par_ins;
 
   print_endline (sprintf "Parallele insertion of %d elements and deletion of %d elements" (List.length elem_end) (List.length elem_init));
-  let t_par_ins2 = benchmark (fun () -> insert_hash t1 q_end1) nb_thread "Insertion2 TH%d END" 0 in
-  let t_par_rem = benchmark (fun () -> remove_hash t1 q_remove1) nb_thread "Deletion TH%d END" wait_time in
+  benchmark (fun () -> insert_hash t1 q_end1) nb_thread "Insertion2 TH%d END" 0 t_par_ins2;
+  benchmark (fun () -> remove_hash t1 q_remove1) nb_thread "Deletion TH%d END" wait_time t_par_rem;
 
 
   print_endline (sprintf "Beginning sequential insertion/deletion");
@@ -201,26 +208,22 @@ let run () =
 
   let elem_t1 = Hash.elem_of t1 in
   let elem_t2 = Hash.elem_of t2 in
+  let elem_dif = dif_list elem_t1 elem_t2 in
 
   print t1;
   print t2;
-(*  print_endline (sprintf "Are they equal ? %b" (Hash.equal t1 t2));*)
-(*  print_endline (sprintf "Still valid split order ? %b" (Hash.still_split_order t1));*)
-  print_endline (sprintf "T1 Elem valid ? %b" (check_valid t1 elem_end elem_init));
-  print_endline (sprintf "T2 Elem valid ? %b" (check_valid t2 elem_end elem_init));
+  printf "[";
+  List.iter (fun i -> printf "%d, " i) (STD_List.sort compare elem_end); print_endline "]";
+  printf "[";
+  List.iter (fun i -> printf "%d, " i) (STD_List.sort compare elem_t1); print_endline "]";
+  printf "[";
+  List.iter (fun i -> printf "%d, " i) (STD_List.sort compare elem_t2); print_endline "]";
+  printf "[";
+  List.iter (fun i -> printf "%d, " i) (STD_List.sort compare elem_dif); print_endline "]";
   print_endline (sprintf "T1    Queue IN Empty : %b    Queue OUT Empty : %b    Queue REMAIN Empty : %b" (Queue.is_empty q_init1) (Queue.is_empty q_remove1) (Queue.is_empty q_end1));
   print_endline (sprintf "T2    Queue IN Empty : %b    Queue OUT Empty : %b    Queue REMAIN Empty : %b" (Queue.is_empty q_init2) (Queue.is_empty q_remove2) (Queue.is_empty q_end2));
-  print_endline (sprintf "Parallel Time :   %f (insertion : %f) (insertion2 : %f) (deletion : %f)" (t_par_ins +. t_par_ins2 +. t_par_rem) t_par_ins t_par_ins2 t_par_rem);
+  print_endline (sprintf "Parallel Time :   %f (insertion : %f) (insertion2 : %f) (deletion : %f)" (!t_par_ins +. !t_par_ins2 +. !t_par_rem) !t_par_ins !t_par_ins2 !t_par_rem);
   print_endline (sprintf "Sequential Time : %f (insertion : %f) (insertion2 : %f) (deletion : %f)" (t_seq_ins +. t_seq_ins2 +. t_seq_rem) t_seq_ins t_seq_ins2 t_seq_rem);
-  (*List.iter (fun l -> List.iter (fun i -> printf "%d, " i) l) l_elem_init; print_endline "";*)
-  let (is_equal, elem_dif) = Hash.equal t1 t2 in
-  print_endline (sprintf "T1 EQUAL T2 ? %b" is_equal);
-  printf "[";
-  List.iter (fun i -> printf "%d, " i) elem_t1; print_endline "]";
-  printf "[";
-  List.iter (fun i -> printf "%d, " i) elem_t2; print_endline "]";
-  printf "[";
-  List.iter (fun i -> printf "%d, " i) elem_dif; print_endline "]";
   Unix.sleep 2;
   elem_dif
 ;;
@@ -230,4 +233,4 @@ let rec exec () =
     exec ()
 ;;
 
-let () = exec ();;
+let () = run (); ();;

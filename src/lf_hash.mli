@@ -17,8 +17,6 @@ module type S = sig
 
   val to_string : 'a t -> ('a -> string) -> string;;
 
-  val equal : 'a t -> 'a t -> bool * 'a list;;
-
   val create : unit -> 'a t;;
 
   val find : 'a t -> int -> 'a option;;

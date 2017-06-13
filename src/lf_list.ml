@@ -260,7 +260,7 @@ module M : S = struct
   ;;
 
   let sdelete l v f =
-    print_endline (sprintf "TH%d : SDELETE" (Domain.self ()));
+(*    print_endline (sprintf "TH%d : SDELETE" (Domain.self ()));*)
     let b = Kcas.Backoff.create () in
     let v = Val(v) in
     let compare = mk_compare f in
@@ -282,11 +282,11 @@ module M : S = struct
             |Nil -> failwith "Lock_Free_List.sdelete: impossible"
           end else
             (
-            print_endline (sprintf "TH%d : SDELETE CAN'T MARK" (Domain.self ()));
+(*            print_endline (sprintf "TH%d : SDELETE CAN'T MARK" (Domain.self ()));*)
             Kcas.Backoff.once b; loop (sfind l v f))
         else
           (
-          print_endline (sprintf "TH%d : SDELETE NOT FOUND" (Domain.self ()));
+(*          print_endline (sprintf "TH%d : SDELETE NOT FOUND" (Domain.self ()));*)
           false)
       |Nil -> failwith "Lock_Free_List.sdelete: impossible"
     in loop (sfind l v f)

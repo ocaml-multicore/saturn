@@ -37,6 +37,18 @@ let gen_elem nb m =
   in loop 0 []
 ;;
 
+(*
+let gen_elem nb m =
+  Random.self_init ();
+  let rec loop i out =
+    if i < nb then begin
+      let new_elem = Random.int m in
+      loop (i+1) (i::out)
+    end else
+      out
+  in loop 0 []
+;;*)
+
 let select_elem l m n =
   let rec loop l out1 out2  =
     match l with
@@ -62,7 +74,7 @@ let insert_list l q =
   let rec loop () =
     match Queue.pop q with
     |Some(v) ->
-      printf "TH%d : insertion %d\n" (Domain.self ()) v;
+      print_endline (sprintf "TH%d : insertion %d" (Domain.self ()) v);
       List.sinsert l v split_compare;
 (*      lprint l;
       print_endline "";*)
@@ -76,7 +88,7 @@ let rec remove_list l q =
   let rec loop () =
     match Queue.pop q with
     |Some(v) ->
-      printf "TH%d : deletion %d\n" (Domain.self ()) v;
+      print_endline (sprintf "TH%d : deletion %d" (Domain.self ()) v);
       let out =  List.sdelete l v split_compare in
 (*      printf "%b " out;
       lprint l;
@@ -120,15 +132,15 @@ let dif_list l1 l2 =
   in loop l1 []
 ;;
 
-let benchmark f nb_thread message wait_time =
+let benchmark f nb_thread message wait_time out =
   let t1 = Unix.gettimeofday () in
-  let t2 = ref (t1 *. 1000000.0) in
+  out := t1 *. 1000000.0;
   for i = 1 to nb_thread do
     Domain.spawn (fun () ->
-      f (); t2 := min !t2 (Unix.gettimeofday () -. t1); print_endline (sprintf message (Domain.self ())))
+      f (); out := min !out (Unix.gettimeofday () -. t1); print_endline (sprintf message (Domain.self ())))
   done;
   Unix.sleep wait_time;
-  !t2
+  ()
 ;;
 
 let benchmark_seq f =
@@ -140,11 +152,11 @@ let benchmark_seq f =
 let run2 () =
   let l1 = List.create () in
   let l2 = List.create () in
-  let nb_thread = 3 in
-  let nb_init = 1000 in
-  let nb_end = 100 in
+  let nb_thread = 16 in
+  let nb_init = 40000 in
+  let nb_end = 10000 in
   let m = 1000000 in
-  let wait_time = 6 in
+  let wait_time = 60 in
   let elem_init = gen_elem nb_init m in
   let elem_end  = gen_elem nb_end m in
 
@@ -155,14 +167,17 @@ let run2 () =
   let elem_delete2 = gen_queue elem_init in
   let elem_end2    = gen_queue elem_end in
 
+  let t_par_ins1 = ref 0.0 in
+  let t_par_del = ref 0.0 in
+  let t_par_ins2 = ref 0.0 in
   print_endline "Parallel Insertion Phase";
-  let t_par_ins1 = benchmark (fun () -> insert_list l1 elem_insert1) nb_thread "Insertion TH%d END" wait_time in
+  benchmark (fun () -> insert_list l1 elem_insert1) nb_thread "Insertion TH%d END" wait_time t_par_ins1;
 
   lprint l1;
 
   print_endline "Parallel Insertion/Deletion Phase";
-  let t_par_del = benchmark (fun () -> Unix.sleep 1; remove_list l1 elem_delete1; lprint l1) nb_thread "Deletion TH%d END" 0 in
-  let t_par_ins2 = benchmark (fun () -> Unix.sleep 1; insert_list l1 elem_end1) nb_thread "Insertion_bis TH%d END" wait_time in
+  benchmark (fun () -> Unix.sleep 1; remove_list l1 elem_delete1; lprint l1) nb_thread "Deletion TH%d END" 0 t_par_del;
+  benchmark (fun () -> Unix.sleep 1; insert_list l1 elem_end1) nb_thread "Insertion_bis TH%d END" wait_time t_par_ins2;
 
   print_endline "Sequential Insertion Phase";
   let t_seq_ins1 = benchmark_seq (fun () -> insert_list l2 elem_insert2) in
@@ -190,7 +205,7 @@ let run2 () =
   print_endline (sprintf "L1 equal L2 : %b" list_equal);
   print_endline (sprintf "Length L1 : %d    Length L2 : %d" len1 len2);
   print_endline (sprintf "Data consistency L1 : %b    Data consistency L2 : %b" consistency1 consistency2);
-  print_endline (sprintf "Parallel Time : %f (Insertion : %f) (Deletion : %f) (Remain : %f)" (t_par_ins1 +. t_par_del +. t_par_ins2) t_par_ins1 t_par_del t_par_ins2);
+  print_endline (sprintf "Parallel Time : %f (Insertion : %f) (Deletion : %f) (Remain : %f)" (!t_par_ins1 +. !t_par_del +. !t_par_ins2) !t_par_ins1 !t_par_del !t_par_ins2);
   print_endline (sprintf "Sequential Time : %f (Insertion : %f) (Deletion : %f) (Remain : %f)" (t_seq_ins1 +. t_seq_del +. t_seq_ins2) t_seq_ins1 t_seq_del t_seq_ins2);
 
   Unix.sleep 3;
@@ -263,4 +278,4 @@ let rec loop () =
     loop ()
 ;;
 
-let () = loop ();;
+let () = run2 (); ();;
