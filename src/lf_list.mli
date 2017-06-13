@@ -30,6 +30,8 @@ module type S = sig
   val sinsert  : 'a t -> 'a -> ('a -> 'a -> int) -> 'a t;;
 
   val sdelete  : 'a t -> 'a -> ('a -> 'a -> int) -> bool;;
+
+  val elem_of  : 'a t -> 'a list;;
 end;;
 
 module M : S;;

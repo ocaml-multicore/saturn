@@ -8,7 +8,7 @@ open Printf;;
 
 module STD_List = List;;
 module List = Lockfree.List;;
-module Queue = Lf_msqueue.M;;
+module Queue = Lf_list.M;;
 
 let lprint l = List.print l (printf "%d");;
 
@@ -61,7 +61,12 @@ let gen_queue l =
 let insert_list l q =
   let rec loop () =
     match Queue.pop q with
-    |Some(v) -> List.sinsert l v split_compare; loop ()
+    |Some(v) ->
+      printf "TH%d : insertion %d\n" (Domain.self ()) v;
+      List.sinsert l v split_compare;
+(*      lprint l;
+      print_endline "";*)
+      loop ()
     |None -> ()
   in loop ()
 ;;
@@ -71,13 +76,16 @@ let rec remove_list l q =
   let rec loop () =
     match Queue.pop q with
     |Some(v) ->
+      printf "TH%d : deletion %d\n" (Domain.self ()) v;
       let out =  List.sdelete l v split_compare in
-(*      printf "deletion %d : %b\n" v out;
-      lprint l;*)
+(*      printf "%b " out;
+      lprint l;
+      print_endline "";*)
+      loop () (*
       if out then
         loop ()
       else
-        (Queue.push q v; loop ())
+        (Queue.push q v; loop ())*)
     |None -> ()
   in loop ()
 ;;
@@ -94,11 +102,11 @@ let to_list l =
   let rec loop out =
     match List.pop l with
     |Some(v) -> loop (v::out)
-    |None -> STD_List.sort compare out
+    |None -> STD_List.sort split_compare out
   in loop []
 ;;
 
-let rec check_consistency l elem_l = l = STD_List.sort compare elem_l;;
+let rec check_consistency l elem_l = STD_List.sort compare l = STD_List.sort compare elem_l;;
 
 let dif_list l1 l2 =
   let rec loop l out =
@@ -132,11 +140,11 @@ let benchmark_seq f =
 let run2 () =
   let l1 = List.create () in
   let l2 = List.create () in
-  let nb_thread = 16 in
-  let nb_init = 50 in
-  let nb_end = 5 in
-  let m = 1000 in
-  let wait_time = 1 in
+  let nb_thread = 3 in
+  let nb_init = 1000 in
+  let nb_end = 100 in
+  let m = 1000000 in
+  let wait_time = 6 in
   let elem_init = gen_elem nb_init m in
   let elem_end  = gen_elem nb_end m in
 
@@ -150,21 +158,25 @@ let run2 () =
   print_endline "Parallel Insertion Phase";
   let t_par_ins1 = benchmark (fun () -> insert_list l1 elem_insert1) nb_thread "Insertion TH%d END" wait_time in
 
+  lprint l1;
+
   print_endline "Parallel Insertion/Deletion Phase";
-  let t_par_del = benchmark (fun () -> remove_list l1 elem_delete1) nb_thread "Deletion TH%d END" 0 in
-  let t_par_ins2 = benchmark (fun () -> insert_list l1 elem_end1) nb_thread "Deletion TH%d END" wait_time in
+  let t_par_del = benchmark (fun () -> Unix.sleep 1; remove_list l1 elem_delete1; lprint l1) nb_thread "Deletion TH%d END" 0 in
+  let t_par_ins2 = benchmark (fun () -> Unix.sleep 1; insert_list l1 elem_end1) nb_thread "Insertion_bis TH%d END" wait_time in
 
   print_endline "Sequential Insertion Phase";
   let t_seq_ins1 = benchmark_seq (fun () -> insert_list l2 elem_insert2) in
+
+  lprint l2;
 
   print_endline "Sequential Insertion/Deletion Phase";
   let t_seq_del = benchmark_seq (fun () -> remove_list l2 elem_delete2) in
   let t_seq_ins2 = benchmark_seq (fun () -> insert_list l2 elem_end2) in
 
   let list_equal = List.equal l1 l2 in
-  let elem_l1 = to_list l1 in
-  let elem_l2 = to_list l2 in
-  let elem_dif = dif_list elem_l1 elem_l2 in
+  let elem_l1 = List.elem_of l1 in
+  let elem_l2 = List.elem_of l2 in
+  let elem_dif = dif_list elem_l1 elem_end in
   let consistency1 = check_consistency elem_l1 elem_end in
   let consistency2 = check_consistency elem_l2 elem_end in
   let len1 = STD_List.length elem_l1 in
@@ -172,6 +184,7 @@ let run2 () =
 
   printf "["; STD_List.iter (printf "%d, ") elem_l1; print_endline "]";
   printf "["; STD_List.iter (printf "%d, ") elem_l2; print_endline "]";
+  printf "["; STD_List.iter (printf "%d, ") (STD_List.sort split_compare elem_end); print_endline "]";
   printf "["; STD_List.iter (printf "%d, ") elem_dif; print_endline "]";
   print_endline (sprintf "Insertions/Deletions : %d    Remain : %d" (STD_List.length elem_init) (STD_List.length elem_end));
   print_endline (sprintf "L1 equal L2 : %b" list_equal);
@@ -180,9 +193,11 @@ let run2 () =
   print_endline (sprintf "Parallel Time : %f (Insertion : %f) (Deletion : %f) (Remain : %f)" (t_par_ins1 +. t_par_del +. t_par_ins2) t_par_ins1 t_par_del t_par_ins2);
   print_endline (sprintf "Sequential Time : %f (Insertion : %f) (Deletion : %f) (Remain : %f)" (t_seq_ins1 +. t_seq_del +. t_seq_ins2) t_seq_ins1 t_seq_del t_seq_ins2);
 
+  Unix.sleep 3;
 
 
-  ()
+
+  elem_dif
 ;;
 
 let run () =
@@ -242,4 +257,10 @@ let run () =
   ()
 ;;
 
-let () = run2 ();;
+let rec loop () =
+  let out = run2 () in
+  if out = [] then
+    loop ()
+;;
+
+let () = loop ();;

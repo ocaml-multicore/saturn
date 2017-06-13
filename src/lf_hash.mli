@@ -28,6 +28,8 @@ module type S = sig
   val add : 'a t -> int -> 'a -> unit;;
 
   val remove : 'a t -> int -> bool;;
+
+  val elem_of : 'a t -> 'a list;;
 end;;
 
 module M : S;;

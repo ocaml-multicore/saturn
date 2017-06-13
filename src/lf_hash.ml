@@ -30,6 +30,8 @@ module type S = sig
   val add : 'a t -> int -> 'a -> unit;;
 
   val remove : 'a t -> int -> bool;;
+
+  val elem_of : 'a t -> 'a list;;
 end;;
 
 module M : S = struct
@@ -270,14 +272,24 @@ module M : S = struct
   ;;
 
   let remove t k =
-    (*print_endline (sprintf "TH%d : REMOVE %d" (Domain.self ()) k);*)
+    print_endline (sprintf "TH%d : REMOVE %d" (Domain.self ()) k);
+(*    print_endline (sprintf "%s" (List.to_string t.store (string_of_elem (fun i -> sprintf "%d" (Obj.magic i)))));*)
     (*print_endline "REMOVE";*)
     check_size t;
     let hk = hash t k in
     let s = get_bucket t hk in
+    print_endline (sprintf "TH%d : REMOVE ALMOST %d" (Domain.self ()) k);
     if List.sdelete s (k, None) split_compare then
       (Cas.decr t.content; true)
     else false
   ;;
 
+  let elem_of t =
+    let rec loop l out =
+      match l with
+      |(_, Some(x))::t -> loop t (x::out)
+      |(_, None)::t -> loop t out
+      |[] -> out
+    in loop (List.elem_of t.store) []
+  ;;
 end;;

@@ -108,13 +108,13 @@ let benchmark f nb_thread message wait_time =
 
 let run () =
   let t = Bst.create () in
-  let n = 1000000 in
-  let m = 1000000000 in
+  let n = 10000 in
+  let m = 1000000 in
   let prob_m = 4 in
   let prob_n = 5 in
   let thread_insert = 5 in
   let thread_delete = 5 in
-  let wait_time = 15 in
+  let wait_time = 2 in
 
   let elems = gen_elem n m in
   let elems_out = gen_elem_out elems prob_m prob_n in

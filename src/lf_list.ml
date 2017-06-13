@@ -20,6 +20,7 @@ module type S = sig
   val find     : 'a t -> 'a -> ('a -> 'a -> int) ->'a option;;
   val sinsert  : 'a t -> 'a -> ('a -> 'a -> int) -> 'a t;;
   val sdelete  : 'a t -> 'a -> ('a -> 'a -> int) -> bool;;
+  val elem_of  : 'a t -> 'a list;;
 end;;
 
 module M : S = struct
@@ -53,17 +54,17 @@ module M : S = struct
     |Val(out) -> Some(out)
   ;;
 
-  let get_status vn = fst vn;;
-  let get_v vn =
+  let get_mark vn = fst vn;;
+(*  let get_v vn =
     match snd vn with
     |Node(v, _) -> v
     |Nil -> failwith "Lock_Free_List.get_v: impossible"
-  ;;
-  let get_next vn =
+  ;;*)
+(*  let get_next vn =
     match snd vn with
     |Node(_, next) -> next
     |Nil -> failwith "Lock_Free_List.get_next: impossible"
-  ;;
+  ;;*)
 
   let print l f =
     let rec loop l =
@@ -82,15 +83,17 @@ module M : S = struct
     print_endline ""
   ;;
 
+  let string_of_mark m = if m then "x>" else "->";;
+
   let to_string l f =
     let buf = Buffer.create 17 in
     let rec loop l =
       match Cas.get l with
-      |_, Node(v, next) ->
+      |mark, Node(v, next) ->
         (match v with
-         |Min -> Buffer.add_string buf "Min ; "
-         |Max -> Buffer.add_string buf "Max ; "
-         |Val(x) -> Buffer.add_string buf (sprintf "%s ; " (f x)));
+         |Min -> Buffer.add_string buf ((string_of_mark mark) ^ "Min ; ")
+         |Max -> Buffer.add_string buf ((string_of_mark mark) ^ "Max ; ")
+         |Val(x) -> Buffer.add_string buf ((string_of_mark mark) ^ (sprintf "%s ; " (f x))));
         loop next
       |_, Nil -> ()
     in
@@ -223,6 +226,22 @@ module M : S = struct
     let b = Kcas.Backoff.create () in
     let v = Val(v) in
     let compare = mk_compare f in
+    let rec loop (prev, vprev, n, vn) =
+      let new_node = (false, Node(v, Cas.ref vn)) in
+      match snd vprev with
+      |Node(vprev_v, vprev_next) ->
+        if not (Cas.cas vprev_next vn new_node) then
+          (Kcas.Backoff.once b; loop (sfind l v f))
+        else
+          vprev_next
+      |Nil -> failwith "Lock_Free_List.sinsert: impossible"
+    in loop (sfind l v f)
+  ;;
+
+(*  let sinsert l v f =
+    let b = Kcas.Backoff.create () in
+    let v = Val(v) in
+    let compare = mk_compare f in
     let rec loop () =
       let (prev, vprev, n, vn) = sfind l v f in
       let new_node = Cas.ref (false, Node(v, n)) in
@@ -232,8 +251,47 @@ module M : S = struct
       end else
         new_node
     in loop ()
+  ;;*)
+
+  let marked node =
+    match Cas.get node with
+    |_, (Node(_, _) as vvnode) as vnode -> (vnode, (true, vvnode))
+    |_ -> failwith "Lock_Free_List.marked: impossible"
   ;;
 
+  let sdelete l v f =
+    print_endline (sprintf "TH%d : SDELETE" (Domain.self ()));
+    let b = Kcas.Backoff.create () in
+    let v = Val(v) in
+    let compare = mk_compare f in
+    let rec loop (prev, vprev, n, vn) =
+(*      print_endline (sprintf "TH%d : SDELETE LOOP" (Domain.self ()));*)
+      match snd vn with
+      |Node(vn_v, vn_next) ->
+        if compare v vn_v = 0 then
+          let (vn_next_v, marked_vn_next_v) = marked vn_next in
+          if Cas.cas vn_next vn_next_v marked_vn_next_v then begin
+            match snd vprev with
+            |Node(vprev_v, vprev_next) ->
+              if (*get_mark (Cas.get vprev_next) || *)not (Cas.cas vprev_next vn vn_next_v) then
+                (
+(*                print_endline (sprintf "TH%d : SDELETE (MARKED ALREADY ? %b)" (Domain.self ()) (get_mark (Cas.get vprev_next)));*)
+                Cas.set vn_next vn_next_v; Kcas.Backoff.once b; loop (sfind l v f))
+              else
+                true
+            |Nil -> failwith "Lock_Free_List.sdelete: impossible"
+          end else
+            (
+            print_endline (sprintf "TH%d : SDELETE CAN'T MARK" (Domain.self ()));
+            Kcas.Backoff.once b; loop (sfind l v f))
+        else
+          (
+          print_endline (sprintf "TH%d : SDELETE NOT FOUND" (Domain.self ()));
+          false)
+      |Nil -> failwith "Lock_Free_List.sdelete: impossible"
+    in loop (sfind l v f)
+  ;;
+(*
   let sdelete l v f =
     let b = Kcas.Backoff.create () in
     let v = Val(v) in
@@ -251,5 +309,17 @@ module M : S = struct
         end
       else false
     in loop ()
+  ;;*)
+
+  let elem_of l =
+    let rec loop l out =
+      match Cas.get l with
+      |_, Node(v, next) -> begin
+        match v with
+        |Val(x) -> loop next (x::out)
+        |_ -> loop next out
+      end
+      |_, Nil -> out
+    in loop l []
   ;;
 end;;
