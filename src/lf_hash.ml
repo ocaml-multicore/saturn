@@ -102,10 +102,18 @@ module M : S = struct
            1
     in
     match x, y with
-    |(k1, None), (k2, None) -> loop k1 k2
-    |(k1, None), (k2, Some(_)) -> let out = loop k1 k2 in if out = 0 then -1 else out
-    |(k1, Some(_)), (k2, None) -> let out = loop k1 k2 in if out = 0 then 1 else out
-    |(k1, Some(_)), (k2, Some(_)) -> loop k1 k2
+    |(k1, None), (k2, None) ->
+(*    print_endline (Printf.sprintf "TH%d : Compare %d %d" (Domain.self ()) k1 k2);*)
+    loop k1 k2
+    |(k1, None), (k2, Some(_)) -> 
+(*    print_endline (Printf.sprintf "TH%d : Compare %d %d" (Domain.self ()) k1 k2);*)
+    let out = loop k1 k2 in if out = 0 then -1 else out
+    |(k1, Some(_)), (k2, None) -> 
+(*    print_endline (Printf.sprintf "TH%d : Compare %d %d" (Domain.self ()) k1 k2);*)
+    let out = loop k1 k2 in if out = 0 then 1 else out
+    |(k1, Some(_)), (k2, Some(_)) -> 
+(*    print_endline (Printf.sprintf "TH%d : Compare %d %d" (Domain.self ()) k1 k2);*)
+    loop k1 k2
   ;;
 
   let get_size_of_access a =

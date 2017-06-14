@@ -109,13 +109,16 @@ let remove_hash t q =
     |Some(v) ->
 (*      print_endline (sprintf "Deletion of %d (TH%d)" v (Domain.self ()));*)
       if Hash.remove t v then
+        (
+(*        print t;*)
         loop ()
+        )
       else
         (
 (*        print_endline (sprintf "Deletion FAILED of %d (TH%d), retry later" v (Domain.self ()));
         print t;
-        Unix.sleep 2;*)
-        Queue.push q v; loop ())
+        Unix.sleep 2;
+        Queue.push q v; *)loop ())
     |None -> ()
   in loop ()
 ;;
@@ -152,11 +155,11 @@ let dif_list l1 l2 =
 let run () =
   let t1 = Hash.create () in
   let t2 = Hash.create () in
-  let nb_thread = 4 in
-  let nb_init = 10000 in
-  let nb_end = 100 in
-  let m = 1000000 in
-  let wait_time = 2 in
+  let nb_thread = 16 in
+  let nb_init = 100000 in
+  let nb_end = 10000 in
+  let m = 1000000000 in
+  let wait_time = 7 in
   let elem_init = gen_elem nb_init m in
   let elem_end  = gen_elem nb_end m in
 
@@ -181,6 +184,8 @@ let run () =
   print_endline (sprintf "Parallele insertion of %d elements" (List.length elem_init));
   benchmark (fun () -> insert_hash t1 q_init1) nb_thread "Insertion TH%d END" wait_time t_par_ins;
 
+(*  print t1;*)
+
   print_endline (sprintf "Parallele insertion of %d elements and deletion of %d elements" (List.length elem_end) (List.length elem_init));
   benchmark (fun () -> insert_hash t1 q_end1) nb_thread "Insertion2 TH%d END" 0 t_par_ins2;
   benchmark (fun () -> remove_hash t1 q_remove1) nb_thread "Deletion TH%d END" wait_time t_par_rem;
@@ -189,6 +194,8 @@ let run () =
   print_endline (sprintf "Beginning sequential insertion/deletion");
   print_endline (sprintf "Sequential insertion of %d elements" (List.length elem_init));
   let t_seq_ins = benchmark_seq (fun () -> insert_hash t2 q_init2) in
+
+(*  print t2;*)
 
   print_endline (sprintf "Sequential insertion of %d elements" (List.length elem_end));
   let t_seq_ins2 = benchmark_seq (fun () -> insert_hash t2 q_end2) in

@@ -227,14 +227,18 @@ module M : S = struct
     let v = Val(v) in
     let compare = mk_compare f in
     let rec loop (prev, vprev, n, vn) =
-      let new_node = (false, Node(v, Cas.ref vn)) in
-      match snd vprev with
-      |Node(vprev_v, vprev_next) ->
-        if not (Cas.cas vprev_next vn new_node) then
-          (Kcas.Backoff.once b; loop (sfind l v f))
-        else
-          vprev_next
-      |Nil -> failwith "Lock_Free_List.sinsert: impossible"
+      match snd vn with
+      |Node(nv_v, _) when compare nv_v v <> 0 -> begin
+        let new_node = (false, Node(v, Cas.ref vn)) in
+        match snd vprev with
+        |Node(vprev_v, vprev_next) ->
+          if not (Cas.cas vprev_next vn new_node) then
+            (Kcas.Backoff.once b; loop (sfind l v f))
+          else
+            Cas.ref new_node
+        |Nil -> failwith "Lock_Free_List.sinsert: impossible"
+      end
+      |_ -> Cas.ref vn
     in loop (sfind l v f)
   ;;
 
@@ -273,7 +277,7 @@ module M : S = struct
           if Cas.cas vn_next vn_next_v marked_vn_next_v then begin
             match snd vprev with
             |Node(vprev_v, vprev_next) ->
-              if (*get_mark (Cas.get vprev_next) || *)not (Cas.cas vprev_next vn vn_next_v) then
+              if get_mark (Cas.get vprev_next) || not (Cas.cas vprev_next vn vn_next_v) then
                 (
 (*                print_endline (sprintf "TH%d : SDELETE (MARKED ALREADY ? %b)" (Domain.self ()) (get_mark (Cas.get vprev_next)));*)
                 Cas.set vn_next vn_next_v; Kcas.Backoff.once b; loop (sfind l v f))

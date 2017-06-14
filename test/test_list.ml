@@ -155,7 +155,7 @@ let run2 () =
   let nb_thread = 16 in
   let nb_init = 40000 in
   let nb_end = 10000 in
-  let m = 1000000 in
+  let m = 1000000000 in
   let wait_time = 60 in
   let elem_init = gen_elem nb_init m in
   let elem_end  = gen_elem nb_end m in
@@ -197,10 +197,10 @@ let run2 () =
   let len1 = STD_List.length elem_l1 in
   let len2 = STD_List.length elem_l2 in
 
-  printf "["; STD_List.iter (printf "%d, ") elem_l1; print_endline "]";
-  printf "["; STD_List.iter (printf "%d, ") elem_l2; print_endline "]";
+  printf "["; STD_List.iter (printf "%d, ") (STD_List.sort split_compare elem_l1); print_endline "]";
+  printf "["; STD_List.iter (printf "%d, ") (STD_List.sort split_compare elem_l2); print_endline "]";
   printf "["; STD_List.iter (printf "%d, ") (STD_List.sort split_compare elem_end); print_endline "]";
-  printf "["; STD_List.iter (printf "%d, ") elem_dif; print_endline "]";
+  printf "["; STD_List.iter (printf "%d, ") (STD_List.sort split_compare elem_dif); print_endline "]";
   print_endline (sprintf "Insertions/Deletions : %d    Remain : %d" (STD_List.length elem_init) (STD_List.length elem_end));
   print_endline (sprintf "L1 equal L2 : %b" list_equal);
   print_endline (sprintf "Length L1 : %d    Length L2 : %d" len1 len2);
