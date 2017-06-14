@@ -8,7 +8,7 @@ open Printf;;
 
 module STD_List = List;;
 module List = Lockfree.List;;
-module Queue = Lf_list.M;;
+module Queue = Lockfree.List;;
 
 let lprint l = print_string (List.to_string l (sprintf "%d"));;
 

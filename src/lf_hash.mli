@@ -4,6 +4,12 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 ########
 *)
 
+module type HashDesc = sig
+  val load : int;;
+  val nb_bucket : int;;
+  val hash_function : int -> int;;
+end;;
+
 module type S = sig
   type 'a t;;
 
@@ -22,4 +28,4 @@ module type S = sig
   val elem_of : 'a t -> 'a list;;
 end;;
 
-module M : S;;
+module Make(Desc : HashDesc) : S;;

@@ -6,7 +6,7 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 
 open Printf;;
 
-module Queue = Lf_msqueue.M;;
+module Queue = Lockfree.MSQueue;;
 
 module Bst = Lf_bst.Make(struct
   type t = int;;

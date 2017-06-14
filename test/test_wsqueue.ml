@@ -6,7 +6,7 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 
 open Printf;;
 
-module Wsqueue = Lf_wsqueue.M;;
+module Wsqueue = Lockfree.WSQueue;;
 
 let print q v =
   match v with

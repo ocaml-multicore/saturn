@@ -6,6 +6,12 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 
 open Printf;;
 
+module type HashDesc = sig
+  val load : int;;
+  val nb_bucket : int;;
+  val hash_function : int -> int;;
+end;;
+
 module type S = sig
   type 'a t;;
 
@@ -24,10 +30,10 @@ module type S = sig
   val elem_of : 'a t -> 'a list;;
 end;;
 
-module M : S = struct
+module Make(Desc : HashDesc) : S = struct
   module Cas = Kcas.W1;;
   module STD_List = List;;
-  module List = Lockfree.List;;
+  module List = Lf_list.M;;
 
   type 'a elem = int * 'a option;;
 
@@ -47,8 +53,8 @@ module M : S = struct
     resize      : int option Cas.ref;
   };;
 
-  let load = 3;;
-  let nb_bucket = 512;;
+  let load = Desc.load;;
+  let nb_bucket = Desc.nb_bucket;;
 
   let string_of_elem f e =
     let (k, v) = e in
@@ -158,7 +164,7 @@ module M : S = struct
   ;;
 
   let hash t k =
-    k mod (Cas.get t.size)
+    (Desc.hash_function k) mod (Cas.get t.size)
   ;;
 
   let get_closest_power n =

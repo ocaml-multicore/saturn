@@ -7,7 +7,7 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 open Printf;;
 
 module STD_List = List;;
-module Hash = Lf_hash.M;;
+module Hash = Lockfree.Hash;;
 module Queue = Lockfree.MSQueue;;
 module Cas = Kcas.W1;;
 
@@ -168,4 +168,4 @@ let rec loop nb_test verbose =
   in bosse 1 0
 ;;
 
-let () = loop 3 false;;
+let () = loop 3 true;;
