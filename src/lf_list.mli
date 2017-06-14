@@ -9,8 +9,6 @@ module type S = sig
 
   val equal    : 'a t -> 'a t -> bool;;
 
-  val print    : 'a t -> ('a -> unit) -> unit;;
-
   val to_string: 'a t -> ('a -> string) -> string;;
 
   val create   : unit -> 'a t;;
@@ -27,7 +25,7 @@ module type S = sig
 
   val find     : 'a t -> 'a -> ('a -> 'a -> int) -> 'a option;;
 
-  val sinsert  : 'a t -> 'a -> ('a -> 'a -> int) -> 'a t;;
+  val sinsert  : 'a t -> 'a -> ('a -> 'a -> int) -> bool * 'a t;;
 
   val sdelete  : 'a t -> 'a -> ('a -> 'a -> int) -> bool;;
 

@@ -10,7 +10,7 @@ module STD_List = List;;
 module List = Lockfree.List;;
 module Queue = Lf_list.M;;
 
-let lprint l = List.print l (printf "%d");;
+let lprint l = print_string (List.to_string l (sprintf "%d"));;
 
 let rec split_compare a b =
   if a = 0 && b = 0 then
@@ -37,30 +37,6 @@ let gen_elem nb m =
   in loop 0 []
 ;;
 
-(*
-let gen_elem nb m =
-  Random.self_init ();
-  let rec loop i out =
-    if i < nb then begin
-      let new_elem = Random.int m in
-      loop (i+1) (i::out)
-    end else
-      out
-  in loop 0 []
-;;*)
-
-let select_elem l m n =
-  let rec loop l out1 out2  =
-    match l with
-    |h::t ->
-      if Random.int n < m then
-        loop t (h::out1) out2
-      else
-        loop t out1 (h::out2)
-    |[] -> out1, out2
-  in loop l [] []
-;;
-
 let gen_queue l =
   let out = Queue.create () in
   let rec loop l =
@@ -74,10 +50,7 @@ let insert_list l q =
   let rec loop () =
     match Queue.pop q with
     |Some(v) ->
-      print_endline (sprintf "TH%d : insertion %d" (Domain.self ()) v);
       List.sinsert l v split_compare;
-(*      lprint l;
-      print_endline "";*)
       loop ()
     |None -> ()
   in loop ()
@@ -88,37 +61,11 @@ let rec remove_list l q =
   let rec loop () =
     match Queue.pop q with
     |Some(v) ->
-      print_endline (sprintf "TH%d : deletion %d" (Domain.self ()) v);
       let out =  List.sdelete l v split_compare in
-(*      printf "%b " out;
-      lprint l;
-      print_endline "";*)
-      loop () (*
-      if out then
-        loop ()
-      else
-        (Queue.push q v; loop ())*)
+      loop ()
     |None -> ()
   in loop ()
 ;;
-
-let length l =
-  let rec loop out =
-    match List.pop l with
-    |Some(_) -> loop (out+1)
-    |None -> out
-  in loop 0
-;;
-
-let to_list l =
-  let rec loop out =
-    match List.pop l with
-    |Some(v) -> loop (v::out)
-    |None -> STD_List.sort split_compare out
-  in loop []
-;;
-
-let rec check_consistency l elem_l = STD_List.sort compare l = STD_List.sort compare elem_l;;
 
 let dif_list l1 l2 =
   let rec loop l out =
@@ -132,12 +79,12 @@ let dif_list l1 l2 =
   in loop l1 []
 ;;
 
-let benchmark f nb_thread message wait_time out =
+let benchmark f nb_thread message wait_time out verbose =
   let t1 = Unix.gettimeofday () in
   out := t1 *. 1000000.0;
   for i = 1 to nb_thread do
     Domain.spawn (fun () ->
-      f (); out := min !out (Unix.gettimeofday () -. t1); print_endline (sprintf message (Domain.self ())))
+      f (); out := min !out (Unix.gettimeofday () -. t1); if verbose then print_endline (sprintf message (Domain.self ())))
   done;
   Unix.sleep wait_time;
   ()
@@ -149,14 +96,16 @@ let benchmark_seq f =
   Unix.gettimeofday () -. t1
 ;;
 
-let run2 () =
+let run num_test verbose =
+  print_endline (sprintf "TEST N°%d" num_test);
+
   let l1 = List.create () in
   let l2 = List.create () in
   let nb_thread = 16 in
-  let nb_init = 40000 in
-  let nb_end = 10000 in
-  let m = 1000000000 in
-  let wait_time = 60 in
+  let nb_init = 4000 in
+  let nb_end = 1000 in
+  let m = 100000000 in
+  let wait_time = 2 in
   let elem_init = gen_elem nb_init m in
   let elem_end  = gen_elem nb_end m in
 
@@ -170,21 +119,17 @@ let run2 () =
   let t_par_ins1 = ref 0.0 in
   let t_par_del = ref 0.0 in
   let t_par_ins2 = ref 0.0 in
-  print_endline "Parallel Insertion Phase";
-  benchmark (fun () -> insert_list l1 elem_insert1) nb_thread "Insertion TH%d END" wait_time t_par_ins1;
+  if verbose then print_endline "Parallel Insertion Phase";
+  benchmark (fun () -> insert_list l1 elem_insert1) nb_thread "Insertion TH%d END" wait_time t_par_ins1 verbose;
 
-  lprint l1;
+  if verbose then print_endline "Parallel Insertion/Deletion Phase";
+  benchmark (fun () -> Unix.sleep 1; remove_list l1 elem_delete1) nb_thread "Deletion TH%d END" 0 t_par_del verbose;
+  benchmark (fun () -> Unix.sleep 1; insert_list l1 elem_end1) nb_thread "Insertion_bis TH%d END" wait_time t_par_ins2 verbose;
 
-  print_endline "Parallel Insertion/Deletion Phase";
-  benchmark (fun () -> Unix.sleep 1; remove_list l1 elem_delete1; lprint l1) nb_thread "Deletion TH%d END" 0 t_par_del;
-  benchmark (fun () -> Unix.sleep 1; insert_list l1 elem_end1) nb_thread "Insertion_bis TH%d END" wait_time t_par_ins2;
-
-  print_endline "Sequential Insertion Phase";
+  if verbose then print_endline "Sequential Insertion Phase";
   let t_seq_ins1 = benchmark_seq (fun () -> insert_list l2 elem_insert2) in
 
-  lprint l2;
-
-  print_endline "Sequential Insertion/Deletion Phase";
+  if verbose then print_endline "Sequential Insertion/Deletion Phase";
   let t_seq_del = benchmark_seq (fun () -> remove_list l2 elem_delete2) in
   let t_seq_ins2 = benchmark_seq (fun () -> insert_list l2 elem_end2) in
 
@@ -192,90 +137,35 @@ let run2 () =
   let elem_l1 = List.elem_of l1 in
   let elem_l2 = List.elem_of l2 in
   let elem_dif = dif_list elem_l1 elem_end in
-  let consistency1 = check_consistency elem_l1 elem_end in
-  let consistency2 = check_consistency elem_l2 elem_end in
   let len1 = STD_List.length elem_l1 in
   let len2 = STD_List.length elem_l2 in
 
-  printf "["; STD_List.iter (printf "%d, ") (STD_List.sort split_compare elem_l1); print_endline "]";
-  printf "["; STD_List.iter (printf "%d, ") (STD_List.sort split_compare elem_l2); print_endline "]";
-  printf "["; STD_List.iter (printf "%d, ") (STD_List.sort split_compare elem_end); print_endline "]";
-  printf "["; STD_List.iter (printf "%d, ") (STD_List.sort split_compare elem_dif); print_endline "]";
-  print_endline (sprintf "Insertions/Deletions : %d    Remain : %d" (STD_List.length elem_init) (STD_List.length elem_end));
-  print_endline (sprintf "L1 equal L2 : %b" list_equal);
-  print_endline (sprintf "Length L1 : %d    Length L2 : %d" len1 len2);
-  print_endline (sprintf "Data consistency L1 : %b    Data consistency L2 : %b" consistency1 consistency2);
-  print_endline (sprintf "Parallel Time : %f (Insertion : %f) (Deletion : %f) (Remain : %f)" (!t_par_ins1 +. !t_par_del +. !t_par_ins2) !t_par_ins1 !t_par_del !t_par_ins2);
-  print_endline (sprintf "Sequential Time : %f (Insertion : %f) (Deletion : %f) (Remain : %f)" (t_seq_ins1 +. t_seq_del +. t_seq_ins2) t_seq_ins1 t_seq_del t_seq_ins2);
-
-  Unix.sleep 3;
-
-
+  if verbose then begin
+    printf "["; STD_List.iter (printf "%d, ") (STD_List.sort split_compare elem_l1); print_endline "]";
+    printf "["; STD_List.iter (printf "%d, ") (STD_List.sort split_compare elem_l2); print_endline "]";
+    printf "["; STD_List.iter (printf "%d, ") (STD_List.sort split_compare elem_end); print_endline "]";
+    printf "["; STD_List.iter (printf "%d, ") (STD_List.sort split_compare elem_dif); print_endline "]";
+    print_endline (sprintf "Insertions/Deletions : %d    Remain : %d" (STD_List.length elem_init) (STD_List.length elem_end));
+    print_endline (sprintf "L1 equal L2 : %b" list_equal);
+    print_endline (sprintf "Length L1 : %d    Length L2 : %d" len1 len2);
+    print_endline (sprintf "Parallel Time : %f (Insertion : %f) (Deletion : %f) (Remain : %f)" (!t_par_ins1 +. !t_par_del +. !t_par_ins2) !t_par_ins1 !t_par_del !t_par_ins2);
+    print_endline (sprintf "Sequential Time : %f (Insertion : %f) (Deletion : %f) (Remain : %f)" (t_seq_ins1 +. t_seq_del +. t_seq_ins2) t_seq_ins1 t_seq_del t_seq_ins2)
+  end;
 
   elem_dif
 ;;
 
-let run () =
-  let l1 = List.create () in
-  let l2 = List.create () in
-  let nb_thread = 2 in
-  let n = 300 in
-  let m = 10000 in
-  let prob_m = 1 in
-  let prob_n = 2 in
-  let wait_time = 2 in
-  let elem_insert = gen_elem n m in
-  let (elem_delete, elem_remain) = select_elem elem_insert prob_m prob_n in
-  let elem_insert1 = gen_queue elem_insert in
-  let elem_delete1 = gen_queue elem_delete in
-  let elem_insert2 = gen_queue elem_insert in
-  let elem_delete2 = gen_queue elem_delete in
-
-  print_endline (sprintf "Beginning parallel insertion/deletion");
-
-  let t1_par = Unix.gettimeofday () in
-  let t2_par = ref (t1_par *. 1000000.0) in
-  for i = 1 to nb_thread do
-    if i mod 2 = 0 then
-      Domain.spawn (fun () -> insert_list l1 elem_insert1; print_endline (sprintf "Insertion TH%d END" (Domain.self ())))
+let rec loop nb_test verbose =
+  let rec bosse nb out =
+    if nb <= nb_test then
+      let dif = run nb verbose in
+      if dif = [] then
+        bosse (nb+1) (out+1)
+      else
+        bosse (nb+1) out
     else
-      Domain.spawn (fun () ->
-                      remove_list l1 elem_delete1;
-                      t2_par := min !t2_par (Unix.gettimeofday () -. t1_par);
-                      print_endline (sprintf "Deletion TH%d END" (Domain.self ())))
-  done;
-
-  Unix.sleep wait_time;
-
-  print_endline (sprintf "Beginning sequential insertion/deletion");
-  let t1_seq = Unix.gettimeofday () in
-  insert_list l2 elem_insert2;
-  remove_list l2 elem_delete2;
-  let t2_seq = Unix.gettimeofday () -. t1_seq in
-
-  lprint l1;
-  lprint l2;
-
-  let list_equal = List.equal l1 l2 in
-  let consistency = false(*check_consistency l1 elem_remain*) in
-  let len1 = length l1 in
-  let len2 = length l2 in
-
-  print_endline (sprintf "Insertions : %d    Deletion : %d    Remain : %d" (STD_List.length elem_insert) (STD_List.length elem_delete) (STD_List.length elem_remain));
-  print_endline (sprintf "L1 equal L2 : %b" list_equal);
-  print_endline (sprintf "Length L1 : %d    Length L2 : %d" len1 len2);
-  print_endline (sprintf "Data consistency : %b" consistency);
-  print_endline (sprintf "Parallel Time : %f" !t2_par);
-  print_endline (sprintf "Sequential Time : %f" t2_seq);
-
-
-  ()
+      print_endline (sprintf "TEST SUCCESS %d/%d" out nb_test)
+  in bosse 1 0
 ;;
 
-let rec loop () =
-  let out = run2 () in
-  if out = [] then
-    loop ()
-;;
-
-let () = run2 (); ();;
+let () = loop 3 true;;
