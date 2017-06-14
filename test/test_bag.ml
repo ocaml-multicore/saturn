@@ -6,7 +6,7 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 
 open Printf;;
 
-module Bag = Lf_bag.Make(struct let nb_domains = 3 end);;
+module Bag = Lockfree.Bag(struct let nb_domains = 3 end);;
 module Cas = Kcas.W1;;
 
 let content = Cas.ref 0;;

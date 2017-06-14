@@ -32,6 +32,10 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 ########
 *)
 
+module type CoreDesc = sig
+  val nb_domains : int;;
+end;;
+
 module type HashDesc = sig
   val load : int;;
   val nb_bucket : int;;
@@ -41,5 +45,6 @@ end;;
 module MSQueue : Lf_msqueue.S;;
 module WSQueue : Lf_wsqueue.S;;
 module List : Lf_list.S;;
+module Bag(Desc : CoreDesc) : Lf_bag.S;;
 module Hash_Custom(Desc : HashDesc) : Lf_hash.S;;
 module Hash : Lf_hash.S;;
