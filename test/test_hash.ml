@@ -42,12 +42,12 @@ let insert_hash t q =
   in loop ()
 ;;
 
-let insert_stdhash t q =
-  let rec loop () =
-    match Queue.pop q with
-    |Some(v) -> Hashtbl.add t v v; loop ()
-    |None -> ()
-  in loop ()
+let insert_stdhash t l =
+  let rec loop l =
+    match l with
+    |v::tl -> Hashtbl.add t v v; loop tl
+    |[] -> ()
+  in loop l
 ;;
 
 let remove_hash t q =
@@ -170,8 +170,7 @@ let rec benchmark_insertion nb n verbose =
       let t = Hashtbl.create 512 in
       let m = n * 1000 in
       let elem_l = gen_elem n m in
-      let q = gen_queue elem_l in
-      loop (i+1) (out +. benchmark_seq (fun () -> insert_stdhash t q))
+      loop (i+1) (out +. benchmark_seq (fun () -> insert_stdhash t elem_l))
     else
       out /. (float_of_int nb)
   in loop 0 0.0
