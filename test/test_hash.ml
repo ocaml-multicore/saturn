@@ -42,6 +42,14 @@ let insert_hash t q =
   in loop ()
 ;;
 
+let insert_stdhash t q =
+  let rec loop () =
+    match Queue.pop q with
+    |Some(v) -> Hashtbl.add t v v; loop ()
+    |None -> ()
+  in loop ()
+;;
+
 let remove_hash t q =
   let rec loop () =
     match Queue.pop q with
@@ -155,7 +163,21 @@ let run num_test verbose =
   elem_dif
 ;;
 
-let rec loop nb_test verbose =
+let rec benchmark_insertion nb n verbose =
+  let rec loop i out =
+    if i < nb then
+      let verbose = false in
+      let t = Hashtbl.create 512 in
+      let m = n * 1000 in
+      let elem_l = gen_elem n m in
+      let q = gen_queue elem_l in
+      loop (i+1) (out +. benchmark_seq (fun () -> insert_stdhash t q))
+    else
+      out /. (float_of_int nb)
+  in loop 0 0.0
+;;
+
+let rec test nb_test verbose =
   let rec bosse nb out =
     if nb <= nb_test then
       let dif = run nb verbose in
@@ -168,4 +190,25 @@ let rec loop nb_test verbose =
   in bosse 1 0
 ;;
 
-let () = loop 3 true;;
+(* Test *)
+(*let () = test 3 true;;*)
+
+(* Insertion Benchmark *)
+let () =
+  let print_usage_and_exit () =
+    print_endline @@ "Usage: " ^ Sys.argv.(0) ^ " <num_items>";
+    exit(0)
+  in
+  let num_items =
+    if Array.length Sys.argv < 2 then
+      print_usage_and_exit ()
+    else try
+      let a = int_of_string (Sys.argv.(1)) in
+      a
+    with Failure _ -> print_usage_and_exit ()
+  in
+  let nb = 5 in
+  let n = num_items in
+  let t = benchmark_insertion nb n false in
+  print_endline (sprintf "%f" t)
+;;

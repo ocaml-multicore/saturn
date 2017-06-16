@@ -52,7 +52,7 @@ let run () =
 
   Unix.sleep 1;
   let c = Cas.get content in
-  print_endline (sprintf "Content %d elements (completed : %b) (success : %b)" c (Cas.get ended = 2) (c = 0))
+  print_endline (sprintf "Content %d elements (completed : %b) (success : %b) (is_empty : %b)" c (Cas.get ended = 2) (c = 0) (Bag.is_empty b))
 ;;
 
 let () = run ();;
