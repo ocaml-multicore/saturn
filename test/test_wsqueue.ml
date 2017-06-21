@@ -14,18 +14,7 @@ let print q v =
   |None -> print_endline (sprintf "Th%d : None (size %d)" (Domain.self ()) (Wsqueue.size q))
 ;;
 
-let push_and_pop q n prob_m prob_n =
-  let rec loop i =
-    if i <= n then
-      if Random.int prob_n < prob_m then begin
-        Wsqueue.push q i; loop (i+1)
-      end else begin
-        print q (Wsqueue.pop q); loop i
-      end
-  in loop 1
-;;
-
-let push_n q n =
+let insert q n =
   let rec loop i =
     if i <= n then begin
       Wsqueue.push q i;
@@ -34,43 +23,42 @@ let push_n q n =
   in loop 1
 ;;
 
-let pop_n q n =
+let remove_own q n =
   let rec loop i =
     if i <= n then begin
-      print q (Wsqueue.pop q);
-      loop (i+1)
-    end
+      match Wsqueue.pop q with
+      |Some(v) -> loop (i+1)
+      |None -> false
+    end else
+      true
   in loop 1
 ;;
 
-let steal_n q n =
+let remove_other q n =
   let rec loop i =
     if i <= n then begin
-      print q (Wsqueue.steal q);
-      loop (i+1)
-    end
+      match Wsqueue.steal q with
+      |Some(v) -> loop (i+1)
+      |None -> false
+    end else
+      true
   in loop 1
-;;
-
-let easy_test () =
-  let q = Wsqueue.create () in
-  let n = 40 in
-  push_n q n;
-  pop_n q (n/2);
-  steal_n q (n/2)
 ;;
 
 let run () =
   let q = Wsqueue.create () in
-  let n = 100000 in
-  let prob_m = 1 in
-  let prob_n = 2 in
-  let nb_thread = 2 in
+  let n_insert = 1000000 in
+  let n_remove = 50000 in
+  let nb_thread = (n_insert / n_remove) in
   let wait_time = 10 in
 
-  Domain.spawn (fun () -> push_and_pop q n prob_m prob_n);
+  let rec loop f =
+    f (); loop f
+  in
+
+  Domain.spawn (fun () -> loop (fun () -> insert q n_insert; remove_own q n_remove; print_endline (sprintf "TH%d OWNER size %d" (Domain.self ()) (Wsqueue.size q))));
   for i = 1 to nb_thread do
-    Domain.spawn (fun () -> steal_n q n)
+    Domain.spawn (fun () -> loop (fun () -> remove_other q n_remove; print_endline (sprintf "TH%d OTHER size %d" (Domain.self ()) (Wsqueue.size q))))
   done;
 
   Unix.sleep wait_time;
