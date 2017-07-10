@@ -23,9 +23,6 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 
 (* Work Stealing Queue *)
 
-(* TODO KC: Replace with concurrent lock free bag --
- * http://dl.acm.org/citation.cfm?id=1989550 *)
-
 module Cas = Kcas.W1;;
 
 module type S = sig

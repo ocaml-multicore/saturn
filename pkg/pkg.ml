@@ -9,6 +9,5 @@ let () =
   Ok [ Pkg.mllib "src/lockfree.mllib";
        test "test_list" ;
        test "test_bag" ;
-       test "test_bst" ;
        test "test_wsqueue" ;
        test "test_hash"]
