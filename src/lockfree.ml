@@ -39,7 +39,10 @@ end;;
 module MSQueue : Lf_msqueue.S = Lf_msqueue.M;;
 module WSQueue : Lf_wsqueue.S = Lf_wsqueue.M;;
 module List : Lf_list.S = Lf_list.M;;
-module Bag(Desc : CoreDesc) : Lf_bag.S = Lf_bag.Make(Desc);;
+module Bag_Custom(Desc : CoreDesc) : Lf_bag.S = Lf_bag.Make(Desc);;
+module Bag : Lf_bag.S = Lf_bag.Make(struct
+  let nb_domains = 8;;
+end);;
 module Hash_Custom(Desc : HashDesc) : Lf_hash.S = Lf_hash.Make(Desc);;
 module Hash : Lf_hash.S = Hash_Custom(struct
   let load = 3;;

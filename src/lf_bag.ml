@@ -23,13 +23,11 @@ module Make(Desc : CoreDesc) : S = struct
   module Queue = Lf_wsqueue.M;;
   module Hash = Lf_hash.Make(struct
     let load = 3;;
-    let nb_bucket = max 8 Desc.nb_domains;;
+    let nb_bucket = max 2 Desc.nb_domains;;
     let hash_function x = x;;
   end);;
 
   type 'a t = ('a Queue.t) Hash.t;;
-
-  let nb_domains = 1 + Desc.nb_domains;;
 
   let create () = Random.self_init (); Hash.create ();;
 

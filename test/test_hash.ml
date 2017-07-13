@@ -7,7 +7,11 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 open Printf;;
 
 module STD_List = List;;
-module Hash = Lockfree.Hash;;
+module Hash = Lockfree.Hash_Custom(struct
+  let load = 3;;
+  let nb_bucket = 526;;
+  let hash_function i = i;;
+end);;
 module Queue = Lockfree.MSQueue;;
 module Cas = Kcas.W1;;
 
@@ -190,10 +194,10 @@ let rec test nb_test verbose =
 ;;
 
 (* Test *)
-(*let () = test 3 true;;*)
+let () = test 1 true;;
 
 (* Insertion Benchmark *)
-let () =
+(*let () =
   let print_usage_and_exit () =
     print_endline @@ "Usage: " ^ Sys.argv.(0) ^ " <num_items>";
     exit(0)
@@ -210,4 +214,4 @@ let () =
   let n = num_items in
   let t = benchmark_insertion nb n false in
   print_endline (sprintf "%f" t)
-;;
+;;*)

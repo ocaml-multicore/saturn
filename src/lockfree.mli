@@ -45,6 +45,7 @@ end;;
 module MSQueue : Lf_msqueue.S;;
 module WSQueue : Lf_wsqueue.S;;
 module List : Lf_list.S;;
-module Bag(Desc : CoreDesc) : Lf_bag.S;;
+module Bag_Custom(Desc : CoreDesc) : Lf_bag.S;;
+module Bag : Lf_bag.S;;
 module Hash_Custom(Desc : HashDesc) : Lf_hash.S;;
 module Hash : Lf_hash.S;;
