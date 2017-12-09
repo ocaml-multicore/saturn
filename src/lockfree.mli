@@ -26,4 +26,26 @@
    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
   ---------------------------------------------------------------------------*)
 
-module MSQueue : Lf_msqueue.S
+(*
+########
+Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
+########
+*)
+
+module type CoreDesc = sig
+  val nb_domains : int;;
+end;;
+
+module type HashDesc = sig
+  val load : int;;
+  val nb_bucket : int;;
+  val hash_function : int -> int;;
+end;;
+
+module MSQueue : Lf_msqueue.S;;
+module WSQueue : Lf_wsqueue.S;;
+module List : Lf_list.S;;
+module Bag_Custom(Desc : CoreDesc) : Lf_bag.S;;
+module Bag : Lf_bag.S;;
+module Hash_Custom(Desc : HashDesc) : Lf_hash.S;;
+module Hash : Lf_hash.S;;

@@ -1,2 +1,6 @@
 Lf_msqueue
+Lf_list
+Lf_bag
+Lf_wsqueue
+Lf_hash
 Lockfree
