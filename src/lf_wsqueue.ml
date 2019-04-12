@@ -38,7 +38,7 @@ end;;
 module CArray = struct
   type 'a t = 'a Cas.ref array;;
 
-  let create s v = Array.init s (fun i -> Cas.ref v);;
+  let create s v = Array.init s (fun _ -> Cas.ref v);;
 
   let size t = Array.length t;;
 
@@ -133,7 +133,7 @@ module M : S = struct
       end
   ;;
 
-  let rec steal q =
+  let steal q =
     let wait = Kcas.Backoff.create () in
     let rec loop () =
       let t = Cas.get q.top in

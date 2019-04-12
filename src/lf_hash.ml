@@ -9,7 +9,7 @@ open Printf;;
 module type HashDesc = sig
   val load : int;;
   val nb_bucket : int;;
-  val hash_function : int -> int;;
+  val hash_function : Domain.id -> int;;
 end;;
 
 module type S = sig
@@ -19,13 +19,13 @@ module type S = sig
 
   val create : unit -> 'a t;;
 
-  val find : 'a t -> int -> 'a option;;
+  val find : 'a t -> Domain.id -> 'a option;;
 
-  val mem : 'a t -> int -> bool;;
+  val mem : 'a t -> Domain.id -> bool;;
 
-  val add : 'a t -> int -> 'a -> unit;;
+  val add : 'a t -> Domain.id -> 'a -> unit;;
 
-  val remove : 'a t -> int -> bool;;
+  val remove : 'a t -> Domain.id -> bool;;
 
   val elem_of : 'a t -> 'a list;;
 end;;
@@ -35,7 +35,7 @@ module Make(Desc : HashDesc) : S = struct
   module STD_List = List;;
   module List = Lf_list.M;;
 
-  type 'a elem = int * 'a option;;
+  type 'a elem = Domain.id * 'a option;;
 
   type 'a table = 'a bucket Cas.ref array
   and 'a bucket =
@@ -74,7 +74,7 @@ module Make(Desc : HashDesc) : S = struct
     Buffer.add_string buf "[";
     Array.iter (loop (ref 0)) (Cas.get t.access);
     Buffer.add_string buf "]\n";
-    Buffer.add_string buf (List.to_string t.store (string_of_elem f));
+    Buffer.add_string buf (List.to_string t.store (string_of_elem f)); 
     Buffer.add_string buf (sprintf "Size %d\n" (Cas.get t.size));
     Buffer.add_string buf (sprintf "Content %d\n" (Cas.get t.content));
     Buffer.add_string buf (sprintf "Access_size %d\n" (Cas.get t.access_size));
@@ -84,7 +84,7 @@ module Make(Desc : HashDesc) : S = struct
     Buffer.contents buf
   ;;
 
-  let rec split_compare x y =
+  let split_compare x y =
     let rec loop a b =
       if a = 0 && b = 0 then
         0
@@ -138,7 +138,7 @@ module Make(Desc : HashDesc) : S = struct
     |Some(_) -> help_resize t old_access old_access_size
     |None when c / s > load ->
       if 2*s <= old_access_size then begin
-        Cas.cas t.size s (2*s); check_size t
+        ignore(Cas.cas t.size s (2*s)); check_size t
       end else if Cas.cas t.resize None (Some(nb_bucket * old_access_size)) then begin
         help_resize t old_access old_access_size
      end  else
@@ -150,7 +150,7 @@ module Make(Desc : HashDesc) : S = struct
     let l = List.create () in
     let (_, n0) = List.sinsert l (0, None) split_compare in
     let (_, n1) = List.sinsert l (1, None) split_compare in
-    let tab = Array.init nb_bucket (fun i -> Cas.ref Uninitialized) in
+    let tab = Array.init nb_bucket (fun _ -> Cas.ref Uninitialized) in
     Cas.set tab.(0) (Initialized(n0));
     Cas.set tab.(1) (Initialized(n1));
     {
@@ -199,7 +199,7 @@ module Make(Desc : HashDesc) : S = struct
         end else
           Allocated(Array.init nb_bucket (fun i -> Cas.ref Uninitialized))
       in
-      Cas.cas a.(ind) Uninitialized new_elem;
+      ignore(Cas.cas a.(ind) Uninitialized new_elem);
       ()
     in
     let size = (Cas.get t.access_size) / nb_bucket in
