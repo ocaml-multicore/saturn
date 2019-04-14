@@ -23,7 +23,7 @@ let remove_own b n =
   let rec loop i =
     if i <= n then begin
       match Bag.pop b with
-      |Some(v) -> loop (i+1)
+      |Some(_) -> loop (i+1)
       |None -> false
     end else
       true
@@ -34,7 +34,7 @@ let remove b n =
   let rec loop i =
     if i <= n then begin
       match Bag.pop b with
-      |Some(v) -> loop (i+1)
+      |Some(_) -> loop (i+1)
       |None -> false
     end else
       true
@@ -52,9 +52,9 @@ let run () =
     f (); loop f
   in
 
-  Domain.spawn (fun () -> loop (fun () -> insert b n_insert; remove_own b n_remove; print_endline (sprintf "TH%d INSERT/REMOVE empty : %b" (Domain.self ()) (Bag.is_empty b))));
-  for i = 1 to nb_thread do
-    Domain.spawn (fun () -> loop (fun () -> remove b n_remove; print_endline (sprintf "TH%d REMOVE size %b" (Domain.self ()) (Bag.is_empty b))))
+  Domain.spawn (fun () -> loop (fun () -> insert b n_insert; ignore(remove_own b n_remove); print_endline (sprintf "TH%d INSERT/REMOVE empty : %b" (Domain.self () :> int) (Bag.is_empty b)))) |> ignore;
+  for _ = 1 to nb_thread do
+    Domain.spawn (fun () -> loop (fun () -> ignore(remove b n_remove); print_endline (sprintf "TH%d REMOVE size %b" (Domain.self () :> int) (Bag.is_empty b)))) |> ignore
   done;
 
   Unix.sleep wait_time;

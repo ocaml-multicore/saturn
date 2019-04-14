@@ -9,7 +9,7 @@ open Printf;;
 module type HashDesc = sig
   val load : int;;
   val nb_bucket : int;;
-  val hash_function : Domain.id -> int;;
+  val hash_function : int -> int;;
 end;;
 
 module type S = sig
@@ -19,13 +19,13 @@ module type S = sig
 
   val create : unit -> 'a t;;
 
-  val find : 'a t -> Domain.id -> 'a option;;
+  val find : 'a t -> int -> 'a option;;
 
-  val mem : 'a t -> Domain.id -> bool;;
+  val mem : 'a t -> int -> bool;;
 
-  val add : 'a t -> Domain.id -> 'a -> unit;;
+  val add : 'a t -> int -> 'a -> unit;;
 
-  val remove : 'a t -> Domain.id -> bool;;
+  val remove : 'a t -> int -> bool;;
 
   val elem_of : 'a t -> 'a list;;
 end;;
@@ -35,7 +35,7 @@ module Make(Desc : HashDesc) : S = struct
   module STD_List = List;;
   module List = Lf_list.M;;
 
-  type 'a elem = Domain.id * 'a option;;
+  type 'a elem = int * 'a option;;
 
   type 'a table = 'a bucket Cas.ref array
   and 'a bucket =
@@ -74,7 +74,7 @@ module Make(Desc : HashDesc) : S = struct
     Buffer.add_string buf "[";
     Array.iter (loop (ref 0)) (Cas.get t.access);
     Buffer.add_string buf "]\n";
-    Buffer.add_string buf (List.to_string t.store (string_of_elem f)); 
+    Buffer.add_string buf (List.to_string t.store (string_of_elem f));
     Buffer.add_string buf (sprintf "Size %d\n" (Cas.get t.size));
     Buffer.add_string buf (sprintf "Content %d\n" (Cas.get t.content));
     Buffer.add_string buf (sprintf "Access_size %d\n" (Cas.get t.access_size));
@@ -115,7 +115,7 @@ module Make(Desc : HashDesc) : S = struct
 
   let rec help_resize t old_access old_access_size =
     let b = Kcas.Backoff.create () in
-    let new_a = Array.init nb_bucket (fun i -> Cas.ref Uninitialized) in
+    let new_a = Array.init nb_bucket (fun _ -> Cas.ref Uninitialized) in
     Cas.set new_a.(0) (Allocated(old_access));
     let rec loop () =
       match Cas.get t.resize with
@@ -192,12 +192,12 @@ module Make(Desc : HashDesc) : S = struct
           let prev_hk = hk mod (get_closest_power hk) in
           let prev_s = get_bucket t prev_hk in
           match Cas.get a.(ind) with
-          |Initialized(s) as out -> out
+          | Initialized(_) as out -> out
           |_ ->
             let (_, s) = List.sinsert prev_s (hk, None) split_compare in
             Initialized(s)
         end else
-          Allocated(Array.init nb_bucket (fun i -> Cas.ref Uninitialized))
+          Allocated(Array.init nb_bucket (fun _ -> Cas.ref Uninitialized))
       in
       ignore(Cas.cas a.(ind) Uninitialized new_elem);
       ()
@@ -212,7 +212,7 @@ module Make(Desc : HashDesc) : S = struct
     let s = get_bucket t hk in
     let v = List.find s (k, Some(Obj.magic ())) split_compare in
     match v with
-    |Some(k', out) -> out
+    |Some(_, out) -> out
     |None -> None
   ;;
 
@@ -224,7 +224,7 @@ module Make(Desc : HashDesc) : S = struct
   ;;
 
 
-  let rec add t k v =
+  let add t k v =
     check_size t;
     let hk = hash t k in
     let s = get_bucket t hk in

@@ -4,8 +4,6 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 ########
 *)
 
-open Printf;;
-
 module type CoreDesc = sig
   val nb_domains : int;;
 end;;
@@ -40,12 +38,13 @@ module Make(Desc : CoreDesc) : S = struct
   ;;
 
   let push b v =
-    match Hash.find b (Domain.self ()) with
-    |Some(q) -> Queue.push q v
-    |None ->
-      let q = Queue.create () in
-      Queue.push q v;
-      Hash.add b (Domain.self ()) q
+    let domain_self = (Domain.self() :> int) in
+      match Hash.find b domain_self with
+      |Some(q) -> Queue.push q v
+      |None ->
+        let q = Queue.create () in
+        Queue.push q v;
+        Hash.add b domain_self q
   ;;
 
   let shuffle l =
@@ -55,7 +54,7 @@ module Make(Desc : CoreDesc) : S = struct
   ;;
 
   let rec pop b =
-    match Hash.find b (Domain.self ()) with
+    match Hash.find b (Domain.self() :> int) with
     |Some(q) -> begin
       match Queue.pop q with
       |Some(_) as out -> out
