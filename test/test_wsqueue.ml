@@ -10,8 +10,8 @@ module Wsqueue = Lockfree.WSQueue;;
 
 let print q v =
   match v with
-  |Some(i) -> print_endline (sprintf "Th%d : %d (size %d)" (Domain.self ()) i (Wsqueue.size q))
-  |None -> print_endline (sprintf "Th%d : None (size %d)" (Domain.self ()) (Wsqueue.size q))
+  |Some(i) -> print_endline (sprintf "Th%d : %d (size %d)" (Domain.self () :> int) i (Wsqueue.size q))
+  |None -> print_endline (sprintf "Th%d : None (size %d)" (Domain.self () :> int) (Wsqueue.size q))
 ;;
 
 let insert q n =
@@ -27,7 +27,7 @@ let remove_own q n =
   let rec loop i =
     if i <= n then begin
       match Wsqueue.pop q with
-      |Some(v) -> loop (i+1)
+      |Some(_) -> loop (i+1)
       |None -> false
     end else
       true
@@ -38,7 +38,7 @@ let remove_other q n =
   let rec loop i =
     if i <= n then begin
       match Wsqueue.steal q with
-      |Some(v) -> loop (i+1)
+      |Some(_) -> loop (i+1)
       |None -> false
     end else
       true
@@ -56,9 +56,9 @@ let run () =
     f (); loop f
   in
 
-  Domain.spawn (fun () -> loop (fun () -> insert q n_insert; remove_own q n_remove; print_endline (sprintf "TH%d OWNER size %d" (Domain.self ()) (Wsqueue.size q))));
-  for i = 1 to nb_thread do
-    Domain.spawn (fun () -> loop (fun () -> remove_other q n_remove; print_endline (sprintf "TH%d OTHER size %d" (Domain.self ()) (Wsqueue.size q))))
+  Domain.spawn (fun () -> loop (fun () -> insert q n_insert; ignore(remove_own q n_remove); print_endline (sprintf "TH%d OWNER size %d" (Domain.self () :> int) (Wsqueue.size q)))) |> ignore;
+  for _ = 1 to nb_thread do
+    Domain.spawn (fun () -> loop (fun () -> ignore(remove_other q n_remove); print_endline (sprintf "TH%d OTHER size %d" (Domain.self () :> int) (Wsqueue.size q)))) |> ignore
   done;
 
   Unix.sleep wait_time;

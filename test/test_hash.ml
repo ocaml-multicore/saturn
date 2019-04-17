@@ -34,7 +34,7 @@ let gen_queue l =
     match l with
     |h::t -> Queue.push out h; loop t
     |[] -> out
-  in loop l; out
+  in loop l |> ignore; out
 ;;
 
 let insert_hash t q =
@@ -69,9 +69,9 @@ let remove_hash t q =
 let benchmark f nb_thread message wait_time out verbose =
   let t1 = Unix.gettimeofday () in
   out := t1 *. 1000000.0;
-  for i = 1 to nb_thread do
+  for _ = 1 to nb_thread do
     Domain.spawn (fun () ->
-      f (); out := min !out (Unix.gettimeofday () -. t1); if verbose then print_endline (sprintf message (Domain.self ())))
+      f (); out := min !out (Unix.gettimeofday () -. t1); if verbose then print_endline (sprintf message (Domain.self () :> int))) |> ignore
   done;
   Unix.sleep wait_time;
   ()
@@ -167,10 +167,10 @@ let run num_test verbose =
   elem_dif
 ;;
 
-let rec benchmark_insertion nb n verbose =
+let benchmark_insertion nb n _ =
   let rec loop i out =
     if i < nb then
-      let verbose = false in
+      let _ = false in
       let t = Hashtbl.create 512 in
       let m = n * 1000 in
       let elem_l = gen_elem n m in
@@ -180,7 +180,7 @@ let rec benchmark_insertion nb n verbose =
   in loop 0 0.0
 ;;
 
-let rec test nb_test verbose =
+let test nb_test verbose =
   let rec bosse nb out =
     if nb <= nb_test then
       let dif = run nb verbose in

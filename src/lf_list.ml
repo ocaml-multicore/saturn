@@ -25,10 +25,6 @@ end;;
 module M : S = struct
   module Cas = Kcas.W1;;
 
-  exception Head_Of_List;;
-  exception End_Of_List;;
-  exception Not_Found;;
-
   type 'a t = (bool * 'a node) Cas.ref
   and 'a node =
     |Node of 'a comparable * 'a t
@@ -59,7 +55,7 @@ module M : S = struct
     let buf = Buffer.create 17 in
     let rec loop l not_first =
       match Cas.get l with
-      |mark, Node(v, next) -> begin
+      |_, Node(v, next) -> begin
         match v with
         |Min -> loop next false
         |Max -> loop next false
@@ -101,7 +97,7 @@ module M : S = struct
       Cas.set next (false, Node(Val(v), Cas.ref vnext))
   ;;
 
-  let rec push l v =
+  let push l v =
     let b = Kcas.Backoff.create () in
     let rec loop () =
       match Cas.get l with
@@ -185,7 +181,7 @@ module M : S = struct
     let rec loop prev vprev n =
       match Cas.get n with
       |_, Nil -> failwith "Lock_Free_List.sfind: impossible"
-      |status, Node(v', next') as vn ->
+      |_, Node(v', next') as vn ->
         if compare v v' <= 0 then begin
           (prev, vprev, n, vn)
         end else
@@ -193,18 +189,18 @@ module M : S = struct
     in
     match Cas.get l with
     |_, Nil -> failwith "Lock_Free_List.sfind: impossible"
-    |status, Node(v', next') as vl -> loop l vl next'
+    |_, Node(_, next') as vl -> loop l vl next'
   ;;
 
   let sinsert l v f =
     let b = Kcas.Backoff.create () in
     let v = Val(v) in
     let compare = mk_compare f in
-    let rec loop (prev, vprev, n, vn) =
+    let rec loop (_, vprev, _, vn) =
       match snd vn with
       |Node(nv_v, nv_next) -> begin
         match snd vprev with
-        |Node(vprev_v, vprev_next) ->
+        |Node(_, vprev_next) ->
           if compare nv_v v <> 0 then
             let new_node = (false, Node(v, Cas.ref vn)) in
             if not (Cas.cas vprev_next vn new_node) then
@@ -233,14 +229,14 @@ module M : S = struct
     let b = Kcas.Backoff.create () in
     let v = Val(v) in
     let compare = mk_compare f in
-    let rec loop (prev, vprev, n, vn) =
+    let rec loop (_, vprev, _, vn) =
       match snd vn with
       |Node(vn_v, vn_next) ->
         if compare v vn_v = 0 then
           let (vn_next_v, marked_vn_next_v) = marked vn_next in
           if Cas.cas vn_next vn_next_v marked_vn_next_v then begin
             match snd vprev with
-            |Node(vprev_v, vprev_next) ->
+            |Node(_, vprev_next) ->
               if get_mark (Cas.get vprev_next) || not (Cas.cas vprev_next vn vn_next_v) then
                 (Cas.set vn_next vn_next_v; Kcas.Backoff.once b; loop (sfind l v f))
               else

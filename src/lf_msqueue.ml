@@ -19,8 +19,6 @@
 
 (* TODO KC: Replace with concurrent lock free bag --
  * http://dl.acm.org/citation.cfm?id=1989550 *)
-
-
 module type S = sig
   type 'a t
   val create      : unit -> 'a t
@@ -87,7 +85,7 @@ module M : S = struct
         ignore (Cas.cas q.tail tail newnode)
     end
 
-  let rec clean_until q f =
+  let clean_until q f =
     let b = Kcas.Backoff.create () in
     let rec loop () =
       let s = Cas.get q.head in

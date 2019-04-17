@@ -9,21 +9,21 @@ module type CoreDesc = sig
 end;;
 
 module type S = sig
-  type 'a t;;
   (** The type of lock-free bag. *)
+  type 'a t;;
 
-  val create : unit -> 'a t;;
   (** Create a new bag, which is initially empty. *)
+  val create : unit -> 'a t;;
 
-  val is_empty : 'a t -> bool;;
   (** [is_empty b] returns empty if [b] is empty. *)
+  val is_empty : 'a t -> bool;;
 
-  val push : 'a t -> 'a -> unit;;
   (** [push b v] pushes [v] into the bag. *)
+  val push : 'a t -> 'a -> unit;;
 
-  val pop : 'a t -> 'a option;;
   (** [pop b] pops an element [e] from the bag and returns
       [Some v] if the bag is non-empty. Otherwise, returns [None]. *)
+  val pop : 'a t -> 'a option;;
 end;;
 
 module Make(Desc : CoreDesc) : S;;

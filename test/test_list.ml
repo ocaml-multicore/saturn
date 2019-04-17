@@ -50,18 +50,18 @@ let insert_list l q =
   let rec loop () =
     match Queue.pop q with
     |Some(v) ->
-      List.sinsert l v split_compare;
+      ignore(List.sinsert l v split_compare);
       loop ()
     |None -> ()
   in loop ()
 ;;
 
-let rec remove_list l q =
-  let b = Kcas.Backoff.create () in
+let remove_list l q =
+  let _ = Kcas.Backoff.create () in
   let rec loop () =
     match Queue.pop q with
     |Some(v) ->
-      let out =  List.sdelete l v split_compare in
+      let _ =  List.sdelete l v split_compare in
       loop ()
     |None -> ()
   in loop ()
@@ -82,9 +82,9 @@ let dif_list l1 l2 =
 let benchmark f nb_thread message wait_time out verbose =
   let t1 = Unix.gettimeofday () in
   out := t1 *. 1000000.0;
-  for i = 1 to nb_thread do
+  for _ = 1 to nb_thread do
     Domain.spawn (fun () ->
-      f (); out := min !out (Unix.gettimeofday () -. t1); if verbose then print_endline (sprintf message (Domain.self ())))
+      f (); out := min !out (Unix.gettimeofday () -. t1); if verbose then print_endline (sprintf message (Domain.self () :> int))) |> ignore
   done;
   Unix.sleep wait_time;
   ()
@@ -155,7 +155,7 @@ let run num_test verbose =
   elem_dif
 ;;
 
-let rec loop nb_test verbose =
+let loop nb_test verbose =
   let rec bosse nb out =
     if nb <= nb_test then
       let dif = run nb verbose in

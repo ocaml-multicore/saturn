@@ -1,0 +1,23 @@
+(test
+ (name test_bag)
+ (libraries lockfree kcas)
+ (modules test_bag)
+ (modes native))
+
+(test
+ (name test_hash)
+ (libraries lockfree kcas)
+ (modules test_hash)
+ (modes native))
+
+(test
+ (name test_list)
+ (libraries lockfree kcas)
+ (modules test_list)
+ (modes native))
+
+(test
+ (name test_wsqueue)
+ (libraries lockfree kcas)
+ (modules test_wsqueue)
+ (modes native))

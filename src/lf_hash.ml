@@ -84,7 +84,7 @@ module Make(Desc : HashDesc) : S = struct
     Buffer.contents buf
   ;;
 
-  let rec split_compare x y =
+  let split_compare x y =
     let rec loop a b =
       if a = 0 && b = 0 then
         0
@@ -115,7 +115,7 @@ module Make(Desc : HashDesc) : S = struct
 
   let rec help_resize t old_access old_access_size =
     let b = Kcas.Backoff.create () in
-    let new_a = Array.init nb_bucket (fun i -> Cas.ref Uninitialized) in
+    let new_a = Array.init nb_bucket (fun _ -> Cas.ref Uninitialized) in
     Cas.set new_a.(0) (Allocated(old_access));
     let rec loop () =
       match Cas.get t.resize with
@@ -138,7 +138,7 @@ module Make(Desc : HashDesc) : S = struct
     |Some(_) -> help_resize t old_access old_access_size
     |None when c / s > load ->
       if 2*s <= old_access_size then begin
-        Cas.cas t.size s (2*s); check_size t
+        ignore(Cas.cas t.size s (2*s)); check_size t
       end else if Cas.cas t.resize None (Some(nb_bucket * old_access_size)) then begin
         help_resize t old_access old_access_size
      end  else
@@ -150,7 +150,7 @@ module Make(Desc : HashDesc) : S = struct
     let l = List.create () in
     let (_, n0) = List.sinsert l (0, None) split_compare in
     let (_, n1) = List.sinsert l (1, None) split_compare in
-    let tab = Array.init nb_bucket (fun i -> Cas.ref Uninitialized) in
+    let tab = Array.init nb_bucket (fun _ -> Cas.ref Uninitialized) in
     Cas.set tab.(0) (Initialized(n0));
     Cas.set tab.(1) (Initialized(n1));
     {
@@ -192,14 +192,14 @@ module Make(Desc : HashDesc) : S = struct
           let prev_hk = hk mod (get_closest_power hk) in
           let prev_s = get_bucket t prev_hk in
           match Cas.get a.(ind) with
-          |Initialized(s) as out -> out
+          | Initialized(_) as out -> out
           |_ ->
             let (_, s) = List.sinsert prev_s (hk, None) split_compare in
             Initialized(s)
         end else
-          Allocated(Array.init nb_bucket (fun i -> Cas.ref Uninitialized))
+          Allocated(Array.init nb_bucket (fun _ -> Cas.ref Uninitialized))
       in
-      Cas.cas a.(ind) Uninitialized new_elem;
+      ignore(Cas.cas a.(ind) Uninitialized new_elem);
       ()
     in
     let size = (Cas.get t.access_size) / nb_bucket in
@@ -212,7 +212,7 @@ module Make(Desc : HashDesc) : S = struct
     let s = get_bucket t hk in
     let v = List.find s (k, Some(Obj.magic ())) split_compare in
     match v with
-    |Some(k', out) -> out
+    |Some(_, out) -> out
     |None -> None
   ;;
 
@@ -224,7 +224,7 @@ module Make(Desc : HashDesc) : S = struct
   ;;
 
 
-  let rec add t k v =
+  let add t k v =
     check_size t;
     let hk = hash t k in
     let s = get_bucket t hk in
