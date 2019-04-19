@@ -8,7 +8,6 @@ license: "ISC"
 dev-repo: "https://github.com/ocaml-multicore/lockfree.git"
 bug-reports: "https://github.com/ocaml-multicore/lockfree/issues"
 tags: []
-available: [ ocaml-version >= "4.06.1"]
 depends: [
   "ocamlfind" {build}
   "ocamlbuild" {build}
