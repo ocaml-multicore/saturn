@@ -21,3 +21,16 @@
  (libraries lockfree kcas)
  (modules test_wsqueue)
  (modes native))
+
+(test
+ (name test_wsqueue_parallel)
+ (libraries lockfree kcas)
+ (modules test_wsqueue_parallel)
+ (modes native))
+
+
+(test
+ (name test_msqueue_parallel)
+ (libraries lockfree kcas)
+ (modules test_msqueue_parallel)
+ (modes native))
