@@ -57,7 +57,7 @@ module M : S = struct
           | _ -> false )
 
   let pop q =
-    let b = Backoff.create () in
+    let b = Kcas.Backoff.create () in
     let rec loop () =
       let s = Atomic.get q.head in
       let nhead = match s with
@@ -66,7 +66,7 @@ module M : S = struct
       in match nhead with
        | Nil -> None
        | Next (v, _) when Atomic.compare_and_set q.head s nhead -> Some v
-       | _ -> ( Backoff.once b ; loop () )
+       | _ -> ( Kcas.Backoff.once b ; loop () )
     in loop ()
 
   let push q v =
