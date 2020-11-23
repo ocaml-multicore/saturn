@@ -1,36 +1,30 @@
 (test
  (name test_bag)
  (libraries lockfree unix)
- (modules test_bag)
- (modes native))
+ (modules test_bag))
 
 (test
  (name test_hash)
  (libraries lockfree unix)
- (modules test_hash)
- (modes native))
+ (modules test_hash))
 
 (test
  (name test_list)
  (libraries lockfree unix)
- (modules test_list)
- (modes native))
+ (modules test_list))
 
 (test
  (name test_wsqueue)
  (libraries lockfree unix)
- (modules test_wsqueue)
- (modes native))
+ (modules test_wsqueue))
 
 (test
  (name test_wsqueue_parallel)
  (libraries lockfree unix)
- (modules test_wsqueue_parallel)
- (modes native))
+ (modules test_wsqueue_parallel))
 
 
 (test
  (name test_msqueue_parallel)
  (libraries lockfree unix)
- (modules test_msqueue_parallel)
- (modes native))
+ (modules test_msqueue_parallel))

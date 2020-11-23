@@ -1,4 +1,3 @@
 (library
  (name lockfree)
- (public_name lockfree)
- (modes native))
+ (public_name lockfree))
