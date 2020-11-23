@@ -13,7 +13,6 @@ module Hash = Lockfree.Hash_Custom(struct
   let hash_function i = i;;
 end);;
 module Queue = Lockfree.MSQueue;;
-module Cas = Kcas.W1;;
 
 let print t = print_endline (Hash.to_string t (sprintf "%d"));;
 
