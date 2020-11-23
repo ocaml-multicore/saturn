@@ -103,7 +103,7 @@ module M : S = struct
         end
 
     let steal q =
-      let wait = Kcas.Backoff.create () in
+      let wait = Backoff.create () in
       let rec loop () =
         let t = Atomic.get q.top in
         let b = Atomic.get q.bottom in
@@ -116,7 +116,7 @@ module M : S = struct
           if Atomic.compare_and_set q.top t (t + 1) then
             out
           else begin
-            Kcas.Backoff.once wait;
+            Backoff.once wait;
             loop ()
           end
       in loop ()

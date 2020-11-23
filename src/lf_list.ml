@@ -99,20 +99,20 @@ module M : S = struct
   ;;
 
   let push l v =
-    let b = Kcas.Backoff.create () in
+    let b = Backoff.create () in
     let rec loop () =
       match Atomic.get l with
       |_, Nil -> failwith "Lock_Free_List.push: impossible"
       |_, Node(_, next) ->
         let vnext = Atomic.get next in
         if not (Atomic.compare_and_set next vnext (false, Node(Val(v), Atomic.make vnext))) then begin
-          Kcas.Backoff.once b; loop ()
+          Backoff.once b; loop ()
         end
     in loop ()
   ;;
 
   let pop l =
-    let b = Kcas.Backoff.create () in
+    let b = Backoff.create () in
     let rec loop () =
       match Atomic.get l with
       |_, Nil -> failwith "Lock_Free_List.pop: impossible"
@@ -125,7 +125,7 @@ module M : S = struct
             if Atomic.compare_and_set next old (Atomic.get next') then
               Some(return)
             else begin
-              Kcas.Backoff.once b; loop ()
+              Backoff.once b; loop ()
             end
           |Max -> None
           |Min -> failwith "Lock_Free_List.pop: impossible"
@@ -194,7 +194,7 @@ module M : S = struct
   ;;
 
   let sinsert l v f =
-    let b = Kcas.Backoff.create () in
+    let b = Backoff.create () in
     let v = Val(v) in
     let compare = mk_compare f in
     let rec loop (_, vprev, _, vn) =
@@ -205,13 +205,13 @@ module M : S = struct
           if compare nv_v v <> 0 then
             let new_node = (false, Node(v, Atomic.make vn)) in
             if not (Atomic.compare_and_set vprev_next vn new_node) then
-              (Kcas.Backoff.once b; loop (sfind l v f))
+              (Backoff.once b; loop (sfind l v f))
             else
               (true, Atomic.make new_node)
           else
             let new_vn = (false, Node(v, nv_next)) in
             if not (Atomic.compare_and_set vprev_next vn new_vn) then
-              (Kcas.Backoff.once b; loop (sfind l v f))
+              (Backoff.once b; loop (sfind l v f))
             else
               (false, Atomic.make new_vn)
         |Nil -> failwith "Lock_Free_List.sinsert: impossible"
@@ -227,7 +227,7 @@ module M : S = struct
   ;;
 
   let sdelete l v f =
-    let b = Kcas.Backoff.create () in
+    let b = Backoff.create () in
     let v = Val(v) in
     let compare = mk_compare f in
     let rec loop (_, vprev, _, vn) =
@@ -239,12 +239,12 @@ module M : S = struct
             match snd vprev with
             |Node(_, vprev_next) ->
               if get_mark (Atomic.get vprev_next) || not (Atomic.compare_and_set vprev_next vn vn_next_v) then
-                (Atomic.set vn_next vn_next_v; Kcas.Backoff.once b; loop (sfind l v f))
+                (Atomic.set vn_next vn_next_v; Backoff.once b; loop (sfind l v f))
               else
                 true
             |Nil -> failwith "Lock_Free_List.sdelete: impossible"
           end else
-            (Kcas.Backoff.once b; loop (sfind l v f))
+            (Backoff.once b; loop (sfind l v f))
         else
           false
       |Nil -> failwith "Lock_Free_List.sdelete: impossible"

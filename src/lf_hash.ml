@@ -114,7 +114,7 @@ module Make(Desc : HashDesc) : S = struct
   ;;
 
   let rec help_resize t old_access old_access_size =
-    let b = Kcas.Backoff.create () in
+    let b = Backoff.create () in
     let new_a = Array.init nb_bucket (fun _ -> Atomic.make Uninitialized) in
     Atomic.set new_a.(0) (Allocated(old_access));
     let rec loop () =
@@ -125,7 +125,7 @@ module Make(Desc : HashDesc) : S = struct
            ((Atomic.get t.resize) <> old_resize || Atomic.compare_and_set t.resize old_resize None) then
           check_size t
         else
-          (Kcas.Backoff.once b; loop ())
+          (Backoff.once b; loop ())
       end
       |None -> check_size t
     in loop ()
