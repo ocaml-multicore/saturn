@@ -31,7 +31,6 @@ module type S = sig
 end;;
 
 module Make(Desc : HashDesc) : S = struct
-  (* module Cas = Kcas.W1;; *)
   module STD_List = List;;
   module List = Lf_list.M;;
 
