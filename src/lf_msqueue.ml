@@ -19,7 +19,6 @@
 
 (* TODO KC: Replace with concurrent lock free bag --
  * http://dl.acm.org/citation.cfm?id=1989550 *)
-exception Empty
 
 module type S = sig
   type 'a t
@@ -50,7 +49,7 @@ module M : S = struct
 
   let is_empty q =
     match Atomic.get q.head with
-    | Nil -> raise Empty
+    | Nil -> failwith "MSQueue.is_empty: impossible"
     | Next (_,x) ->
         ( match Atomic.get x with
           | Nil -> true
@@ -61,7 +60,7 @@ module M : S = struct
     let rec loop () =
       let s = Atomic.get q.head in
       let nhead = match s with
-        | Nil -> raise Empty
+        | Nil -> failwith "MSQueue.pop: impossible"
         | Next (_, x) -> Atomic.get x
       in match nhead with
        | Nil -> None
@@ -79,7 +78,7 @@ module M : S = struct
     let newnode = Next (v, Atomic.make Nil) in
     let tail = Atomic.get q.tail in
     match tail with
-    | Nil         -> raise Empty
+    | Nil         -> failwith "HW_MSQueue.push: impossible"
     | Next (_, n) -> begin
         find_tail_and_enq n newnode;
         ignore (Atomic.compare_and_set q.tail tail newnode)
@@ -90,7 +89,7 @@ module M : S = struct
     let rec loop () =
       let s = Atomic.get q.head in
       let nhead = match s with
-        | Nil -> raise Empty
+        | Nil -> failwith "MSQueue.pop: impossible"
         | Next (_, x) -> Atomic.get x
       in match nhead with
        | Nil -> ()
@@ -106,7 +105,7 @@ module M : S = struct
 
   let snapshot q =
     match Atomic.get q.head with
-    | Nil -> raise Empty
+    | Nil -> failwith "MSQueue.snapshot: impossible"
     | Next (_, n) -> Atomic.get n
 
     let next c =

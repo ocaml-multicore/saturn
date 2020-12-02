@@ -23,8 +23,7 @@ module type S = sig
 end;;
 
 module M : S = struct
-  (* module Cas = Kcas.W1;; *)
-
+  
   type 'a t = (bool * 'a node) Atomic.t
 
   and 'a node =
