@@ -31,13 +31,12 @@ module type S = sig
 end;;
 
 module Make(Desc : HashDesc) : S = struct
-  module Cas = Kcas.W1;;
   module STD_List = List;;
   module List = Lf_list.M;;
 
   type 'a elem = int * 'a option;;
 
-  type 'a table = 'a bucket Cas.ref array
+  type 'a table = 'a bucket Atomic.t array
   and 'a bucket =
     |Initialized of 'a elem List.t
     |Allocated of 'a table
@@ -45,12 +44,12 @@ module Make(Desc : HashDesc) : S = struct
   ;;
 
   type 'a t = {
-    access      : 'a table Cas.ref;
+    access      : 'a table Atomic.t;
     store       : 'a elem List.t;
-    size        : int Cas.ref;
-    content     : int Cas.ref;
-    access_size : int Cas.ref;
-    resize      : int option Cas.ref;
+    size        : int Atomic.t;
+    content     : int Atomic.t;
+    access_size : int Atomic.t;
+    resize      : int option Atomic.t;
   };;
 
   let load = Desc.load;;
@@ -66,19 +65,21 @@ module Make(Desc : HashDesc) : S = struct
   let to_string t f =
     let buf = Buffer.create 17 in
     let rec loop acc r =
-      match Cas.get r with
+      match Atomic.get r with
       |Uninitialized -> Buffer.add_string buf "x, "; acc := !acc + 1
-      |Allocated(a') -> Buffer.add_string buf "{"; Array.iter (loop acc) a'; Buffer.add_string buf "}"
-      |Initialized(_) -> Buffer.add_string buf (sprintf "(%d), " !acc); acc := !acc + 1
+      |Allocated(a') ->
+        Buffer.add_string buf "{"; Array.iter (loop acc) a'; Buffer.add_string buf "}"
+      |Initialized(_) ->
+        Buffer.add_string buf (sprintf "(%d), " !acc); acc := !acc + 1
     in
     Buffer.add_string buf "[";
-    Array.iter (loop (ref 0)) (Cas.get t.access);
+    Array.iter (loop (ref 0)) (Atomic.get t.access);
     Buffer.add_string buf "]\n";
     Buffer.add_string buf (List.to_string t.store (string_of_elem f));
-    Buffer.add_string buf (sprintf "Size %d\n" (Cas.get t.size));
-    Buffer.add_string buf (sprintf "Content %d\n" (Cas.get t.content));
-    Buffer.add_string buf (sprintf "Access_size %d\n" (Cas.get t.access_size));
-    (match Cas.get t.resize with
+    Buffer.add_string buf (sprintf "Size %d\n" (Atomic.get t.size));
+    Buffer.add_string buf (sprintf "Content %d\n" (Atomic.get t.content));
+    Buffer.add_string buf (sprintf "Access_size %d\n" (Atomic.get t.access_size));
+    (match Atomic.get t.resize with
     |None -> Buffer.add_string buf (sprintf "Resize None")
     |Some(resize) -> Buffer.add_string buf (sprintf "Resize %d" resize));
     Buffer.contents buf
@@ -100,48 +101,55 @@ module Make(Desc : HashDesc) : S = struct
     in
     match x, y with
     |(k1, None), (k2, None) -> loop k1 k2
-    |(k1, None), (k2, Some(_)) -> let out = loop k1 k2 in if out = 0 then -1 else out
-    |(k1, Some(_)), (k2, None) -> let out = loop k1 k2 in if out = 0 then 1 else out
+    |(k1, None), (k2, Some(_)) ->
+      let out = loop k1 k2 in if out = 0 then -1 else out
+    |(k1, Some(_)), (k2, None) ->
+      let out = loop k1 k2 in if out = 0 then 1 else out
     |(k1, Some(_)), (k2, Some(_)) -> loop k1 k2
   ;;
 
   let get_size_of_access a =
     let rec loop a out =
-      match Cas.get a.(0) with
+      match Atomic.get a.(0) with
       |Allocated(a') -> loop a' (nb_bucket * out)
       |_ -> out
     in loop a nb_bucket
   ;;
 
   let rec help_resize t old_access old_access_size =
-    let b = Kcas.Backoff.create () in
-    let new_a = Array.init nb_bucket (fun _ -> Cas.ref Uninitialized) in
-    Cas.set new_a.(0) (Allocated(old_access));
+    let b = Backoff.create () in
+    let new_a = Array.init nb_bucket (fun _ -> Atomic.make Uninitialized) in
+    Atomic.set new_a.(0) (Allocated(old_access));
     let rec loop () =
-      match Cas.get t.resize with
+      match Atomic.get t.resize with
       |Some(new_access_size) as old_resize -> begin
-        if (get_size_of_access (Cas.get t.access) >= new_access_size || Cas.cas t.access old_access new_a) &&
-           ((Cas.get t.access_size) >= new_access_size || Cas.cas t.access_size old_access_size new_access_size) &&
-           ((Cas.get t.resize) <> old_resize || Cas.cas t.resize old_resize None) then
+        if (get_size_of_access (Atomic.get t.access) >= new_access_size ||
+            Atomic.compare_and_set t.access old_access new_a) &&
+           ((Atomic.get t.access_size) >= new_access_size ||
+           Atomic.compare_and_set t.access_size old_access_size new_access_size)
+           && ((Atomic.get t.resize) <> old_resize ||
+           Atomic.compare_and_set t.resize old_resize None) then
           check_size t
         else
-          (Kcas.Backoff.once b; loop ())
+          (Backoff.once b; loop ())
       end
       |None -> check_size t
     in loop ()
   and check_size t =
-    let old_access = Cas.get t.access in
-    let old_access_size = Cas.get t.access_size in
-    let s = Cas.get t.size in
-    let c = Cas.get t.content in
-    match Cas.get t.resize with
+    let old_access = Atomic.get t.access in
+    let old_access_size = Atomic.get t.access_size in
+    let s = Atomic.get t.size in
+    let c = Atomic.get t.content in
+    match Atomic.get t.resize with
     |Some(_) -> help_resize t old_access old_access_size
     |None when c / s > load ->
       if 2*s <= old_access_size then begin
-        ignore(Cas.cas t.size s (2*s)); check_size t
-      end else if Cas.cas t.resize None (Some(nb_bucket * old_access_size)) then begin
+        ignore(Atomic.compare_and_set t.size s (2*s)); check_size t
+      end else if
+        Atomic.compare_and_set t.resize None (Some(nb_bucket * old_access_size))
+        then begin
         help_resize t old_access old_access_size
-     end  else
+        end  else
         check_size t
     |_ -> ()
   ;;
@@ -150,21 +158,21 @@ module Make(Desc : HashDesc) : S = struct
     let l = List.create () in
     let (_, n0) = List.sinsert l (0, None) split_compare in
     let (_, n1) = List.sinsert l (1, None) split_compare in
-    let tab = Array.init nb_bucket (fun _ -> Cas.ref Uninitialized) in
-    Cas.set tab.(0) (Initialized(n0));
-    Cas.set tab.(1) (Initialized(n1));
+    let tab = Array.init nb_bucket (fun _ -> Atomic.make Uninitialized) in
+    Atomic.set tab.(0) (Initialized(n0));
+    Atomic.set tab.(1) (Initialized(n1));
     {
-      access      = Cas.ref tab;
+      access      = Atomic.make tab;
       store       = l;
-      size        = Cas.ref 2;
-      content     = Cas.ref 0;
-      access_size = Cas.ref nb_bucket;
-      resize      = Cas.ref None;
+      size        = Atomic.make 2;
+      content     = Atomic.make 0;
+      access_size = Atomic.make nb_bucket;
+      resize      = Atomic.make None;
     }
   ;;
 
   let hash t k =
-    (Desc.hash_function k) mod (Cas.get t.size)
+    (Desc.hash_function k) mod (Atomic.get t.size)
   ;;
 
   let get_closest_power n =
@@ -182,8 +190,9 @@ module Make(Desc : HashDesc) : S = struct
       let tmp_ind = ind / size in
       let new_ind = ind mod size in
       let new_size = size / nb_bucket in
-      match Cas.get a.(tmp_ind) with
-      |Uninitialized -> initialise_bucket a tmp_ind size; access_bucket a ind size
+      match Atomic.get a.(tmp_ind) with
+      |Uninitialized ->
+        initialise_bucket a tmp_ind size; access_bucket a ind size
       |Allocated(a') -> access_bucket a' new_ind new_size
       |Initialized(s) -> s
     and initialise_bucket a ind size =
@@ -191,19 +200,19 @@ module Make(Desc : HashDesc) : S = struct
         if size = 1 then begin
           let prev_hk = hk mod (get_closest_power hk) in
           let prev_s = get_bucket t prev_hk in
-          match Cas.get a.(ind) with
+          match Atomic.get a.(ind) with
           | Initialized(_) as out -> out
           |_ ->
             let (_, s) = List.sinsert prev_s (hk, None) split_compare in
             Initialized(s)
         end else
-          Allocated(Array.init nb_bucket (fun _ -> Cas.ref Uninitialized))
+          Allocated(Array.init nb_bucket (fun _ -> Atomic.make Uninitialized))
       in
-      ignore(Cas.cas a.(ind) Uninitialized new_elem);
+      ignore(Atomic.compare_and_set a.(ind) Uninitialized new_elem);
       ()
     in
-    let size = (Cas.get t.access_size) / nb_bucket in
-    access_bucket (Cas.get t.access) hk size
+    let size = (Atomic.get t.access_size) / nb_bucket in
+    access_bucket (Atomic.get t.access) hk size
   ;;
 
   let find t k =
@@ -230,7 +239,7 @@ module Make(Desc : HashDesc) : S = struct
     let s = get_bucket t hk in
     let (is_new, _) = List.sinsert s (k, (Some(v))) split_compare in
     if is_new then
-      Cas.incr t.content
+      Atomic.incr t.content
   ;;
 
   let remove t k =
@@ -238,7 +247,7 @@ module Make(Desc : HashDesc) : S = struct
     let hk = hash t k in
     let s = get_bucket t hk in
     if List.sdelete s (k, Some(Obj.magic ())) split_compare then
-      (Cas.decr t.content; true)
+      (Atomic.decr t.content; true)
     else false
   ;;
 

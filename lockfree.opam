@@ -5,7 +5,7 @@ homepage: "https://github.com/ocaml-multicore/lockfree"
 doc: "https://kayceesrk.github.io/lockfree/doc"
 synopsis: "Lock-free data structures for multicore OCaml"
 license: "ISC"
-dev-repo: "https://github.com/ocaml-multicore/lockfree.git"
+dev-repo: "git+https://github.com/ocaml-multicore/lockfree.git"
 bug-reports: "https://github.com/ocaml-multicore/lockfree/issues"
 tags: []
 depends: [

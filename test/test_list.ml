@@ -57,7 +57,6 @@ let insert_list l q =
 ;;
 
 let remove_list l q =
-  let _ = Kcas.Backoff.create () in
   let rec loop () =
     match Queue.pop q with
     |Some(v) ->

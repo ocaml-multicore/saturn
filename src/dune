@@ -1,5 +1,3 @@
 (library
  (name lockfree)
- (public_name lockfree)
- (libraries kcas)
- (modes native))
+ (public_name lockfree))
