@@ -82,12 +82,14 @@ module M : S = struct
 
   let rec equal l1 l2 =
     match Atomic.get l1, Atomic.get l2 with
-    |(s1, Node(v1, next1)), (s2, Node(v2, next2)) -> s1 = s2 && equal_val v1 v2 && equal next1 next2
+    |(s1, Node(v1, next1)), (s2, Node(v2, next2)) ->
+       s1 = s2 && equal_val v1 v2 && equal next1 next2
     |(s1, Nil), (s2, Nil) -> s1 = s2
     |_ -> false
   ;;
 
-  let create () = Atomic.make (false, Node(Min, Atomic.make (false, Node(Max, Atomic.make (false, Nil)))));;
+  let create () = Atomic.make (false, 
+    Node (Min, Atomic.make (false, Node(Max, Atomic.make (false, Nil)))));;
 
   let cons v l =
     match Atomic.get l with
@@ -104,7 +106,9 @@ module M : S = struct
       |_, Nil -> failwith "Lock_Free_List.push: impossible"
       |_, Node(_, next) ->
         let vnext = Atomic.get next in
-        if not (Atomic.compare_and_set next vnext (false, Node(Val(v), Atomic.make vnext))) then begin
+        if not (Atomic.compare_and_set 
+          next vnext (false, Node(Val(v), Atomic.make vnext))) 
+          then begin
           Backoff.once b; loop ()
         end
     in loop ()
@@ -234,11 +238,15 @@ module M : S = struct
       |Node(vn_v, vn_next) ->
         if compare v vn_v = 0 then
           let (vn_next_v, marked_vn_next_v) = marked vn_next in
-          if Atomic.compare_and_set vn_next vn_next_v marked_vn_next_v then begin
+          if Atomic.compare_and_set vn_next vn_next_v marked_vn_next_v 
+            then begin
             match snd vprev with
             |Node(_, vprev_next) ->
-              if get_mark (Atomic.get vprev_next) || not (Atomic.compare_and_set vprev_next vn vn_next_v) then
-                (Atomic.set vn_next vn_next_v; Backoff.once b; loop (sfind l v f))
+              if get_mark (Atomic.get vprev_next) 
+                || not (Atomic.compare_and_set vprev_next vn vn_next_v) then
+                (Atomic.set vn_next vn_next_v; 
+                Backoff.once b; 
+                loop (sfind l v f))
               else
                 true
             |Nil -> failwith "Lock_Free_List.sdelete: impossible"

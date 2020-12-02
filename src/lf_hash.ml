@@ -67,8 +67,10 @@ module Make(Desc : HashDesc) : S = struct
     let rec loop acc r =
       match Atomic.get r with
       |Uninitialized -> Buffer.add_string buf "x, "; acc := !acc + 1
-      |Allocated(a') -> Buffer.add_string buf "{"; Array.iter (loop acc) a'; Buffer.add_string buf "}"
-      |Initialized(_) -> Buffer.add_string buf (sprintf "(%d), " !acc); acc := !acc + 1
+      |Allocated(a') ->
+        Buffer.add_string buf "{"; Array.iter (loop acc) a'; Buffer.add_string buf "}"
+      |Initialized(_) ->
+        Buffer.add_string buf (sprintf "(%d), " !acc); acc := !acc + 1
     in
     Buffer.add_string buf "[";
     Array.iter (loop (ref 0)) (Atomic.get t.access);
@@ -99,8 +101,10 @@ module Make(Desc : HashDesc) : S = struct
     in
     match x, y with
     |(k1, None), (k2, None) -> loop k1 k2
-    |(k1, None), (k2, Some(_)) -> let out = loop k1 k2 in if out = 0 then -1 else out
-    |(k1, Some(_)), (k2, None) -> let out = loop k1 k2 in if out = 0 then 1 else out
+    |(k1, None), (k2, Some(_)) ->
+      let out = loop k1 k2 in if out = 0 then -1 else out
+    |(k1, Some(_)), (k2, None) ->
+      let out = loop k1 k2 in if out = 0 then 1 else out
     |(k1, Some(_)), (k2, Some(_)) -> loop k1 k2
   ;;
 
@@ -119,9 +123,12 @@ module Make(Desc : HashDesc) : S = struct
     let rec loop () =
       match Atomic.get t.resize with
       |Some(new_access_size) as old_resize -> begin
-        if (get_size_of_access (Atomic.get t.access) >= new_access_size || Atomic.compare_and_set t.access old_access new_a) &&
-           ((Atomic.get t.access_size) >= new_access_size || Atomic.compare_and_set t.access_size old_access_size new_access_size) &&
-           ((Atomic.get t.resize) <> old_resize || Atomic.compare_and_set t.resize old_resize None) then
+        if (get_size_of_access (Atomic.get t.access) >= new_access_size ||
+            Atomic.compare_and_set t.access old_access new_a) &&
+           ((Atomic.get t.access_size) >= new_access_size ||
+           Atomic.compare_and_set t.access_size old_access_size new_access_size)
+           && ((Atomic.get t.resize) <> old_resize ||
+           Atomic.compare_and_set t.resize old_resize None) then
           check_size t
         else
           (Backoff.once b; loop ())
@@ -138,9 +145,11 @@ module Make(Desc : HashDesc) : S = struct
     |None when c / s > load ->
       if 2*s <= old_access_size then begin
         ignore(Atomic.compare_and_set t.size s (2*s)); check_size t
-      end else if Atomic.compare_and_set t.resize None (Some(nb_bucket * old_access_size)) then begin
+      end else if
+        Atomic.compare_and_set t.resize None (Some(nb_bucket * old_access_size))
+        then begin
         help_resize t old_access old_access_size
-     end  else
+        end  else
         check_size t
     |_ -> ()
   ;;
@@ -182,7 +191,8 @@ module Make(Desc : HashDesc) : S = struct
       let new_ind = ind mod size in
       let new_size = size / nb_bucket in
       match Atomic.get a.(tmp_ind) with
-      |Uninitialized -> initialise_bucket a tmp_ind size; access_bucket a ind size
+      |Uninitialized ->
+        initialise_bucket a tmp_ind size; access_bucket a ind size
       |Allocated(a') -> access_bucket a' new_ind new_size
       |Initialized(s) -> s
     and initialise_bucket a ind size =
