@@ -10,7 +10,7 @@ let once (maxv, r) =
   if t = 0 then ()
   else begin
     for _ = 1 to 4096 * t do
-      Domain.Sync.cpu_relax ()
+      Domain.cpu_relax ()
     done
   end
 
