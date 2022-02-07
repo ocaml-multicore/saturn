@@ -9,8 +9,6 @@ dev-repo: "git+https://github.com/ocaml-multicore/lockfree.git"
 bug-reports: "https://github.com/ocaml-multicore/lockfree/issues"
 tags: []
 depends: [
-  "ocamlfind" {build}
-  "ocamlbuild" {build}
   "dune" {build}
 ]
 depopts: []
