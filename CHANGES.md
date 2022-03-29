@@ -1,4 +1,4 @@
-vX.Y.Z YYYY-MM-DD Location
+#v0.1
 --------------------------
 
-First release. 
+* First release.
