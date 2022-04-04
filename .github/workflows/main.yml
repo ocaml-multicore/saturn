@@ -1,0 +1,47 @@
+name: main
+
+on:
+  pull_request:
+  push:
+  schedule:
+    # Prime the caches every Monday
+    - cron: 0 1 * * MON
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+        ocaml-compiler:
+          - 5.0.0+trunk
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Get latest OCaml commit hash
+        id: multicore_hash
+        shell: bash
+        run: |
+          curl -sH "Accept: application/vnd.github.v3+json" \
+          https://api.github.com/repos/ocaml/ocaml/commits/trunk \
+          | jq .commit.tree.sha | xargs printf '::set-output name=commit::%s'
+      - name: Use OCaml ${{ matrix.ocaml-compiler }}
+        uses: ocaml/setup-ocaml@v2
+        with:
+          ocaml-compiler: ocaml-variants.${{ matrix.ocaml-compiler }}
+          opam-repositories: |
+            default: https://github.com/ocaml/opam-repository.git
+            ocaml-beta-repository: https://github.com/ocaml/ocaml-beta-repository.git
+          cache-prefix: ${{ steps.multicore_hash.outputs.commit }}
+          opam-depext: false
+
+      - run: opam install . --deps-only --with-test
+
+      - run: opam exec -- dune build
+
+      - run: opam exec -- dune runtest

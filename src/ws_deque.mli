@@ -10,15 +10,16 @@ module type S = sig
   (** [is_empty q] returns empty if [q] is empty. *)
 
   val size : 'a t -> int
-  (** [size q] returns the number of elements currently stored in the queue. *)
+  (** [size q] returns the number of elements currently stored in the queue.
+      It should only be invoked by the domain which owns the queue [q]. *)
 
   val push : 'a t -> 'a -> unit
   (** [push q v] pushes [v] to the back of the queue.
-      It should only be invoked by domain which owns the queue [q]. *)
+      It should only be invoked by the domain which owns the queue [q]. *)
 
   val pop : 'a t -> 'a
   (** [pop q] removes an element [e] from the front of the queue and returns
-      it. It should only be invoked by domain which owns the queue [q].
+      it. It should only be invoked by the domain which owns the queue [q].
 
       @raise [Exit] if the queue is empty.
       *)
