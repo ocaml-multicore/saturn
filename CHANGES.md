@@ -1,4 +1,4 @@
-#v0.1
+#v0.2.0
 --------------------------
 
-* First release.
+* Add Chase-Lev Work-stealing deque `Ws_deque`. (@ctk21)

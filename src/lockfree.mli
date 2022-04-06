@@ -4,9 +4,7 @@
    %%NAME%% %%VERSION%%
   ---------------------------------------------------------------------------*)
 
-(** Lock-free data structures for Multicore OCaml
-
-    {e %%VERSION%% — {{:%%PKG_HOMEPAGE%% }homepage}} *)
+(** Lock-free data structures for Multicore OCaml *)
 
 (** {1 Lockfree} *)
 
