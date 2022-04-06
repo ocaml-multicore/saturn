@@ -4,13 +4,6 @@ module Ws_deque = Ws_deque.M
 
 let test_empty () =
   let q = Ws_deque.create () in
-  assert (Ws_deque.is_empty q = true);
-  Ws_deque.push q 42;
-  assert (Ws_deque.is_empty q = false);
-  print_string "test_empty: ok\n"
-
-let test_exit () =
-  let q = Ws_deque.create () in
   let r = try
             Ws_deque.pop q
           with Exit -> - 1
@@ -39,19 +32,7 @@ let test_push_and_steal () =
   Array.iter Domain.join domains;
   print_string "test_push_and_steal: ok\n"
 
-let test_size () =
-  let q = Ws_deque.create () in
-  Ws_deque.push q 1;
-  Ws_deque.push q 2;
-  Ws_deque.push q 3;
-  Ws_deque.push q 4;
-  Ws_deque.push q 5;
-  assert (Ws_deque.size q = 5);
-  print_string "test_size: ok\n"
-
 let _ =
   test_empty ();
-  test_exit ();
   test_push_and_pop ();
   test_push_and_steal ();
-  test_size ()

@@ -6,13 +6,6 @@ module type S = sig
   val create : unit -> 'a t
   (** Returns a fresh empty work-stealing queue *)
 
-  val is_empty : 'a t -> bool
-  (** [is_empty q] returns empty if [q] is empty. *)
-
-  val size : 'a t -> int
-  (** [size q] returns the number of elements currently stored in the queue.
-      It should only be invoked by the domain which owns the queue [q]. *)
-
   val push : 'a t -> 'a -> unit
   (** [push q v] pushes [v] to the back of the queue.
       It should only be invoked by the domain which owns the queue [q]. *)

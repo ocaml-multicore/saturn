@@ -30,8 +30,6 @@
  module type S = sig
   type 'a t
   val create : unit -> 'a t
-  val is_empty : 'a t -> bool
-  val size : 'a t -> int
   val push : 'a t -> 'a -> unit
   val pop : 'a t -> 'a
   val steal : 'a t -> 'a
@@ -112,11 +110,6 @@ module M : S = struct
   let grow q t b =
     Atomic.set q.tab (CArray.grow (Atomic.get q.tab) t b);
     set_next_shrink q
-
-  let is_empty q =
-    let b = Atomic.get q.bottom in
-    let t = Atomic.get q.top in
-    b - t <= 0
 
   let size q =
     let b = Atomic.get q.bottom in
