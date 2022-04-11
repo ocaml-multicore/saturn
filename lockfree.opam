@@ -10,9 +10,7 @@ bug-reports: "https://github.com/ocaml-multicore/lockfree/issues"
 tags: []
 depends: [
   "ocaml" {>= "5.0"}
-  "dune" {>= "1.8"}
+  "dune" {>= "3.0"}
 ]
 depopts: []
-build: [
-  "dune" "build" "-p" name
-  ]
+build: ["dune" "build" "-p" name "-j" jobs]
