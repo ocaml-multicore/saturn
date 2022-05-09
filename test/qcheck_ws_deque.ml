@@ -9,6 +9,7 @@ let deque_of_list l =
 (* [deque_to_list] makes no use of (list or array) iterators to avoid
    the order of the resulting list to depend on the order of evaluation of the iterator.
 *)
+
 let deque_to_list f q n =
   let rec loop acc = 
     function
@@ -18,7 +19,13 @@ let deque_to_list f q n =
         loop (a :: acc) (n-1)
   in
   loop [] n
-                 
+
+let keep_some l =
+   List.filter Option.is_some l
+   |> List.map Option.get 
+
+let keep_n_first n = List.filteri (fun i _ -> i < n)
+
 let tests_one_domain =
   [
     (* TEST 1 - single domain:
@@ -78,16 +85,14 @@ let tests_two_domains =
                  let steal_list = Domain.join stealer |> List.rev in
 
                  (* The stolen values should be the [n]th first elements of [l]*)
-                 (let expected_stolen_val =
-                   List.filteri (fun i _ -> i < n) l in
-                 let nfirst =
-                   List.filteri (fun i _ -> i < (List.length l)) steal_list in
+                 (let expected_stolen = keep_n_first n l in
+                  let nfirst = keep_n_first (List.length l) steal_list in
                  
                  List.for_all2 (fun found_opt expected ->
                      match found_opt with
                      |  Some found -> found = expected
                      | _ -> false)
-                   nfirst expected_stolen_val)                
+                   nfirst expected_stolen)                
                  &&
                   (* The [n - (List.length l)] last values of [steal_list]
                     should be [None] (i.e. the [steal] function had raised [Exit]). *)
@@ -138,13 +143,10 @@ let tests_two_domains =
                        have been stolen, they are the [m] first pushed values. *)
                     List.length steal_list = n
                     &&
-                    (let stolen_val =
-                       List.filter (function Some _ -> true | None -> false) steal_list
-                       |> List.map (function Some v -> v | None -> failwith "Should not happen") 
+                    (let stolen = keep_some steal_list 
                      in
-                     let expected_stolen_val =
-                       List.filteri (fun i _ -> i < List.length stolen_val) l in
-                     stolen_val = expected_stolen_val)));
+                     let expected_stolen = keep_n_first (List.length stolen) l in
+                     stolen = expected_stolen)));
 
     (* TEST 3 with 2 domains and parallel execution.
 
@@ -196,19 +198,74 @@ let tests_two_domains =
                     &&
                     List.length pop_list = npop
                     &&
-                    (let stolen_val =
-                       List.filter (function Some _ -> true | None -> false) steal_list
-                       |> List.map (function Some v -> v | None -> failwith "Should not happen") 
+                    (let stolen = keep_some steal_list
                      in
-                     let popped_val =
-                       List.filter (function Some _ -> true | None -> false) pop_list
-                       |> List.map (function Some v -> v | None -> failwith "Should not happen") 
+                     let popped_val = keep_some pop_list
                      in
-                     stolen_val @ popped_val = l)))
+                     stolen @ popped_val = l)))
 ]
-  
+
+let tests_three_domains =
+  [  
+    (* TEST 1 with 2 stealers domains and parallel steals.
+    *)
+      QCheck.(Test.make
+                ~name:"3_dom_par_steal"
+                (pair (list small_int) (pair small_nat small_nat)) (fun (l, (ns1, ns2)) ->
+                    (* Initialization *)
+                    let deque = deque_of_list l in      
+                    let sema = Semaphore.Counting.make 2 in
+                    let steal nsteal =
+                      Semaphore.Counting.acquire sema;
+                      let res = Array.make nsteal None in
+                      while Semaphore.Counting.get_value sema <> 0 do
+                        Domain.cpu_relax ()
+                      done;
+                      for i = 0 to nsteal -1 do
+                        (res.(i) <- try Some (Ws_deque.steal deque) with Exit -> None);
+                        Domain.cpu_relax ()
+                      done ;
+                      res
+                    in
+
+                    let stealer1 = Domain.spawn (fun  () -> steal ns1) in
+                    let stealer2 = Domain.spawn (fun  () -> steal ns2) in
+                    
+                    let steal_list1 = Domain.join stealer1  in
+                    let steal_list2 = Domain.join stealer2 in
+
+                    let stolen1 = keep_some (Array.to_list steal_list1) in
+                    let stolen2 = keep_some (Array.to_list steal_list2) in
+
+                    let expected_stolen = keep_n_first (ns1+ns2) l in
+
+                    let rec compare l l1 l2 =
+                      match l, l1, l2 with
+                      | [], [] , [] -> true
+                      | [], _, _ -> false
+                      | _, [], _ -> l = l2
+                      | _, _, [] -> l = l1
+                      | x :: l', y :: l1', z :: l2' ->
+                          begin
+                            if x = y && x = z then
+                              compare l' l1 l2' || compare l' l1' l2
+                            else if x = y then
+                              compare l' l1' l2
+                            else if x = z then
+                              compare l' l1 l2'
+                            else false end
+                     
+                    in
+                    
+                    Array.length steal_list1 = ns1 &&
+                    Array.length steal_list2 = ns2 &&
+                    compare expected_stolen stolen1 stolen2
+                  ))
+    ]
+
 
 let main () = 
-  QCheck_runner.run_tests (tests_one_domain @ tests_two_domains);;
+  QCheck_runner.run_tests (tests_one_domain @ tests_two_domains @ tests_three_domains);;
 
 main ()
+
