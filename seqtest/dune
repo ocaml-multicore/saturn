@@ -1,0 +1,5 @@
+(executable
+  (name seqtest)
+  (libraries monolith lockfree)
+  (modules seqtest)
+)
