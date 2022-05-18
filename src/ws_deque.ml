@@ -45,9 +45,9 @@ module CArray = struct
   let rec log2 n =
     if n <= 1 then 0 else 1 + (log2 (n asr 1))
 
-  let create n v =
-    let sz = Int.shift_left 1 (log2 n) in
-    assert ((sz >= n) && (sz > 0));
+  let create sz v =
+    (* [sz] must be a power of two. *)
+    assert (0 < sz && sz = Int.shift_left 1 (log2 sz));
     assert (Int.logand sz (sz-1) == 0);
     {
       arr  = Array.make sz v;
