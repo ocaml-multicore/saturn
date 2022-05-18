@@ -66,23 +66,29 @@ module CArray = struct
   let put t i v =
     Array.unsafe_set t (index i t) v [@@inline]
 
+  let transfer src dst top num =
+    ArrayExtra.blit_circularly
+      (* source array and index: *)
+      src (index top src)
+      (* target array and index: *)
+      dst (index top dst)
+      (* number of elements: *)
+      num
+    [@@inline]
+
   let grow t top bottom =
-    let s = size t in
-    let ns = 2 * s in
-    let out = create ns (Obj.magic ()) in
-    for i = top to bottom do
-      put out i (get t i)
-    done;
-    out
+    let sz = size t in
+    assert (bottom - top = sz);
+    let dst = create (2 * sz) (Obj.magic ()) in
+    transfer t dst top sz;
+    dst
 
   let shrink t top bottom =
-    let s = size t in
-    let ns = s / 2 in
-    let out = create ns (Obj.magic ()) in
-    for i = top to bottom do
-      put out i (get t i)
-    done;
-    out
+    let sz = size t in
+    assert (bottom - top <= sz / 2);
+    let dst = create (sz / 2) (Obj.magic ()) in
+    transfer t dst top (bottom - top);
+    dst
 
 end
 
