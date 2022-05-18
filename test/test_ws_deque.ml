@@ -4,12 +4,11 @@ module Ws_deque = Ws_deque.M
 
 let test_empty () =
   let q = Ws_deque.create () in
-  let r = try
-            Ws_deque.pop q
-          with Exit -> - 1
-  in
-  assert (r = -1);
-  print_string "test_exit: ok\n"
+  match Ws_deque.pop q with
+  | exception Exit ->
+      print_string "test_exit: ok\n"
+  | _ ->
+      assert false
 
 let test_push_and_pop () =
   let q = Ws_deque.create () in
