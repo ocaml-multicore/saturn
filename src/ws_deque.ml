@@ -37,10 +37,8 @@ end
 
 module CArray = struct
 
-  type 'a t = {
-    arr  : 'a array;
-    mask : int
-    }
+  type 'a t =
+    'a array
 
   let rec log2 n =
     if n <= 1 then 0 else 1 + (log2 (n asr 1))
@@ -49,18 +47,24 @@ module CArray = struct
     (* [sz] must be a power of two. *)
     assert (0 < sz && sz = Int.shift_left 1 (log2 sz));
     assert (Int.logand sz (sz-1) == 0);
-    {
-      arr  = Array.make sz v;
-      mask = sz - 1
-    }
+    Array.make sz v
 
-  let size t = Array.length t.arr [@@inline]
+  let size t =
+    Array.length t [@@inline]
+
+  let mask t =
+    size t - 1 [@@inline]
+
+  let index i t =
+    (* Because [size t] is a power of two, [i mod (size t)] is the same as
+       [i land (size t - 1)], that is, [i land (mask t)]. *)
+    Int.logand i (mask t) [@@inline]
 
   let get t i =
-    Array.unsafe_get t.arr (Int.logand i t.mask) [@@inline]
+    Array.unsafe_get t (index i t) [@@inline]
 
   let put t i v =
-    Array.unsafe_set t.arr (Int.logand i t.mask) v [@@inline]
+    Array.unsafe_set t (index i t) v [@@inline]
 
   let grow t top bottom =
     let s = size t in
