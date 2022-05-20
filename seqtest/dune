@@ -2,4 +2,5 @@
   (name seqtest)
   (libraries monolith lockfree)
   (modules seqtest)
+  (enabled_if (= %{profile} seqtest))
 )

@@ -1,3 +1,4 @@
-SWITCH := 5.0.0+trunk
+SWITCH := $(shell opam switch show)
 EXE := seqtest.exe
-include $(shell ocamlfind query monolith)/Makefile.monolith
+DUNEFLAGS := --profile seqtest
+include ./Makefile.monolith
