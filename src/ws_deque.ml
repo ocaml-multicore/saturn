@@ -37,48 +37,58 @@ end
 
 module CArray = struct
 
-  type 'a t = {
-    arr  : 'a array;
-    mask : int
-    }
+  type 'a t =
+    'a array
 
   let rec log2 n =
     if n <= 1 then 0 else 1 + (log2 (n asr 1))
 
-  let create n v =
-    let sz = Int.shift_left 1 (log2 n) in
-    assert ((sz >= n) && (sz > 0));
+  let create sz v =
+    (* [sz] must be a power of two. *)
+    assert (0 < sz && sz = Int.shift_left 1 (log2 sz));
     assert (Int.logand sz (sz-1) == 0);
-    {
-      arr  = Array.make sz v;
-      mask = sz - 1
-    }
+    Array.make sz v
 
-  let size t = Array.length t.arr [@@inline]
+  let size t =
+    Array.length t [@@inline]
+
+  let mask t =
+    size t - 1 [@@inline]
+
+  let index i t =
+    (* Because [size t] is a power of two, [i mod (size t)] is the same as
+       [i land (size t - 1)], that is, [i land (mask t)]. *)
+    Int.logand i (mask t) [@@inline]
 
   let get t i =
-    Array.unsafe_get t.arr (Int.logand i t.mask) [@@inline]
+    Array.unsafe_get t (index i t) [@@inline]
 
   let put t i v =
-    Array.unsafe_set t.arr (Int.logand i t.mask) v [@@inline]
+    Array.unsafe_set t (index i t) v [@@inline]
+
+  let transfer src dst top num =
+    ArrayExtra.blit_circularly
+      (* source array and index: *)
+      src (index top src)
+      (* target array and index: *)
+      dst (index top dst)
+      (* number of elements: *)
+      num
+    [@@inline]
 
   let grow t top bottom =
-    let s = size t in
-    let ns = 2 * s in
-    let out = create ns (Obj.magic ()) in
-    for i = top to bottom do
-      put out i (get t i)
-    done;
-    out
+    let sz = size t in
+    assert (bottom - top = sz);
+    let dst = create (2 * sz) (Obj.magic ()) in
+    transfer t dst top sz;
+    dst
 
   let shrink t top bottom =
-    let s = size t in
-    let ns = s / 2 in
-    let out = create ns (Obj.magic ()) in
-    for i = top to bottom do
-      put out i (get t i)
-    done;
-    out
+    let sz = size t in
+    assert (bottom - top <= sz / 2);
+    let dst = create (sz / 2) (Obj.magic ()) in
+    transfer t dst top (bottom - top);
+    dst
 
 end
 

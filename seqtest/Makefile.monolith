@@ -1,0 +1,364 @@
+# This Makefile is used by each of the demos.
+
+# Let's use a fixed shell.
+SHELL := bash
+
+# The following variables can be overridden via the command line or in a
+# Makefile that includes this Makefile.
+
+# The variable SWITCH must refer to a version of OCaml that has been
+# compiled with support for afl instrumentation.
+ifndef SWITCH
+  SWITCH := 4.11.1+afl
+endif
+
+# The variable SEED_SIZE determines the size (in bytes) of the random
+# data that we use as an initial input.
+ifndef SEED_SIZE
+  SEED_SIZE := 16
+endif
+
+# The variable EXE represents the path of the executable file that must
+# be tested relative to the current directory (the one where [make] is
+# run).
+ifndef EXE
+  EXE := Main.exe
+endif
+
+# The variable WHERE is the directory where the input/ and output/
+# subdirectories are created.
+ifndef WHERE
+  WHERE := .
+endif
+
+# dune options.
+ifndef DUNEFLAGS
+  DUNEFLAGS :=
+endif
+DUNEBUILD := dune build --no-print-directory --display quiet $(DUNEFLAGS)
+
+# The variable TIMEOUT_COMMAND specifies the name of the timeout command.
+# We wish to use GNU timeout. We assume that it must be named either
+# gtimeout or just timeout.
+TIMEOUT_COMMAND := $(shell \
+  if command -v gtimeout >/dev/null ; then echo gtimeout ; \
+  else echo timeout ; fi)
+
+# ----------------------------------------------------------------------------
+
+# Go up to the root of the dune project, and compute the location of the
+# build subdirectory that corresponds to the current directory.
+
+BUILD := $(shell \
+  up=""; down=""; switch="$(SWITCH)"; \
+  while ! [ -f dune-project ] ; do \
+    up="../"$$up ; down=/$$(basename $$(pwd))$$down ; \
+    cd .. ; \
+  done ; \
+  path=$$up"_build/"$${switch-default}$$down ; \
+  echo $$path \
+)
+
+# ----------------------------------------------------------------------------
+
+# [make all] compiles the code in an appropriate opam switch.
+
+.PHONY: all
+all:
+	@ $(DUNEBUILD) @check # build src/.merlin, etc.
+	@(echo "(lang dune 2.0)" && \
+	  echo "(context (opam (switch $(SWITCH))))" \
+	 ) > dune-workspace.afl
+	@ $(DUNEBUILD) --workspace dune-workspace.afl .
+
+# ----------------------------------------------------------------------------
+
+# [make setup] creates the required opam switch (if necessary) and installs
+# Monolith in it (if necessary).
+
+.PHONY: setup
+setup:
+	@ if opam switch list | grep '$(SWITCH) ' >/dev/null ; then \
+	  echo "The switch $(SWITCH) already exists." ; \
+	else \
+	  echo "Creating switch $(SWITCH)..." ; \
+	  opam switch create $(SWITCH) --no-switch ; \
+	fi ; \
+	echo "Installing monolith in the switch $(SWITCH)..." ; \
+	opam install --yes monolith --switch $(SWITCH)
+
+# ----------------------------------------------------------------------------
+
+# [make clean] cleans up.
+
+.PHONY: clean
+clean:
+	@ dune clean
+	@ rm -rf $(INPUT) $(OUTPUT) $(OUTPUT).*
+	@ rm -f dune-workspace.afl
+
+# ----------------------------------------------------------------------------
+
+# Settings.
+
+# Directories for input and output files.
+INPUT   := $(WHERE)/input
+OUTPUT  := $(WHERE)/output
+CRASHES := \
+  $(wildcard $(OUTPUT)/crashes/dummy) \
+  $(wildcard $(OUTPUT)/crashes/id*) \
+  $(wildcard $(OUTPUT)/*/crashes/id*) \
+
+# This is where dune places the executable file.
+BINARY  := $(BUILD)/$(EXE)
+
+# On MacOS, the highest stack size that seems permitted is 65532.
+STACK   := ulimit -s 65532
+
+# ----------------------------------------------------------------------------
+
+# [make prepare] makes preparations for running afl-fuzz.
+
+PATTERN  := /proc/sys/kernel/core_pattern
+GOVERNOR := /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+
+.PHONY: prepare
+prepare:
+	@ if [[ "$$OSTYPE" == "linux-gnu" ]]; then \
+	  if grep -v -w --quiet core $(PATTERN) || \
+	     grep -v -w --quiet performance $(GOVERNOR) ; then \
+	    echo "Disabling the crash reporter, and changing CPU settings" ; \
+	    echo "so as to maximize performance." ; \
+	    echo "(This uses sudo; you may be asked for your password.)" ; \
+	    sudo bash -c \
+	      'echo core >$(PATTERN) && \
+	       (echo performance | tee $(GOVERNOR) >/dev/null)' ; \
+	  fi \
+	fi
+	@ rm -rf $(INPUT) $(OUTPUT)
+	@ mkdir -p $(INPUT) $(OUTPUT)/crashes
+	@ dd if=/dev/urandom bs=$(SEED_SIZE) count=1 > $(INPUT)/dummy 2>/dev/null
+
+# ----------------------------------------------------------------------------
+
+# [make test] runs afl-fuzz.
+
+# afl-fuzz must be interrupted by Ctrl-C after it has found some crashes
+# (or after it has run long enough).
+
+# afl-fuzz refuses to run if the dummy input file $(INPUT)/dummy happens
+# to cause a crash right away. This is why we run $(BINARY) once before
+# attempting to launch afl-fuzz. If this initial run fails, then we copy
+# $(INPUT)/dummy to $(OUTPUT)/crashes, so as to let [make show] and
+# [make min] work normally.
+
+.PHONY: test
+test: all prepare
+	@ make test_nodep
+
+.PHONY: test_nodep
+test_nodep:
+	@ if $(BINARY) $(INPUT)/dummy ; then \
+	    $(STACK) && afl-fuzz -i $(INPUT) -o $(OUTPUT) $(BINARY) @@ ; \
+	  else \
+	    exitcode=$$? ; \
+	    cp $(INPUT)/dummy $(OUTPUT)/crashes ; \
+	    exit $$exitcode ; \
+	  fi
+
+# ----------------------------------------------------------------------------
+
+# [make random] runs random tests (without using afl-fuzz).
+
+# When no file name is given, $(BINARY) reads from /dev/urandom.
+
+# It runs in an infinite loop and saves the scenarios that it finds
+# in the directory output/crashes, in a human-readable form. There
+# is no need to use [make show] to decode them.
+
+.PHONY: random
+random: all prepare
+	@ make random_nodep
+
+.PHONY: random_nodep
+random_nodep:
+	@ $(BINARY)
+
+# ----------------------------------------------------------------------------
+
+# [make unattended] runs either [make test] or [make random], according to the
+# variable MODE, and interrupts it after a while (TIMEOUT).
+# It then checks that the outcome is as expected, i.e., some bugs were found,
+# or no bugs were found, depending on EXPECTING_BUGS (which should be defined
+# as 0 or 1).
+
+TIMEOUT        := 20
+EXPECTING_BUGS :=  0
+MODE           := test # or: random
+
+RED             = \033[0;31m
+NORMAL          = \033[0m
+
+.PHONY: unattended
+unattended: all prepare
+	@ echo "     $$(pwd)"
+	@ echo "     Running unattended for at most $(TIMEOUT) seconds..."
+	@ (($(TIMEOUT_COMMAND) --signal=INT $(TIMEOUT) make $(MODE)_nodep >/dev/null 2>&1) || true) \
+	    | grep -v "aborting" || true
+	@ crashes=`ls $(OUTPUT)/crashes | grep -v README | wc -l` && \
+	  if (( $$crashes > 0 )) ; then \
+	    if (( $(EXPECTING_BUGS) > 0 )) ; then \
+	      echo "[OK] Found $$crashes faults, great." ; \
+	    else \
+	      printf "$(RED)[KO] Found $$crashes faults, but none were expected!\n$(NORMAL)" ; \
+	      exit 1 ; \
+	    fi \
+	  else \
+	    if (( $(EXPECTING_BUGS) > 0 )) ; then \
+	      printf "$(RED)[KO] Found no faults in $(TIMEOUT) seconds, yet some were expected!\n$(NORMAL)" ; \
+	      exit 1 ; \
+	    else \
+	      echo "[OK] Found no faults, great." ; \
+	    fi \
+	  fi
+
+# ----------------------------------------------------------------------------
+
+# [make multicore] launches several instances of afl-fuzz in parallel.
+# Therefore, it is usually faster than [make test].
+
+# The following is a hopefully portable way of finding how many cores we have.
+
+CORES := $(shell \
+  nproc 2>/dev/null || \
+  sysctl -n hw.ncpu 2>/dev/null || \
+  getconf _NPROCESSORS_ONLN 2>/dev/null || \
+  echo 1)
+
+# Choose a heuristic number of slaves.
+
+SLAVES := $(shell expr $(CORES) - 1)
+
+.PHONY: check_enough_cores
+check_enough_cores:
+	@ echo "We have $(CORES) cores."
+	@ if [[ "$(SLAVES)" -le "0" ]]; then \
+	    echo "Not enough cores! Run 'make test' instead."; exit 1; fi
+
+.PHONY: multicore
+multicore: all prepare check_enough_cores
+# Run one instance in master mode, and many instances in slave mode.
+# The only difference between masters and slaves is that the master
+# performs additional deterministic checks.
+# All processes are launched in the background.
+	@ $(STACK) && \
+	echo "Launching $(SLAVES) slave instances..." ; \
+	for i in `seq $(SLAVES)` ; do \
+	  (afl-fuzz -i $(INPUT) -o $(OUTPUT) -S slave$$i $(BINARY) @@ >/dev/null &) ; \
+	done ; \
+	echo "Launching one master instance..." ; \
+	(afl-fuzz -i $(INPUT) -o $(OUTPUT) -M master $(BINARY) @@ >/dev/null &) ; \
+# In the foreground, provide periodic progress reports.
+	while true ; do afl-whatsup $(OUTPUT) ; sleep 3 ; done
+
+# [make tmux] runs in multicore mode and uses tmux to show all GUIs at
+# once in a terminal window. (A large window and a small font size are
+# needed.)
+
+# Repeating [tmux select-layout tiled] after every step seems required;
+# otherwise, tmux can refuse to split a window, arguing that there is
+# not enough space.
+
+.PHONY: tmux
+tmux: all prepare check_enough_cores
+	@ $(STACK) && \
+	tmux new-session -s monolith -d "afl-fuzz -i $(INPUT) -o $(OUTPUT) -S master $(BINARY) @@" ; \
+	tmux select-layout tiled ; \
+	for i in `seq $(SLAVES)` ; do \
+	  tmux split-window "afl-fuzz -i $(INPUT) -o $(OUTPUT) -S slave$$i $(BINARY) @@" ; \
+	  tmux select-layout tiled ; \
+	done ; \
+	tmux select-layout tiled ; \
+	tmux attach-session
+
+.PHONY: whatsup
+whatsup:
+	afl-whatsup $(OUTPUT)
+
+# ----------------------------------------------------------------------------
+
+# [make show] displays the problems found by afl-fuzz in the previous run.
+
+.PHONY: show
+show:
+	@ $(STACK) && \
+	  (for f in $(CRASHES) ; do \
+	    echo "(* $$f *)"; \
+	    tmp=`mktemp /tmp/crash.XXXX` && \
+	    ($(BINARY) $$f > $$tmp 2>&1 || true) >/dev/null 2>&1 ; \
+	    cat $$tmp ; \
+	    rm $$tmp ; \
+	    echo ; \
+	  done) | more
+
+# ----------------------------------------------------------------------------
+
+# [make summary] is like [make show], but postprocesses its output so as to
+# keep only the last instruction before the crash, and sorts these lines, so
+# as to determine the length of the shortest instruction sequence that causes
+# a problem.
+
+# If you determine that a crash can be obtained in (say) 4 instructions, then
+# typing [make show] and searching for "@04: Failure" will allow you to
+# inspect the scenario that caused this crash.
+
+.PHONY: summary
+summary:
+	@ $(STACK) && \
+	  parallel '$(BINARY) {} 2>/dev/null | grep "Failure" | head -n 1' ::: $(CRASHES) \
+	  | sort -r
+
+# ----------------------------------------------------------------------------
+
+# [make min] attempts to minimize the problematic inputs found by
+# afl-fuzz in the previous run.
+
+.PHONY: min
+min:
+	@ COPY=`mktemp -d $(OUTPUT).XXXX` && rm -rf $(COPY) && \
+	  echo "Saving un-minimized output to $$COPY." && \
+	  cp -rf $(OUTPUT) $$COPY
+	@ $(STACK) && \
+	  parallel 'afl-tmin -i {} -o {} -- $(BINARY) @@' ::: $(CRASHES)
+
+# ----------------------------------------------------------------------------
+
+# [make unload] turns off the MacOS Crash Reporter utility.
+# [make load] turns it on again.
+# This utility should be OFF for afl-fuzz to work correctly.
+
+SL := /System/Library
+PL := com.apple.ReportCrash
+
+.PHONY: unload
+unload:
+	launchctl unload -w $(SL)/LaunchAgents/$(PL).plist
+	sudo launchctl unload -w $(SL)/LaunchDaemons/$(PL).Root.plist
+
+.PHONY: load
+load:
+	launchctl load -w $(SL)/LaunchAgents/$(PL).plist
+	sudo launchctl load -w $(SL)/LaunchDaemons/$(PL).Root.plist
+
+# ----------------------------------------------------------------------------
+
+# [make switch] prints the value of SWITCH.
+
+.PHONY: switch
+switch:
+	@ echo $(SWITCH)
+
+# [make binary] prints the value of BINARY.
+.PHONY: binary
+binary:
+	@ echo $(BINARY)
