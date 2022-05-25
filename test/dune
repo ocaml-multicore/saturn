@@ -5,5 +5,5 @@
 
 (test
  (name qcheck_ws_deque)
- (libraries lockfree qcheck)
+ (libraries lockfree qcheck qcheck-alcotest)
  (modules qcheck_ws_deque))
