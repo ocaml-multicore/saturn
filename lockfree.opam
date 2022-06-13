@@ -11,6 +11,13 @@ tags: []
 depends: [
   "ocaml" {>= "5.0"}
   "dune" {>= "3.0"}
+  "qcheck" {>= "0.18.1" & with-test}
+  "multicorecheck" {with-test}
+  "ppx_deriving"        {>= "5.2.1" & with-test}
+]
+pin-depends: [
+  [ "multicorecheck.dev" "git+https://github.com/jmid/multicoretests.git#main" ]
+  ["ppx_deriving_qcheck.0.2.0" "git+https://github.com/c-cube/qcheck.git#master"]
 ]
 depopts: []
 build: ["dune" "build" "-p" name "-j" jobs]
