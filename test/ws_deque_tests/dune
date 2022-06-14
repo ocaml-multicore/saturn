@@ -4,6 +4,7 @@
  (modules test_ws_deque))
 
 ;; multicorecheck tests
+
 (alias
  (name default)
  (deps multicorecheck_ws_deque.exe))
@@ -12,7 +13,8 @@
  (name multicorecheck_ws_deque)
  (modules multicorecheck_ws_deque)
  (libraries qcheck multicorecheck.stm lockfree)
- (preprocess (pps ppx_deriving.show)))
+ (preprocess
+  (pps ppx_deriving.show)))
 
 (env
  (_
@@ -24,5 +26,10 @@
  (deps multicorecheck_ws_deque.exe)
  (action
   (progn
-   (bash "(./multicorecheck_ws_deque.exe --no-colors --verbose || echo 'test run triggered an error') | tee wsd-output.txt")
-   (run %{bin:check_error_count} "lockfree/multicorecheck_ws_deque" 1 wsd-output.txt))))
+   (bash
+    "(./multicorecheck_ws_deque.exe --no-colors --verbose || echo 'test run triggered an error') | tee wsd-output.txt")
+   (run
+    %{bin:check_error_count}
+    "lockfree/multicorecheck_ws_deque"
+    1
+    wsd-output.txt))))

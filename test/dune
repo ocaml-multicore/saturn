@@ -1,9 +1,10 @@
 ;; this prevents the tests from running on a default build
+
 (alias
  (name default)
- (deps check_error_count.exe
-       (alias ws_deque_tests/default)
-       ))
+ (deps
+  check_error_count.exe
+  (alias ws_deque_tests/default)))
 
 ;; platform independent helper to help validate non-deterministic output
 
