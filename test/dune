@@ -2,3 +2,8 @@
  (name test_ws_deque)
  (libraries lockfree)
  (modules test_ws_deque))
+
+(test
+ (name test_spsc_queue)
+ (libraries lockfree)
+ (modules test_spsc_queue))
