@@ -1,5 +1,6 @@
 module Mpsc_queue = Lockfree.Mpsc_queue
 
+(* Mpsc_queue is a multiple producers, single consumer queue. *)
 (* Producers can use the functions
  - [push],
  - [is_empty],
@@ -10,9 +11,7 @@ module Mpsc_queue = Lockfree.Mpsc_queue
  - [is_empty],
  - [close] *)
 
-(* [extract_n_from_queue q n when_close] extract [n] elements of [q] by calling
-   [n] times the function [f] on [q]. *)
-let extract_n_of_queue q n close =
+let extract_n q n close =
   let rec loop acc =
     function
     | 0 -> acc
@@ -39,11 +38,6 @@ let popped_until_empty_and_closed q =
   in
   loop [] |> List.rev
 
-(*
-let keep_some l =
-   List.filter Option.is_some l
-   |> List.map Option.get
-*)
 let keep_n_first n = List.filteri (fun i _ -> i < n)
 let keep_n_last n l = List.filteri (fun i _ -> i >= List.length l - n) l
 
@@ -179,7 +173,7 @@ let tests_one_consumer =
           List.iter (fun elt -> Mpsc_queue.push_head queue elt) (List.rev lpush);
 
           (* Call [pop] [npop] times and [close] after [when_close] pops. *)
-          let popped = extract_n_of_queue queue npop when_close in
+          let popped = extract_n queue npop when_close in
 
           let expected =
             List.init npop (fun i ->
@@ -214,12 +208,12 @@ let tests_one_consumer =
           (* Sequential [push_head] *)
           List.iter (fun elt -> Mpsc_queue.push_head queue elt) lpush1;
           (* Call [pop] [npop] times without closing. *)
-          let popped = extract_n_of_queue queue npop (npop+1) in
+          let popped = extract_n queue npop (npop+1) in
           (* Sequential [push_head] *)
           List.iter (fun elt -> Mpsc_queue.push_head queue elt) lpush2;
           (* Dequeue and closing *)
           let size_queue = List.length lpush2 + (Int.max 0 (List.length lpush1 - npop)) in
-          let final = extract_n_of_queue queue size_queue 0 in
+          let final = extract_n queue size_queue 0 in
 
           if npop <= List.length lpush1 then
             (
@@ -294,7 +288,7 @@ let tests_one_consumer_one_producer =
 
             (* Sequential test: we wait for the producer to be finished *)
             let () = Domain.join producer in
-            let popped = extract_n_of_queue queue npop (npop+1) in
+            let popped = extract_n queue npop (npop+1) in
 
             (* Testing property *)
             let expected =
@@ -327,7 +321,7 @@ let tests_one_consumer_one_producer =
               Domain.cpu_relax () done;
 
             (* Consumer pops. *)
-            let popped = extract_n_of_queue queue npop (npop+1) in
+            let popped = extract_n queue npop (npop+1) in
 
             let closed = Domain.join producer in
 
@@ -371,7 +365,7 @@ let tests_one_consumer_one_producer =
 
             (* We pop everything to check order.*)
             let total_push = List.length lpush + (List.length lpush_head) in
-            let all_pushed = extract_n_of_queue queue total_push (total_push+1) in
+            let all_pushed = extract_n queue total_push (total_push+1) in
 
             (* Testing property *)
             not closed
@@ -489,8 +483,13 @@ let tests_one_consumer_two_producers =
             compare popped_value lpush1 lpush2);
 
       (* TEST 2 - one consumer two producers:
-         Sequential [push] then several [pop].
-         Checks that producers do not erase each other [pushes].      *)
+
+         Two producers push and close the queue when one has finished
+         pushing. At the same time a consumer popes.
+
+         Checks that closing the queue prevent other producers to push
+         and that popping at the same time works.
+      *)
       Test.make
         ~name:"par_push_close_pop"
         (pair (list int) (list int)) (fun (lpush1, lpush2) ->
