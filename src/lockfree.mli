@@ -31,4 +31,4 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 *)
 
 module Ws_deque = Ws_deque
-module Lf_queue = Lf_queue
+module Mpsc_queue = Mpsc_queue

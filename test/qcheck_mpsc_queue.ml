@@ -1,4 +1,4 @@
-module Lf_queue = Lockfree.Lf_queue
+module Mpsc_queue = Lockfree.Mpsc_queue
 
 (* Producers can use the functions
  - [push],
@@ -17,12 +17,12 @@ let extract_n_of_queue q n close =
     function
     | 0 -> acc
     | m ->
-        if m = n - close then Lf_queue.close q;
+        if m = n - close then Mpsc_queue.close q;
         let res =
-          match Lf_queue.pop q with
+          match Mpsc_queue.pop q with
           | Some elt -> `Some elt
           | None -> `None
-          | exception Lf_queue.Closed -> `Closed in
+          | exception Mpsc_queue.Closed -> `Closed in
         Domain.cpu_relax ();
         loop (res :: acc) (m-1)
   in
@@ -32,10 +32,10 @@ let extract_n_of_queue q n close =
 let popped_until_empty_and_closed q =
   let rec loop acc =
     try
-      let popped = Lf_queue.pop q in
+      let popped = Mpsc_queue.pop q in
       Domain.cpu_relax ();
       loop (popped :: acc)
-    with Lf_queue.Closed -> acc
+    with Mpsc_queue.Closed -> acc
   in
   loop [] |> List.rev
 
@@ -50,7 +50,7 @@ let keep_n_last n l = List.filteri (fun i _ -> i >= List.length l - n) l
 let list_some = List.map (fun elt -> `Some elt)
 
 
-(* With just one consumer, the [Lf_queue] is basically a LIFO. *)
+(* With just one consumer, the [Mpsc_queue] is basically a LIFO. *)
 let tests_one_consumer =
   QCheck.([
       (* TEST 1 - single consumer no producer:
@@ -59,11 +59,11 @@ let tests_one_consumer =
         ~name:"push_head_pop"
         (pair (list int) int) (fun (lpush, i) ->
             (* Building a random queue *)
-            let queue = Lf_queue.create () in
-            List.iter (fun elt -> Lf_queue.push_head queue elt) (List.rev lpush);
+            let queue = Mpsc_queue.create () in
+            List.iter (fun elt -> Mpsc_queue.push_head queue elt) (List.rev lpush);
 
             (* Testing property *)
-            Lf_queue.push_head queue i ; Lf_queue.pop queue =  Some i);
+            Mpsc_queue.push_head queue i ; Mpsc_queue.pop queue =  Some i);
 
       (* TEST 2 - single consumer no producer:
          forall q, if is_empty q then pop queue = None *)
@@ -71,17 +71,17 @@ let tests_one_consumer =
         ~name:"pop_empty"
         (list int) (fun lpush ->
             (* Building a random queue *)
-            let queue = Lf_queue.create () in
-            List.iter (fun elt -> Lf_queue.push_head queue elt) (List.rev lpush);
+            let queue = Mpsc_queue.create () in
+            List.iter (fun elt -> Mpsc_queue.push_head queue elt) (List.rev lpush);
             (* Popping until [is_empty q] is true*)
             let count = ref 0 in
-            while (not (Lf_queue.is_empty queue)) do
+            while (not (Mpsc_queue.is_empty queue)) do
               incr count;
-              ignore (Lf_queue.pop queue)
+              ignore (Mpsc_queue.pop queue)
             done;
 
             (* Testing property *)
-            Lf_queue.pop queue = None && !count = List.length lpush);
+            Mpsc_queue.pop queue = None && !count = List.length lpush);
 
       (* TEST 3 - single consumer no producer:
          forall q and i,  push_head q i; is_empty q = false*)
@@ -90,11 +90,11 @@ let tests_one_consumer =
         (list int) (fun lpush ->
             assume ( lpush <> []);
             (* Building a random queue *)
-            let queue = Lf_queue.create () in
-            List.iter (fun elt -> Lf_queue.push_head queue elt) (List.rev lpush);
+            let queue = Mpsc_queue.create () in
+            List.iter (fun elt -> Mpsc_queue.push_head queue elt) (List.rev lpush);
 
             (* Testing property *)
-            not (Lf_queue.is_empty queue));
+            not (Mpsc_queue.is_empty queue));
 
       (* TEST 4 - single consumer no producer:
          forall q and i,  [close q; push_head q i] raises Closed <=> q is empty. *)
@@ -102,22 +102,22 @@ let tests_one_consumer =
         ~name:"close_push_head"
         (pair (list int) int) (fun (lpush, i) ->
             (* Building a random queue *)
-            let queue = Lf_queue.create () in
-            List.iter (fun elt -> Lf_queue.push_head queue elt) (List.rev lpush);
+            let queue = Mpsc_queue.create () in
+            List.iter (fun elt -> Mpsc_queue.push_head queue elt) (List.rev lpush);
 
             (* is_empty raises Close if the queue is closed and empty,
                so we need to register its value before closing. Next
                test checks [is_empty] behaviour on a closed queue. *)
-            let is_empty = Lf_queue.is_empty queue in
-            Lf_queue.close queue;
+            let is_empty = Mpsc_queue.is_empty queue in
+            Mpsc_queue.close queue;
 
             (* Testing property *)
             if is_empty then
-              (try Lf_queue.push_head queue i; false
-              with Lf_queue.Closed -> true)
+              (try Mpsc_queue.push_head queue i; false
+              with Mpsc_queue.Closed -> true)
             else
-              (try Lf_queue.push_head queue i; true
-              with Lf_queue.Closed -> false));
+              (try Mpsc_queue.push_head queue i; true
+              with Mpsc_queue.Closed -> false));
 
       (* TEST 5 - single consumer no producer:
          This test works also for one producer no consumer.
@@ -126,19 +126,19 @@ let tests_one_consumer =
         ~name:"close_is_empty"
         (list int) (fun lpush ->
             (* Building a random queue *)
-            let queue = Lf_queue.create () in
-            List.iter (fun elt -> Lf_queue.push_head queue elt) (List.rev lpush);
+            let queue = Mpsc_queue.create () in
+            List.iter (fun elt -> Mpsc_queue.push_head queue elt) (List.rev lpush);
 
-            let is_empty = Lf_queue.is_empty queue in
-            Lf_queue.close queue;
+            let is_empty = Mpsc_queue.is_empty queue in
+            Mpsc_queue.close queue;
 
             (* Testing property *)
             if is_empty then
-              (try ignore (Lf_queue.is_empty queue); false
-              with Lf_queue.Closed -> true)
+              (try ignore (Mpsc_queue.is_empty queue); false
+              with Mpsc_queue.Closed -> true)
             else
-              (try Lf_queue.is_empty queue = false
-              with Lf_queue.Closed -> false));
+              (try Mpsc_queue.is_empty queue = false
+              with Mpsc_queue.Closed -> false));
 
       (* TEST 6 - single consumer no producer:
          forall q and i, [close q; pop q] raises Closed <=> q is empty *)
@@ -146,19 +146,19 @@ let tests_one_consumer =
         ~name:"close_pop"
         (list int) (fun lpush ->
             (* Building a random queue *)
-            let queue = Lf_queue.create () in
-            List.iter (fun elt -> Lf_queue.push_head queue elt) (List.rev lpush);
+            let queue = Mpsc_queue.create () in
+            List.iter (fun elt -> Mpsc_queue.push_head queue elt) (List.rev lpush);
 
-            let is_empty = Lf_queue.is_empty queue in
-            Lf_queue.close queue;
+            let is_empty = Mpsc_queue.is_empty queue in
+            Mpsc_queue.close queue;
 
             (* Testing property *)
             if is_empty then
-              (try ignore (Lf_queue.pop queue); false
-              with Lf_queue.Closed -> true)
+              (try ignore (Mpsc_queue.pop queue); false
+              with Mpsc_queue.Closed -> true)
             else
-              (try Lf_queue.pop queue = Some (List.hd lpush)
-              with Lf_queue.Closed -> false));
+              (try Mpsc_queue.pop queue = Some (List.hd lpush)
+              with Mpsc_queue.Closed -> false));
 
     (* TEST 7 - single consumer no producer:
        More complex test. Maybe redondant with tests 1 to 6.
@@ -173,10 +173,10 @@ let tests_one_consumer =
       (pair (list int) (pair small_nat small_nat)) (fun (lpush, (npop, when_close)) ->
           (* Initialisation*)
           let npush = List.length lpush in
-          let queue = Lf_queue.create () in
+          let queue = Mpsc_queue.create () in
 
           (* Sequential [push_head] *)
-          List.iter (fun elt -> Lf_queue.push_head queue elt) (List.rev lpush);
+          List.iter (fun elt -> Mpsc_queue.push_head queue elt) (List.rev lpush);
 
           (* Call [pop] [npop] times and [close] after [when_close] pops. *)
           let popped = extract_n_of_queue queue npop when_close in
@@ -209,14 +209,14 @@ let tests_one_consumer =
       ~name:"seq_push_pop"
       (pair small_nat (pair (list int) (list int))) (fun (npop, (lpush1, lpush2)) ->
           (* Initialisation*)
-          let queue = Lf_queue.create () in
+          let queue = Mpsc_queue.create () in
 
           (* Sequential [push_head] *)
-          List.iter (fun elt -> Lf_queue.push_head queue elt) lpush1;
+          List.iter (fun elt -> Mpsc_queue.push_head queue elt) lpush1;
           (* Call [pop] [npop] times without closing. *)
           let popped = extract_n_of_queue queue npop (npop+1) in
           (* Sequential [push_head] *)
-          List.iter (fun elt -> Lf_queue.push_head queue elt) lpush2;
+          List.iter (fun elt -> Mpsc_queue.push_head queue elt) lpush2;
           (* Dequeue and closing *)
           let size_queue = List.length lpush2 + (Int.max 0 (List.length lpush1 - npop)) in
           let final = extract_n_of_queue queue size_queue 0 in
@@ -252,13 +252,13 @@ let tests_one_producer =
         ~name:"push_not_empty"
         (list int) (fun lpush ->
             (* Building a random queue *)
-            let queue = Lf_queue.create () in
-            List.iter (fun elt -> Lf_queue.push queue elt) lpush;
+            let queue = Mpsc_queue.create () in
+            List.iter (fun elt -> Mpsc_queue.push queue elt) lpush;
 
             (* Testing property *)
             match lpush with
-            | [] -> Lf_queue.is_empty queue
-            | _  -> not (Lf_queue.is_empty queue));
+            | [] -> Mpsc_queue.is_empty queue
+            | _  -> not (Mpsc_queue.is_empty queue));
 
       (* TEST 2 - single producer no consumer:
          forall q and i,  [close q; push q i] raises Closed. *)
@@ -266,13 +266,13 @@ let tests_one_producer =
         ~name:"closing_prevents_pushing"
         (pair (list int) int) (fun (lpush, i) ->
             (* Building a random queue *)
-            let queue = Lf_queue.create () in
-            List.iter (fun elt -> Lf_queue.push queue elt) lpush;
+            let queue = Mpsc_queue.create () in
+            List.iter (fun elt -> Mpsc_queue.push queue elt) lpush;
 
-            Lf_queue.close queue;
+            Mpsc_queue.close queue;
             (* Testing property *)
-            try Lf_queue.push queue i; false
-            with Lf_queue.Closed -> true);
+            try Mpsc_queue.push queue i; false
+            with Mpsc_queue.Closed -> true);
     ])
 
 
@@ -285,12 +285,12 @@ let tests_one_consumer_one_producer =
         ~name:"seq_push_pop"
         (pair (list int) small_nat) (fun (lpush, npop) ->
             (* Initialization *)
-            let queue = Lf_queue.create () in
+            let queue = Mpsc_queue.create () in
 
             (* Producer pushes. *)
             let producer =
               Domain.spawn (fun () ->
-                  List.iter (fun elt -> Lf_queue.push queue elt) lpush) in
+                  List.iter (fun elt -> Mpsc_queue.push queue elt) lpush) in
 
             (* Sequential test: we wait for the producer to be finished *)
             let () = Domain.join producer in
@@ -309,7 +309,7 @@ let tests_one_consumer_one_producer =
         ~name:"par_push_pop"
         (pair (list int) small_nat) (fun (lpush, npop) ->
             (* Initialization *)
-            let queue = Lf_queue.create () in
+            let queue = Mpsc_queue.create () in
             let sema = Semaphore.Binary.make false in
 
             (* Producer pushes. *)
@@ -318,9 +318,9 @@ let tests_one_consumer_one_producer =
                   Semaphore.Binary.release sema;
                   try
                     List.iter
-                      (fun elt -> Lf_queue.push queue elt; Domain.cpu_relax ()) lpush;
+                      (fun elt -> Mpsc_queue.push queue elt; Domain.cpu_relax ()) lpush;
                     false
-                  with Lf_queue.Closed -> true) in
+                  with Mpsc_queue.Closed -> true) in
 
             (* Waiting to make sure the producer can start *)
             while not (Semaphore.Binary.try_acquire sema) do
@@ -348,7 +348,7 @@ let tests_one_consumer_one_producer =
         ~name:"par_push_push_head"
         (pair (list int) (list int)) (fun (lpush, lpush_head) ->
             (* Initialization *)
-            let queue = Lf_queue.create () in
+            let queue = Mpsc_queue.create () in
             let sema = Semaphore.Binary.make false in
 
             (* Producer pushes. *)
@@ -357,15 +357,15 @@ let tests_one_consumer_one_producer =
                   Semaphore.Binary.release sema;
                   try
                     List.iter
-                      (fun elt -> Lf_queue.push queue elt; Domain.cpu_relax ()) lpush;
+                      (fun elt -> Mpsc_queue.push queue elt; Domain.cpu_relax ()) lpush;
                     false
-                  with Lf_queue.Closed -> true) in
+                  with Mpsc_queue.Closed -> true) in
 
             (* Waiting to make sure the producer can start *)
             while not (Semaphore.Binary.try_acquire sema) do
               Domain.cpu_relax () done;
 
-            List.iter (fun elt -> Lf_queue.push_head queue elt) lpush_head;
+            List.iter (fun elt -> Mpsc_queue.push_head queue elt) lpush_head;
 
             let closed = Domain.join producer in
 
@@ -376,7 +376,7 @@ let tests_one_consumer_one_producer =
             (* Testing property *)
             not closed
             &&
-            Lf_queue.is_empty queue
+            Mpsc_queue.is_empty queue
             &&
             keep_n_first (List.length lpush_head) all_pushed = list_some (lpush_head |> List.rev)
             &&
@@ -390,7 +390,7 @@ let tests_one_consumer_one_producer =
         ~name:"par_pop_push2"
         (list int) (fun lpush ->
             (* Initialisation*)
-            let queue = Lf_queue.create () in
+            let queue = Mpsc_queue.create () in
             let sema = Semaphore.Binary.make false in
 
             (* Sequential [push_head] *)
@@ -400,10 +400,10 @@ let tests_one_consumer_one_producer =
                   let res =
                     try
                       List.iter
-                        (fun elt -> Lf_queue.push queue elt; Domain.cpu_relax ()) lpush;
+                        (fun elt -> Mpsc_queue.push queue elt; Domain.cpu_relax ()) lpush;
                       false
-                    with Lf_queue.Closed -> true in
-                Lf_queue.close queue; res) in
+                    with Mpsc_queue.Closed -> true in
+                Mpsc_queue.close queue; res) in
 
             while not (Semaphore.Binary.try_acquire sema) do
               Domain.cpu_relax () done;
@@ -430,7 +430,7 @@ let tests_one_consumer_two_producers =
         (pair (list int) (list int)) (fun (lpush1, lpush2) ->
             (* Initialization *)
             let npush1, npush2 = List.length lpush1, List.length lpush2 in
-            let queue = Lf_queue.create () in
+            let queue = Mpsc_queue.create () in
             let sema = Semaphore.Counting.make 2 in
 
             let multi_push lpush =
@@ -440,9 +440,9 @@ let tests_one_consumer_two_producers =
               done;
               try
                 List.iter
-                  (fun elt -> Lf_queue.push queue elt; Domain.cpu_relax ()) lpush;
+                  (fun elt -> Mpsc_queue.push queue elt; Domain.cpu_relax ()) lpush;
                 false
-              with Lf_queue.Closed -> true in
+              with Mpsc_queue.Closed -> true in
 
             (* Producers pushes. *)
             let producer1 = Domain.spawn (fun () -> multi_push lpush1) in
@@ -451,7 +451,7 @@ let tests_one_consumer_two_producers =
             let closed1 = Domain.join producer1 in
             let closed2 = Domain.join producer2 in
 
-            Lf_queue.close queue;
+            Mpsc_queue.close queue;
 
             (* Retrieve pushed values. *)
             let popped = popped_until_empty_and_closed queue in
@@ -496,7 +496,7 @@ let tests_one_consumer_two_producers =
         (pair (list int) (list int)) (fun (lpush1, lpush2) ->
             (* Initialization *)
             let npush1, npush2 = List.length lpush1, List.length lpush2 in
-            let queue = Lf_queue.create () in
+            let queue = Mpsc_queue.create () in
             let sema = Semaphore.Counting.make 2 in
 
             let guard_push lpush =
@@ -507,11 +507,11 @@ let tests_one_consumer_two_producers =
                let closed_when_pushing =
                  try
                    List.iter
-                     (fun elt -> Lf_queue.push queue elt; Domain.cpu_relax ()) lpush;
+                     (fun elt -> Mpsc_queue.push queue elt; Domain.cpu_relax ()) lpush;
                    false
-                 with Lf_queue.Closed -> true in
+                 with Mpsc_queue.Closed -> true in
                closed_when_pushing,
-               try Lf_queue.close queue; true with Lf_queue.Closed -> false
+               try Mpsc_queue.close queue; true with Mpsc_queue.Closed -> false
             in
 
             (* Producers pushes. *)
@@ -586,7 +586,7 @@ let tests_one_consumer_two_producers =
 
 let main () =
   let to_alcotest = List.map QCheck_alcotest.to_alcotest  in
-  Alcotest.run "Lf_queue" [
+  Alcotest.run "Mpsc_queue" [
     "one_consumer", to_alcotest tests_one_consumer;
     "one_producer", to_alcotest tests_one_producer;
     "one_cons_one_prod", to_alcotest tests_one_consumer_one_producer;

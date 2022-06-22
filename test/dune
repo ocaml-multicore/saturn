@@ -9,6 +9,6 @@
  (modules qcheck_ws_deque))
 
 (test
- (name qcheck_lf_queue)
+ (name qcheck_mpsc_queue)
  (libraries lockfree qcheck qcheck-alcotest)
- (modules qcheck_lf_queue))
+ (modules qcheck_mpsc_queue))
