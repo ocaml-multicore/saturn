@@ -15,7 +15,8 @@ jobs:
           - ubuntu-latest
           - macos-latest
         ocaml-compiler:
-          - 5.0.0+trunk
+          - ocaml-base-compiler.5.0.0~alpha0
+          - ocaml-variants.5.1.0+trunk
 
     runs-on: ${{ matrix.os }}
 
@@ -33,10 +34,10 @@ jobs:
       - name: Use OCaml ${{ matrix.ocaml-compiler }}
         uses: ocaml/setup-ocaml@v2
         with:
-          ocaml-compiler: ocaml-variants.${{ matrix.ocaml-compiler }}
+          ocaml-compiler: ${{ matrix.ocaml-compiler }}
           opam-repositories: |
             default: https://github.com/ocaml/opam-repository.git
-            ocaml-beta-repository: https://github.com/ocaml/ocaml-beta-repository.git
+            alpha: https://github.com/kit-ty-kate/opam-alpha-repository.git
           cache-prefix: ${{ steps.multicore_hash.outputs.commit }}
           opam-depext: false
 
