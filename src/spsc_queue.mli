@@ -1,19 +1,21 @@
-type 'a t 
+type 'a t
+(** Type of single-producer single-consumer non-resizable thread-safe
+   queue that works in FIFO order. *)
 
-(* [create] initializes a single-producer single-consumer thread-safe queue. *)
+exception Full
+
 val create : size_exponent:int -> 'a t
+(** [create ~size_exponent:int] creates a empty queue of size
+   [2^size_exponent].  *)
 
-(* [enqueue] insert element into the queue. This method can be used by at most 1 
-  thread at the time. *)
-val enqueue : 'a t -> 'a -> bool 
+val push : 'a t -> 'a -> unit
+(** [push q v] pushes [v] at the back of the queue. *)
 
-
-(* [dequeue] removes element from the queue, if any. This method can be used by 
+val pop : 'a t -> 'a option
+(** [pop q] removes element from head of the queue, if any. This method can be used by
   at most 1 thread at the time. *)
-val dequeue : 'a t -> 'a option
 
-(* [size] returns the size of the queue. This method linearizes only when called 
-  from either enqueuer or dequeuer thread. Otherwise, it is safe to call but 
-  provides only an *indication* of the size of the structure. 
-*)
 val size : 'a t -> int
+(** [size] returns the size of the queue. This method linearizes only when called
+  from either enqueuer or dequeuer thread. Otherwise, it is safe to call but
+  provides only an *indication* of the size of the structure. *)
