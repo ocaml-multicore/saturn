@@ -1,5 +1,7 @@
-(** A lock-free multi-producer, single-consumer, thread-safe queue without support for cancellation.
-    This makes a good data structure for a scheduler's run queue. *)
+(** A lock-free multi-producer, single-consumer, thread-safe queue
+    without support for cancellation.
+    This makes a good data structure for a scheduler's run queue and
+    is currently (September 2022) used for Eio's scheduler. *)
 
 type 'a t
 (** A queue of items of type ['a]. *)
