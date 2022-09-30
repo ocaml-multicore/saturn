@@ -31,3 +31,5 @@ module Spsc_queue = Spsc_queue
 module Mpsc_queue = Mpsc_queue
 module Ms_queue = Lf_msqueue
 module Backoff = Backoff
+
+module Triber_stack = Lf_stack
