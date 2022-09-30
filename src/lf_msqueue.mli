@@ -15,6 +15,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
+(* Michael-Scott queue 
+   inspired by https://www.cs.rochester.edu/research/synchronization/pseudocode/queues.html *)
+
 type 'a t
 (** The type of lock-free queue. *)
 

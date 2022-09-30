@@ -20,5 +20,10 @@
 
 (test
  (name qcheck_mpsc_queue)
- (libraries lockfree qcheck "qcheck-alcotest")
+ (libraries lockfree qcheck qcheck-alcotest)
  (modules qcheck_mpsc_queue))
+
+(test
+ (name qcheck_ms_queue)
+ (libraries lockfree qcheck qcheck-alcotest)
+ (modules qcheck_ms_queue))

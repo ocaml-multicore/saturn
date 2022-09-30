@@ -15,11 +15,10 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-(* Michael-Scott queue *)
+(* Michael-Scott queue inspired by https://www.cs.rochester.edu/research/synchronization/pseudocode/queues.html *)
 
 (* TODO KC: Replace with concurrent lock free bag --
  * http://dl.acm.org/citation.cfm?id=1989550 *)
-
 
 type 'a node =
   | Nil
@@ -42,7 +41,6 @@ let is_empty q =
        | _ -> false )
 
 let pop q =
-  let b = Backoff.create () in
   let rec loop () =
     let s = Atomic.get q.head in
     let nhead = match s with
@@ -51,7 +49,7 @@ let pop q =
     in match nhead with
      | Nil -> None
      | Next (v, _) when Atomic.compare_and_set q.head s nhead -> Some v
-     | _ -> ( Backoff.once b ; loop () )
+     | _ -> loop ()
   in loop ()
 
 let push q v =
@@ -64,14 +62,13 @@ let push q v =
   let newnode = Next (v, Atomic.make Nil) in
   let tail = Atomic.get q.tail in
   match tail with
-  | Nil         -> failwith "HW_MSQueue.push: impossible"
+  | Nil         -> failwith "MSQueue.push: impossible"
   | Next (_, n) -> begin
       find_tail_and_enq n newnode;
       ignore (Atomic.compare_and_set q.tail tail newnode)
   end
 
 let clean_until q f =
-  let b = Backoff.create () in
   let rec loop () =
     let s = Atomic.get q.head in
     let nhead = match s with
@@ -82,8 +79,8 @@ let clean_until q f =
      | Next (v, _) ->
          if not (f v) then
             if Atomic.compare_and_set q.head s nhead
-            then (Backoff.reset b; loop ())
-            else (Backoff.once b; loop ())
+            then loop ()
+            else loop ()
          else ()
   in loop ()
 
