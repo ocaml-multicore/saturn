@@ -19,7 +19,7 @@
    The principle is similar on a bounded array but now the number of threads
    accessing a single cell is not capped at 2. If queue wraps around multiple
    times, there could be N pushrs and N dequeuers on a single slot. Still, as long
-   as long as pushrs retry and all operations are properly synchronized, it
+   as long as pushers retry and all operations are properly synchronized, it
    linearizes. This is the queue described in the paper above.
 
    --
@@ -138,6 +138,10 @@ let pop queue =
         && Atomic.compare_and_set head (old_head + 1) old_head
       then (* rolled back head *)
         None
+      else if
+        ccas tail old_head (old_head + 1)
+      then (* pushed tail forward *)
+        None  
       else take_or_rollback ()
     in
     take_or_rollback ()
