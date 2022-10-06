@@ -22,3 +22,8 @@
  (name qcheck_mpsc_queue)
  (libraries lockfree qcheck qcheck-alcotest)
  (modules qcheck_mpsc_queue))
+
+(test
+ (name test_mpmc_queue)
+ (libraries lockfree)
+ (modules test_mpmc_queue))
