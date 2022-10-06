@@ -15,5 +15,5 @@
 
 (test
  (name test_mpmc_queue)
- (libraries lockfree)
+ (libraries lockfree unix)
  (modules test_mpmc_queue))

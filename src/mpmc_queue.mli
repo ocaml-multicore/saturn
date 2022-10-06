@@ -4,8 +4,13 @@
     order. 
 *)
 
-type 'a t
-(** A queue of items of type ['a]. *)
+type 'a t = private {
+  array : 'a Option.t Atomic.t Array.t;
+  head : int Atomic.t;
+  tail : int Atomic.t;
+  mask : int;
+}
+(** A queue of items of type ['a]. Implementation exposed for testing. *)
 
 val create : size_exponent:int -> unit -> 'a t
 (** [create ~size_exponent:int] creates an empty queue of size
