@@ -1,6 +1,6 @@
 open Lockfree.Mpmc_queue
 
-let _smoke_test () =
+let smoke_test () =
   let queue = create ~size_exponent:2 () in
   (* enqueue 4 *)
   for i = 1 to 4 do
@@ -17,29 +17,10 @@ let _smoke_test () =
   assert (Option.is_none (pop queue))
 ;;
 
-_smoke_test ()
+smoke_test ()
 
-(*let log s =
-  Printf.printf "%s\n" s;
-  Stdlib.flush_all ()
-*)
-let _two_threads_test () =
+let two_threads_test () =
   let queue = create ~size_exponent:2 () in
-  (* Domain.spawn (fun () ->
-         while true do
-           let ({ array; head; tail; _ } : 'a t) = queue in
-           log
-             (Printf.sprintf "\nhd: %d, tl:%d\n" (Atomic.get head)
-                (Atomic.get tail));
-           log
-             (Array.to_list array |> List.map Atomic.get
-             |> List.map (function
-                  | None -> "none"
-                  | Some v -> Printf.sprintf "%d" v)
-             |> String.concat ",");
-           Unix.sleepf 0.3
-         done)
-     |> ignore; *)
   let num_of_elements = 1_000_000 in
   (* start dequeuer *)
   let dequeuer =
@@ -60,10 +41,10 @@ let _two_threads_test () =
   done;
   Domain.join dequeuer |> ignore;
   ()
+;;
 
-(*
 two_threads_test ()
-*)
+
 module Wait_for_others = struct
   type t = { currently : int Atomic.t; total_expected : int }
 
@@ -92,7 +73,7 @@ let pusher wfo queue num_of_elements () =
 
 let run_test num_takers num_pushers =
   let queue = create ~size_exponent:6 () in
-  let num_of_elements = 2_000_000 in
+  let num_of_elements = 4_000_000 in
   let wfo = Wait_for_others.init ~total_expected:(num_takers + num_pushers) in
   let _ =
     let takers =
