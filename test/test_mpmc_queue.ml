@@ -72,7 +72,7 @@ let pusher wfo queue num_of_elements () =
   done
 
 let run_test num_takers num_pushers =
-  let queue = create ~size_exponent:6 () in
+  let queue = create ~size_exponent:3 () in
   let num_of_elements = 4_000_000 in
   let wfo = Wait_for_others.init ~total_expected:(num_takers + num_pushers) in
   let _ =
