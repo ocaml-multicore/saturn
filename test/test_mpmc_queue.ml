@@ -4,7 +4,8 @@ let smoke_test () =
   let queue = create ~size_exponent:2 () in
   (* enqueue 4 *)
   for i = 1 to 4 do
-    assert (push queue i)
+    Alcotest.(check bool)
+      "there should be space in the queue" (push queue i) true
   done;
   assert (not (push queue 0));
   let ({ tail; head; _ } : 'a t) = queue in
@@ -12,12 +13,10 @@ let smoke_test () =
   assert (Atomic.get head = 0);
   (* dequeue 4 *)
   for i = 1 to 4 do
-    assert (Some i = pop queue)
+    Alcotest.(check (option int))
+      "items should come out in FIFO order" (Some i) (pop queue)
   done;
-  assert (Option.is_none (pop queue))
-;;
-
-smoke_test ()
+  Alcotest.(check (option int)) "queue should be empty" None (pop queue)
 
 let two_threads_test () =
   let queue = create ~size_exponent:2 () in
@@ -29,7 +28,8 @@ let two_threads_test () =
         while !i < num_of_elements do
           match pop queue with
           | Some item ->
-              assert (item = !i);
+              Alcotest.(check int)
+                "popped items should follow FIFO order" item !i;
               i := !i + 1
           | None -> ()
         done)
@@ -41,9 +41,6 @@ let two_threads_test () =
   done;
   Domain.join dequeuer |> ignore;
   ()
-;;
-
-two_threads_test ()
 
 module Wait_for_others = struct
   type t = { currently : int Atomic.t; total_expected : int }
@@ -71,20 +68,20 @@ let pusher wfo queue num_of_elements () =
     if push queue !i then i := !i + 1
   done
 
-let run_test num_takers num_pushers =
+let run_test num_takers num_pushers () =
   let queue = create ~size_exponent:3 () in
   let num_of_elements = 4_000_000 in
   let wfo = Wait_for_others.init ~total_expected:(num_takers + num_pushers) in
   let _ =
     let takers =
       assert (num_of_elements mod num_takers == 0);
-      let items_per_taker = num_of_elements / num_takers in 
+      let items_per_taker = num_of_elements / num_takers in
       List.init num_takers (fun _ ->
           Domain.spawn (taker wfo queue items_per_taker))
     in
     let pushers =
       assert (num_of_elements mod num_pushers == 0);
-      let items_per_pusher = num_of_elements / num_pushers in 
+      let items_per_pusher = num_of_elements / num_pushers in
       List.init num_pushers (fun _ ->
           Domain.spawn (pusher wfo queue items_per_pusher))
     in
@@ -93,12 +90,23 @@ let run_test num_takers num_pushers =
   let ({ array; head; tail; _ } : 'a t) = queue in
   let head_val = Atomic.get head in
   let tail_val = Atomic.get tail in
-  assert (head_val = tail_val);
-  Array.iter (fun item -> assert (Option.is_none (Atomic.get item))) array;
-  Stdlib.flush_all();
-;;
+  Alcotest.(check int) "hd an tl match" head_val tail_val;
+  Array.iter
+    (fun item ->
+      Alcotest.(check (option int))
+        "ghost item in the queue!" None (Atomic.get item))
+    array
 
-let scenarios = [(4,4); (8,1); (1,8)];;
-
-List.iter (fun (takers, pushers) -> run_test takers pushers) scenarios;;
-
+let () =
+  let open Alcotest in
+  run "Mpmc_queue"
+    [
+      ("single-thread", [ test_case "is it a queue" `Quick smoke_test ]);
+      ("validate items", [ test_case "1 prod. 1 cons." `Quick two_threads_test ]);
+      ( "validate indices under load",
+        [
+          test_case " 4 prod. 4 cons." `Slow (run_test 4 4);
+          test_case " 8 prod. 1 cons." `Slow (run_test 8 1);
+          test_case " 1 prod. 8 cons." `Slow (run_test 1 8);
+        ] );
+    ]
