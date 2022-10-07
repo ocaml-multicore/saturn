@@ -1,79 +1,95 @@
 (*
-   The general idea behind FAD queues is the easiest to first understand on an
-   array of infinite size. In such a case each slot is a single-use pigeonhole.
-   Incrementing [tail] assigns a particular slot to an pushr, and incrementing
-   [head] assigns a particular slot to dequeuer.
+  The idea behind FAD queues is easier to explain on an array of infinite size. 
+  each element in such array constitutes a single-use exchange slot. Enqueuer 
+  increments [tail] and uses its previous value as the index of its slot. Same 
+  for dequeuer and [head].   
+   
+  # Infinite array
 
-   pushr never fails, as it always gets a brand-new slot. Dequeuer, on the other
-   hand, can witness an empty slot, if [head] jumps behind [tail]. What can
-   dequeuer do? It needs to check whether its slot has anything in it. If it does,
-   it simply returns the value. Otherwise, let's keep spinning until an element
-   appears.
+  Enqueuer never fails. It always gets a brand-new slot and places item in it. 
+  Dequeuer, on the other hand, may witness an empty slot, if [head] jumps behind 
+  [tail]. Remember, we blindly increment respective index. Assume dequeuer 
+  simply keeps spinning on checking the slot until an item appears. 
 
-   Thus each slot has to be atomic - it's the place where paired pushr and
-   dequeuer synchronize. That's an extra atomic operation when comparing to e.g. CAS
-   queue, which runs no risk of [head] overtaking [tail]. But CAS queue experiences
-   a lot of contention on [head], [tail] and ends up with worse throughput even with
-   just a few threads.
+  That's it. There's a few things flowing from this construction: 
+  * Slots are atomic. This is where paired enqueuer and dequeuer communicate. 
+  * [head] overshooting [tail] is a normal condition and that's good - we want 
+  to keep operations on [head] and [tail] independent.
+  
 
-   The principle is similar on a bounded array but now the number of threads
-   accessing a single cell is not capped at 2. If queue wraps around multiple
-   times, there could be N pushrs and N dequeuers on a single slot. Still, as long
-   as long as pushers retry and all operations are properly synchronized, it
-   linearizes. This is the queue described in the paper above.
+  # Finite array
 
-   --
+  Simply treat finite array as circular, i.e. wrap around when reached the end. 
+  Slots are now re-used, so we need to be a little more careful, but just a little. 
+  
+  Firstly, if there's too many items enqueuer may witness a full slot. Let's assume 
+  enqueuer keeps spinning until some dequeuer appears and creates space. 
 
-   It may happen that requested action cannot be completed. Queue could be full (preventing
-   enqueue) or empty (preventing dequeue). We're only gonna learn this after incrementing
-   respective index. Push will see that assigned slot still has an item. Pop will see
-   assigned slot with nothing in it. There's a bunch of things that can be done:
-   1. Busy wait until able to finish.
-   2. Rollback its index with CAS (unassign itself from slot).
-   3. Move forward other index with CAS (assign itself to the same slot as opposite action).
-   4. Mark slot as burned - dequeue only.
+  Secondly, in the case of overlap, there can be more than 2 threads assigned to a 
+  single slot (e.g. 20 enqueuers spinning on 16-slot array). In fact, it could be 
+  any number. Thus, all operations on slot have to be use CAS to ensure that no item 
+  is overwrriten on store and no item is dequeued by two threads at once. 
 
-   Which one then?
+  Above works fine in practises. For example (DOI: 10.1145/3437801.3441583) analyzed
+  this particular design. But this kind of approach is a far bit older and also 
+  present in other papers (e.g. DOI: 10.1145/2851141.2851168) and some GitHub repos. 
 
-   Let's optimize for stability, i.e. some reasonable latency that won't get much worse
-   under heavy load. Busy wait is great because it does not cause any contention in the
-   hotspots ([head], [tail]). Let's start with busy wait (1) for say 30 iterations - that
-   will handle the case when queue is heavily loaded. Once N busy-loops happen and nothing
-   changes, we probably just want to return.
+  Note, this design may violate FIFO (on overlap). The risk can be minimized by 
+  ensuring size_of_array >> num_of_threads but it's never zero.   
+  (github.com/rigtorp/MPMCQueue has a nice way of fixing this, we could add it).
 
-   (2), (3) both allow that. (2) is a little nicer than (3), in that it doesn't add
-   contention to the other index like (3) does. Say, there's a lot more dequeuers than
-   enqueuers, if all dequeurs did (3), they would add a fair amount of contention to
-   the [tail] index and slow the already-outnumbered enqueuers further. So, (2) > (3) for
-   that reason.
+  # Non-blocking operations
 
-   However, in the previous scenario, some dequeuers will really struggle to return. If many
-   dequeuers are constatly trying to pop an element and fail, they will form a chain.
+  Up until now [push] and [pop] were allowed to block on empty and full queue. 
+  There's a few ways to fix that: 
 
-    tl                 hd
-    |                  |
-   [.]-[A]-[B]-[C]-..-[X]
+  1. Busy wait until able to finish.
+  2. Rollback its index with CAS (unassign itself from slot).
+  3. Move forward other index with CAS (assign itself to the same slot as opposite 
+  action).
+  4. Mark slot as burned - dequeue only.
 
-   For A to rollback, B has to rollback first. For B to dequeue C has to rollback first.
+  Which one then?
 
-   [A] is likely to experience a large latency spike. In such a case, it is easier for [A]
-   to do (3) than hope all other active dequeuers will unblock [A] at some point. Thus, it's
-   worthwile also trying to do (3) periodically.
+  Let's optimize for stability, i.e. some reasonable latency that won't get much worse
+  under heavy load. Busy wait is great because it does not cause any contention in the
+  hotspots ([head], [tail]). Start with busy wait (1) for, say, 30 iterations - that
+  will handle the case when queue is heavily loaded and moving forward fast. Once N 
+  busy-loops happen and nothing changes, we probably just want to return.
 
-   It's good to always assign non-zero probability to each of the options. An item for A
-   may appear at any time. Neighbour succeeding with other strategy may render ours
-   impossible (e.g. if dequeuer [B] moves forward [tail] then [A] will never succed in
-   rolling [head] back).
+  (2), (3) both allow that. (2) doesn't add contention to the other index like (3) 
+  does. Say, there's a lot more dequeuers than enqueuers, if all dequeurs did (3), 
+  they would add a fair amount of contention to the [tail] index and slow the 
+  already-outnumbered enqueuers further. So, (2) > (3) for that reason.
 
-   What about burned slots (4)?
+  However, in the previous scenario, some dequeuers will struggle to return. If many
+  dequeuers are constatly trying to pop an element and fail, they will form a chain.
 
-   It's present in the literature. Weakly I'm not a fan. In the case where dequeuers
-   are faster to remove items than enqueuers supply them, slots burned by dequeuers
-   are going to make enqueuers do even more work.
+   tl                 hd
+   |                  |
+  [.]-[A]-[B]-[C]-..-[X]
 
-   --
+  For A to rollback, B has to rollback first. For B to rollback C has to rollback first.
 
-   The queue can be made auto-resizable by user using a lockfree list.
+  [A] is likely to experience a large latency spike. In such a case, it is easier for [A]
+  to do (3) rather than hope all other active dequeuers will unblock it at some point. 
+  Thus, it's worthwile also trying to do (3) periodically.
+
+  It's good to always assign non-zero probability to each of the options. An item for A
+  may appear at any time. Neighbour succeeding with other strategy may render ours
+  impossible (e.g. if dequeuer [B] moves forward [tail] then [A] will never succed in
+  rolling [head] back).
+
+  What about burned slots (4)?
+
+  It's present in the literature. Weakly I'm not a fan. In the case where dequeuers
+  are faster to remove items than enqueuers supply them, slots burned by dequeuers
+  are going to make enqueuers do even more work.
+
+  # Resizing 
+
+  The queue does not support resizing, but it can be simulated by wrapping it in a 
+  lockfree list. 
 *)
 
 type 'a t = {
