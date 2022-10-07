@@ -4,6 +4,7 @@
 A collection of Concurrent Lockfree Data Structures for OCaml 5. It contains:
 
 * [Chase-Lev Work-Stealing Queue](src/ws_deque.mli)
+* [FAD-based Multi-Producer Multi-Consumer Queue](src/mpmc_queue.mli)
 
 ## Usage
 
