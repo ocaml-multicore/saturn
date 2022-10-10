@@ -1,15 +1,15 @@
-open Lockfree
-
+open Lockfree.Mpmc_queue
+open Lockfree.Mpmc_queue.CAS_interface
 let taker queue num_of_elements () =
   let i = ref 0 in
   while !i < num_of_elements do
-    if Option.is_some (Mpmc_queue.pop queue) then i := !i + 1
+    if Option.is_some (pop queue) then i := !i + 1
   done
 
 let pusher queue num_of_elements () =
   let i = ref 0 in
   while !i < num_of_elements do
-    if Mpmc_queue.push queue !i then i := !i + 1
+    if push queue !i then i := !i + 1
   done
 
 let num_of_elements = ref 20_000_000 
@@ -18,7 +18,7 @@ let num_of_takers = ref 4
 let iterations = ref 10
 
 let run_bench () =
-  let queue = Mpmc_queue.create ~size_exponent:3 () in
+  let queue = create ~size_exponent:10 () in
   let orchestrator =
     Orchestrator.init ~total_domains:(!num_of_takers + !num_of_pushers)
   in
