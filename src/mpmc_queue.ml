@@ -161,7 +161,7 @@ let pop queue =
   let ({ array; head; tail; mask; _ } : 'a t) = queue in
   let head_value = Atomic.get head in
   let tail_value = Atomic.get tail in
-  if head_value >= tail_value then None
+  if head_value - tail_value >= 0 then None
   else
     let old_head = Atomic.fetch_and_add head 1 in
     let cell = Array.get array (old_head land mask) in
@@ -191,3 +191,52 @@ let pop queue =
 
     (* return if got item, clean up otherwise *)
     if Option.is_some !item then !item else take_or_rollback 0
+
+module CAS_interface = struct
+  let rec push ({ array; tail; head; mask; _ } as t) item =
+    let tail_val = Atomic.get tail in
+    let head_val = Atomic.get head in
+    let size = mask + 1 in
+    if tail_val - head_val >= size then false
+    else if ccas tail tail_val (tail_val + 1) then (
+      let index = tail_val land mask in
+      let cell = Array.get array index in
+      (*
+         Given that code above checks for overlap, is this CAS needed?
+
+         Yes. Even though a thread cannot explicitely enter overlap,
+         it can still occur just because enqueuer may theoretically be
+         unscheduled for unbounded amount of time between incrementing
+         index and filling the slot.
+
+         I doubt we'd observe that case in real-life (outside some
+         extreme circumstances), but this optimization has to be left
+         for the user to decide. After all, algorithm would not pass
+         model-checking without it.
+
+         Incidentally, it also makes this method interoperable with
+         standard interface.
+      *)
+      while not (Atomic.compare_and_set cell None (Some item)) do
+        ()
+      done;
+      true)
+    else push t item
+
+  let rec pop ({ array; tail; head; mask; _ } as t) =
+    let tail_val = Atomic.get tail in
+    let head_val = Atomic.get head in
+    if head_val - tail_val >= 0 then None
+    else if ccas head head_val (head_val + 1) then (
+      let index = head_val land mask in
+      let cell = Array.get array index in
+      let item = ref (Atomic.get cell) in
+      while
+        not (Option.is_some !item && Atomic.compare_and_set cell !item None)
+      do
+        item := Atomic.get cell
+      done;
+      !item)
+    else pop t
+end
+
