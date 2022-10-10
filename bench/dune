@@ -1,0 +1,3 @@
+(executable
+  (name mpmc_queue)
+  (libraries lockfree unix))
