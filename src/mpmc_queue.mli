@@ -20,16 +20,17 @@ val push : 'a t -> 'a -> bool
 (** [push t x] adds [x] to the tail of the queue.
     Returns [false] if [t] is currently full. *)
 
-(** #TODO(bartosz): throwing exception for Full state seems more in line with 
-    other structures, bench this.  *)
-
 val pop : 'a t -> 'a option
 (** [pop t] removes the head item from [t] and returns it.
     Returns [None] if [t] is currently empty. *)
 
 module CAS_interface : sig 
     (* Alternative interface, which may perform better on architectures without 
-       FAD instructions (e.g. AArch). *)
+       FAD instructions (e.g. AArch). 
+
+       CAS_interface should not be the default choice. It may be a little faster 
+       on ARM, but it is going to be a few times slower than standard on x86.
+       *)
 
     val push : 'a t -> 'a -> bool 
     val pop : 'a t -> 'a option
