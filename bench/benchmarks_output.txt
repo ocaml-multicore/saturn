@@ -1,13 +1,13 @@
-Mon 10 Oct 21:43:52 BST 2022
+Mon 10 Oct 22:52:06 BST 2022
 ./../_build/default/bench/mpmc_queue.exe  -takers 4 -pushers 4 
-iterations: 10, mean: 0.700415s, stddev: 0.029614s
+iterations: 10, mean: 0.582352s, stddev: 0.031560s
 ./../_build/default/bench/mpmc_queue.exe  -takers 1 pushers 8 
-iterations: 10, mean: 1.341576s, stddev: 0.010712s
+iterations: 10, mean: 1.323114s, stddev: 0.020052s
 ./../_build/default/bench/mpmc_queue.exe  -takers 8 pushers 1 
-iterations: 10, mean: 0.726263s, stddev: 0.165309s
+iterations: 10, mean: 0.696108s, stddev: 0.038534s
 ./../_build/default/bench/mpmc_queue.exe  -takers 4 -pushers 4 -use-cas
-iterations: 10, mean: 1.483666s, stddev: 0.079076s
+iterations: 10, mean: 2.452110s, stddev: 0.096634s
 ./../_build/default/bench/mpmc_queue.exe  -takers 1 pushers 8 -use-cas
-iterations: 10, mean: 2.277900s, stddev: 0.013096s
+iterations: 10, mean: 2.115521s, stddev: 0.017245s
 ./../_build/default/bench/mpmc_queue.exe  -takers 8 pushers 1 -use-cas
-iterations: 10, mean: 3.012309s, stddev: 0.179506s
+iterations: 10, mean: 3.233271s, stddev: 0.260396s
