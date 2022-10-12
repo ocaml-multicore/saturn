@@ -7,13 +7,19 @@ type 'a t = private {
   array : 'a option Atomic.t Array.t Atomic.t;
 }
 
-val init : size_exponent:int -> unit -> 'a t
+val create : size_exponent:int -> unit -> 'a t
 
+(* [Local] functions here can only be called from the thread owning given queue
+  (at a given time). In the case of [steal], [from] parameter is unrestricted.    
+
+  This restriction improves performance as [push], [pop], [resize] need to 
+  linearize only with [steal]. 
+*)
 module Local : sig
-  val enqueue : 'a t -> 'a -> bool
-  val dequeue : 'a t -> 'a option
+  val push : 'a t -> 'a -> bool
+  val pop : 'a t -> 'a option
   val resize : 'a t -> unit
-  val enqueue_with_resize : 'a t -> 'a -> unit
+  val push_with_autoresize : 'a t -> 'a -> unit
   val steal : from:'a t -> 'a t -> int
 
   val is_empty : 'a t -> bool
@@ -25,3 +31,6 @@ end
     It's actual queue size when called from enqueuer thread (or while 
     enqueuer is not inserting elements). *)
 val indicative_size : 'a t -> int
+
+(* [M] is the interface for Domainslib *)
+module M : Ws_deque.S 

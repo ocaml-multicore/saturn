@@ -1,3 +1,4 @@
+open Utils
 open Lockfree
 
 let smoke_test (push, pop) () =
@@ -42,17 +43,6 @@ let two_threads_test (push, pop) () =
   Domain.join dequeuer |> ignore;
   ()
 
-module Wait_for_others = struct
-  type t = { currently : int Atomic.t; total_expected : int }
-
-  let init ~total_expected = { currently = Atomic.make 0; total_expected }
-
-  let wait { currently; total_expected } =
-    Atomic.incr currently;
-    while Atomic.get currently < total_expected do
-      ()
-    done
-end
 
 let taker wfo queue num_of_elements () =
   Wait_for_others.wait wfo;

@@ -1,10 +1,12 @@
 (* Notes:
    - Local deque does not have to synchronize with the writer, only other readers.
-   - Tail marks the "logical tail", physical one is the cell with oldest Value.
-   - Local dequeue and enqueue are wait-free. Normal dequeue (steal) may spin, but
-   it only has to do it once for any number of elements.
-   - Some accesses do not have to be atomic but that's the only way current lib
-   allows 'a Atomic.t to be accessed. Probably doesn't matter on x86.
+   - Tail index marks the "logical tail", physical one is the cell with oldest Value.
+   - Local dequeue and enqueue are quite close to wait freedom. Enqueuer can simply
+   check whether the slot it will get is free before incrementing tail, dequeuer can
+   just roll back after a few spins. I don't think it makes sense to implement that
+   in the general case though, as we don't actually want to return in those cases.
+   - Some accesses do not have to be atomic but Atomic.t does not have unsafe
+   methods. Probably doesn't matter on x86.
 *)
 
 type 'a t = {
@@ -14,7 +16,7 @@ type 'a t = {
   array : 'a option Atomic.t Array.t Atomic.t;
 }
 
-let init ~size_exponent () =
+let create ~size_exponent () =
   let size = Int.shift_left 1 size_exponent in
   {
     head = Atomic.make 0;
@@ -75,7 +77,7 @@ module Local = struct
     Atomic.set mask new_mask;
     Atomic.set head old_head_val
 
-  let enqueue { tail; head; mask; array; _ } element =
+  let push { tail; head; mask; array; _ } element =
     let mask, array = Atomic.(get mask, get array) in
     let tail_val = Atomic.get tail in
     let head_val = Atomic.get head in
@@ -93,7 +95,7 @@ module Local = struct
       Atomic.set tail (tail_val + 1);
       true
 
-  let rec enqueue_with_resize ({ tail; mask; array; _ } as t) element =
+  let rec push_with_autoresize ({ tail; mask; array; _ } as t) element =
     let mask = Atomic.get mask in
     let array = Atomic.get array in
     let tail_val = Atomic.get tail in
@@ -104,16 +106,12 @@ module Local = struct
         (* tail might have been changed by resize *)
         Atomic.set tail (Atomic.get tail + 1)
     | Some _ ->
-        let i = ref 0 in
         (* I suppose we should be getting increasingly hesitant to increase
            as the buffer is already big. *)
-        while Option.is_some (Atomic.get cell) && !i < 30 do
-          i := !i + 1
-        done;
-        if Option.is_some (Atomic.get cell) then resize t;
-        enqueue_with_resize t element
+        resize t;
+        push_with_autoresize t element
 
-  let dequeue { head; tail; mask; array; _ } : 'a option =
+  let pop { head; tail; mask; array; _ } : 'a option =
     let mask = Atomic.get mask in
     let array = Atomic.get array in
     (* dequeue is optimistic because it can use the fact that
@@ -158,7 +156,7 @@ module Local = struct
     let { head; tail; _ } = queue in
     let tail_val = Atomic.get tail in
     let head_val = Atomic.get head in
-    if tail_val - head_val > 0 then false else is_empty_thorough queue
+    if tail_val - head_val != 0 then false else is_empty_thorough queue
 
   let steal ~from ({ mask = local_mask; _ } as local) =
     (* need to be careful with from queue, which is not local *)
@@ -203,9 +201,46 @@ module Local = struct
             value := Atomic.get cell
           done;
           let value_exn = function None -> assert false | Some v -> v in
-          while not (enqueue local (value_exn !value)) do
+          while not (push local (value_exn !value)) do
             ()
           done
         done;
         stealable)
+end
+
+module M = struct
+  (*
+     Fitted into the module type expected by Domainslib.
+     Note stealing now only takes 1 element.
+  *)
+
+  type nonrec 'a t = 'a t
+
+  let create () = create ~size_exponent:5 ()
+  let push = Local.push_with_autoresize
+  let pop t = match Local.pop t with Some v -> v | None -> raise Exit
+
+  let steal { head; tail; mask; array } =
+    (* need to be careful with from queue, which is not local *)
+    let mask_val = Atomic.get mask in
+    let array = Atomic.get array in
+    (* assumes there's space in the queue *)
+    let tail_val = Atomic.get tail in
+    let head_val = Atomic.get head in
+    let size = tail_val - head_val in
+    if size < 1 then raise Exit
+    else
+      let new_head_val = head_val + 1 in
+      let acquired_item = Atomic.compare_and_set head head_val new_head_val in
+      if not acquired_item then raise Exit
+      else
+        let index = head_val land mask_val in
+        let cell = Array.get array index in
+        let value = ref (Atomic.get cell) in
+        while
+          not (Option.is_some !value && Atomic.compare_and_set cell !value None)
+        do
+          value := Atomic.get cell
+        done;
+        match !value with None -> assert false | Some v -> v
 end

@@ -15,5 +15,10 @@
 
 (test
  (name test_mpmc_queue)
- (libraries lockfree unix alcotest)
+ (libraries lockfree unix alcotest utils)
  (modules test_mpmc_queue))
+
+(test
+ (name test_spmc_queue)
+ (libraries lockfree alcotest utils)
+ (modules test_spmc_queue))
