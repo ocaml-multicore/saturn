@@ -33,4 +33,6 @@ end
 val indicative_size : 'a t -> int
 
 (* [M] is the interface for Domainslib *)
-module M : Ws_deque.S 
+module M : sig 
+  include Ws_deque.S with type 'a t := 'a t
+end

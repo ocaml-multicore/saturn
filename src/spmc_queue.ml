@@ -214,8 +214,6 @@ module M = struct
      Note stealing now only takes 1 element.
   *)
 
-  type nonrec 'a t = 'a t
-
   let create () = create ~size_exponent:5 ()
   let push = Local.push_with_autoresize
   let pop t = match Local.pop t with Some v -> v | None -> raise Exit
