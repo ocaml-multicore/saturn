@@ -4,6 +4,7 @@
 A collection of Concurrent Lockfree Data Structures for OCaml 5. It contains:
 
 * [Chase-Lev Work-Stealing Queue](src/ws_deque.mli)
+* [SPSC Queue](src/spsc_queue.mli) Simple single-producer single-consumer fixed-size queue. Thread-safe as long as at most one thread acts as producer and at most one as consumer at any single point in time. 
 
 ## Usage
 
