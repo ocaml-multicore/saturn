@@ -1,5 +1,3 @@
-open Ppx_yojson_conv_lib.Yojson_conv.Primitives
-
 module Metric = struct 
   type t = {
     name : string; 
