@@ -1,0 +1,5 @@
+(executable
+ (name main)
+ (libraries lockfree unix yojson)
+ (preprocess
+  (pps ppx_yojson_conv)))
