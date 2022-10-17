@@ -10,4 +10,4 @@ let () =
     List.map (fun f -> f ()) benchmark_list
   in
   Yojson.Safe.pretty_print Format.std_formatter
-    (to_yojson ({ name = "lockfree"; results } : t))
+    (yojson_of_t ({ name = "lockfree"; results } : t))

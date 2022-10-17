@@ -2,4 +2,4 @@
  (name main)
  (libraries lockfree unix yojson)
  (preprocess
-  (pps ppx_deriving_yojson)))
+  (pps ppx_yojson_conv)))
