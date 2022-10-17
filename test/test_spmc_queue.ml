@@ -137,7 +137,7 @@ let stress_with_stealers ?(with_resize = false) ?(use_steal_one = false) () =
   let wfo = Wait_for_others.init ~total_expected:5 in
   let t = Spmc_queue.create ~size_exponent:(if with_resize then 1 else 7) () in
   let stealer_counter = Atomic.make 0 in
-  let total_items = 2_000_000 in
+  let total_items = 500_000 in
   let _domains =
     Array.init 4 (fun _ ->
         Domain.spawn (stealer_domain t wfo stealer_counter ~use_steal_one))
