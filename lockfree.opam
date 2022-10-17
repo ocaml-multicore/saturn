@@ -14,7 +14,7 @@ depends: [
   "qcheck" {with-test & >= "0.18.1"}
   "qcheck-alcotest" {with-test & >= "0.18.1"}
   "yojson" {>= "2.0.2"}
-  "ppx_yojson_conv" {>= "v0.15.0"}
+  "ppx_deriving_yojson" {>= "v0.15.0"}
 ]
 depopts: []
 build: ["dune" "build" "-p" name "-j" jobs]
