@@ -1,19 +1,19 @@
-Mon 17 Oct 17:30:28 BST 2022
+Mon 17 Oct 17:41:38 BST 2022
 ./../_build/default/bench/mpmc_queue.exe  -takers 4 -pushers 4 
-iterations: 10, mean: 0.780129s, stddev: 0.046040s
+iterations: 10, mean: 0.833760s, stddev: 0.062153s
 ./../_build/default/bench/mpmc_queue.exe  -takers 1 pushers 8 
-iterations: 10, mean: 1.462362s, stddev: 0.020003s
+iterations: 10, mean: 1.418691s, stddev: 0.015645s
 ./../_build/default/bench/mpmc_queue.exe  -takers 8 pushers 1 
-iterations: 10, mean: 0.759050s, stddev: 0.209267s
+iterations: 10, mean: 0.703808s, stddev: 0.026074s
 ./../_build/default/bench/mpmc_queue.exe  -takers 4 -pushers 4 -use-cas
-iterations: 10, mean: 2.555304s, stddev: 0.077361s
+iterations: 10, mean: 2.426262s, stddev: 0.080545s
 ./../_build/default/bench/mpmc_queue.exe  -takers 1 pushers 8 -use-cas
-iterations: 10, mean: 2.118492s, stddev: 0.009750s
+iterations: 10, mean: 1.982850s, stddev: 0.049347s
 ./../_build/default/bench/mpmc_queue.exe  -takers 8 pushers 1 -use-cas
-iterations: 10, mean: 3.248721s, stddev: 0.090912s
-./../_build/default/bench/spmc_queue.exe  -stealers 0
-iterations: 10, mean: 0.043526s, stddev: 0.000513s
-./../_build/default/bench/spmc_queue.exe  -stealers 2
-iterations: 10, mean: 0.203690s, stddev: 0.004552s
-./../_build/default/bench/spmc_queue.exe  -stealers 4
-iterations: 10, mean: 0.519728s, stddev: 0.012035s
+iterations: 10, mean: 3.250525s, stddev: 0.118707s
+./../_build/default/bench/spmc_queue.exe  -stealers 0 
+iterations: 10, mean: 0.150843s, stddev: 0.003683s
+./../_build/default/bench/spmc_queue.exe  -stealers 2 
+iterations: 10, mean: 0.293674s, stddev: 0.007478s
+./../_build/default/bench/spmc_queue.exe  -stealers 4 
+iterations: 10, mean: 0.431867s, stddev: 0.015829s

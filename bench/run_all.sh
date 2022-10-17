@@ -29,7 +29,7 @@ path="./../_build/default/bench/spmc_queue.exe "
 
 for j in "${rw_balance[@]}" 
 do
-  cmd="$path $j"
+  cmd="$path $j "
   output=$($cmd)
 
   echo "$cmd" >> benchmarks_output.txt
