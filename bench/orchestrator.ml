@@ -19,7 +19,7 @@ let worker ({ ready; round; _ } as t) f =
     while Atomic.get round < i do
       ()
     done;
-    f ();
+    f ~round:i;
     (* signal that we're done *)
     Atomic.incr ready;
   done

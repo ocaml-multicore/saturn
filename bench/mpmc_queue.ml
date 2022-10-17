@@ -9,13 +9,13 @@ let use_cas_intf = ref false
 let pop = ref Lockfree.Mpmc_queue.pop
 let push = ref Lockfree.Mpmc_queue.push 
 
-let taker queue num_of_elements () =
+let taker queue num_of_elements ~round:_  =
   let i = ref 0 in
   while !i < num_of_elements do
     if Option.is_some (!pop queue) then i := !i + 1
   done
 
-let pusher queue num_of_elements () =
+let pusher queue num_of_elements ~round:_  =
   let i = ref 0 in
   while !i < num_of_elements do
     if !push queue !i then i := !i + 1
