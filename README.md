@@ -3,10 +3,12 @@
 
 A collection of Concurrent Lockfree Data Structures for OCaml 5. It contains:
 
-* [Chase-Lev Work-Stealing Queue](src/ws_deque.mli)
+* [Chase-Lev Work-Stealing Queue](src/ws_deque.mli) Single-producer, multi-consumer dynamic-size queue. Ideal for throughput-focused scheduling using per-core queue. 
+
+* [SPMC Queue](src/spmc_queue.mli) Single-producer, multi-consumer dynamic-size queue. Ideal for latency-focused scheduling using per-core queue. 
 
 * [MPMC Queue](src/mpmc_queue.mli) Multi-producer, multi-consumer fixed-size queue. Optimised for high number of threads.
-
+  
 ## Usage
 
 lockfree cam be installed from `opam`: `opam install lockfree`. Sample usage of
