@@ -29,7 +29,7 @@ let create_output median_time median_throughput =
   let time =
     ({
        name = "time";
-       value = Float.to_string median_time;
+       value = `Numeric median_time;
        units = "s";
        description = "median time result";
      }
@@ -38,7 +38,7 @@ let create_output median_time median_throughput =
   let throughput =
     ({
        name = "throughput";
-       value = Float.to_string median_throughput;
+       value = `Numeric median_throughput;
        units = "item/s";
        description = "median throughput result";
      }
