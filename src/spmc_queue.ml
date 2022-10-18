@@ -213,6 +213,7 @@ module M = struct
      Fitted into the module type expected by Domainslib.
      Note stealing now only takes 1 element.
   *)
+  type nonrec 'a t = 'a t
 
   let create () = create ~size_exponent:5 ()
   let push = Local.push_with_autoresize

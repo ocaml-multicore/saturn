@@ -62,8 +62,10 @@ let speclist =
     ("-owner-adds-only", Arg.Set owner_adds_only, "queue owner is only adding items; all pops are by thieves")
   ]
 
-let () =
+let f () =
   Arg.parse speclist
     (fun _ -> ())
-    "spmc_queue.exe [-items INT] [-stealers INT] [-iterations INT]  [-owner-adds-only]";
-  run_bench ();
+    "spmc_queue.exe [-items INT] [-stealers INT] [-iterations INT] [-owner-adds-only]";
+  run_bench ();;
+
+f ()
