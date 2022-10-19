@@ -58,7 +58,6 @@ let () =
   Arg.parse speclist
     (fun _ -> ())
     "mpmc_queue.exe [-items INT] [-pushers INT] [-takers INT] [-iterations INT] [-use-cas]";
-
   if !use_cas_intf then 
     (push := Lockfree.Mpmc_queue.CAS_interface.push; 
     pop := Lockfree.Mpmc_queue.CAS_interface.pop);

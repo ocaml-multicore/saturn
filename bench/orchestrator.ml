@@ -35,7 +35,7 @@ let run ({ ready = _; round; total_domains = _ } as t) ?(drop_first = true) roun
     Atomic.incr round;
     wait_until_all_ready ~round:i t;
     let end_time = Unix.gettimeofday () in
-
+    
     let diff = end_time -. start_time in
     if drop_first && i == 1 then () else results := diff :: !results
   done;
