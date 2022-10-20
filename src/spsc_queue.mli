@@ -9,7 +9,10 @@ val create : size_exponent:int -> 'a t
    [2^size_exponent].  *)
 
 val push : 'a t -> 'a -> unit
-(** [push q v] pushes [v] at the back of the queue. *)
+(** [push q v] pushes [v] at the back of the queue. 
+    
+   @raise [Full] if the queue is full.
+*)
 
 val pop : 'a t -> 'a option
 (** [pop q] removes element from head of the queue, if any. This method can be used by
