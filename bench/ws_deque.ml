@@ -3,7 +3,7 @@ open Lockfree
 let num_of_elements = ref 10_000_000
 let num_of_stealers = ref 0 
 let iterations = ref 10
-let owner_adds_only = ref false
+let owner_adds_only = ref false;;
 
 module Benchmark(S : Ws_deque.S) = struct
   let round_done = Atomic.make 0
@@ -11,6 +11,12 @@ module Benchmark(S : Ws_deque.S) = struct
   let pop queue = 
     try Some (S.pop queue) with 
     | Exit -> None 
+
+  let steal queue = 
+    try Some (S.steal queue) with 
+    | Exit -> None 
+  
+
 
   let owner queue ~round:_ = 
     let left = ref !num_of_elements in 
@@ -30,8 +36,8 @@ module Benchmark(S : Ws_deque.S) = struct
   ;;
 
   let stealer victim_queue ~round = 
-    while Atomic.get round_done < round do 
-      pop victim_queue |> ignore;
+    while Atomic.get round_done < round do
+      steal victim_queue |> ignore;
     done;;
 
   let run_bench () =
