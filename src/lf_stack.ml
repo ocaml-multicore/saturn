@@ -21,17 +21,24 @@ let is_empty q =
        | _ -> false )
 
 let push q v =
-  let b = Backoff.create () in
-  let rec loop () =
+
+  let rec loop b () =
     let head = Atomic.get q.head in
     let newnode = Next (v, Atomic.make head) in
     if (Atomic.compare_and_set q.head head newnode) then ()
-    else (Backoff.once b; loop ()) (* This can fail we need to loop *)
-  in loop ()
+    else (Backoff.once b; loop b ()) (* This can fail we need to loop *)
+  in 
+
+  let head = Atomic.get q.head in
+  let newnode = Next (v, Atomic.make head) in
+  if (Atomic.compare_and_set q.head head newnode) then ()
+  else (
+    let b = Backoff.create () in
+    Backoff.once b;
+    loop b ())
 
 let pop q =
-  let b = Backoff.create () in
-  let rec loop () =
+  let rec loop b () =
     let s = Atomic.get q.head in
     let newhead = match s with
       | Nil -> failwith "Stack.pop: impossible"
@@ -39,5 +46,17 @@ let pop q =
     in match newhead with
        | Nil -> None
        | Next (v, _) when Atomic.compare_and_set q.head s newhead -> Some v
-       | _ -> (Backoff.once b; loop ())
-  in loop ()
+       | _ -> (Backoff.once b; loop b ())
+  in 
+
+  let s = Atomic.get q.head in
+  let newhead = match s with
+    | Nil -> failwith "Stack.pop: impossible"
+    | Next (_, x) -> Atomic.get x
+  in match newhead with
+     | Nil -> None
+     | Next (v, _) when Atomic.compare_and_set q.head s newhead -> Some v
+     | _ -> (
+       let b = Backoff.create () in
+       Backoff.once b;
+       loop b ())
