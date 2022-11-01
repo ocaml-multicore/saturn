@@ -8,7 +8,7 @@ let () =
   in
   let output = 
     Printf.sprintf 
-    {| {"name": "lockfree", "results": %s}|} 
+    {| {"name": "lockfree", "results": [%s]}|} 
     results
     (* Cannot use Yojson rewriters as of today none works on OCaml 5.1.0. 
        This at least verifies that the manually crafted JSON is well-formed. 
@@ -17,4 +17,4 @@ let () =
        pasting in its output. *)
     |> Yojson.Basic.prettify
   in
-  Printf.printf "%s" output
+  Printf.printf "%s\n" output
