@@ -62,4 +62,8 @@ let () =
   if !use_cas_intf then 
     (push := Lockfree.Mpmc_queue.CAS_interface.push; 
     pop := Lockfree.Mpmc_queue.CAS_interface.pop);
-  run_bench ();
+  run_bench ();;
+
+
+  
+let bench () = ({name = ""; metrics = []} : Benchmark_result.t)
