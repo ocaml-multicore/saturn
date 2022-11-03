@@ -9,9 +9,6 @@ let median data =
     ((a+.b) /. 2.)
 ;;
 
-
-
-
 let mean data =
   let sum = List.fold_left (fun curr_sum b -> curr_sum +. b) 0. data in
   let n = Int.to_float (List.length data) in
