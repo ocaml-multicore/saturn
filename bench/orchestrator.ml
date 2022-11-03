@@ -1,7 +1,7 @@
-type t = { ready : int Atomic.t; total_domains : int; round : int Atomic.t }
+type t = { ready : int Atomic.t; total_domains : int; round : int Atomic.t; rounds : int }
 
-let init ~total_domains =
-  { ready = Atomic.make 0; total_domains; round = Atomic.make 0 }
+let init ~total_domains ~rounds =
+  { ready = Atomic.make 0; total_domains; round = Atomic.make 0 ; rounds}
 ;;
 
 let wait_until_all_ready ?(round=0) { ready; total_domains; _ } =
@@ -10,11 +10,11 @@ let wait_until_all_ready ?(round=0) { ready; total_domains; _ } =
   done
 ;;
 
-let worker ({ ready; round; _ } as t) f =
+let worker ({ ready; round; rounds;  _ } as t) f =
   Atomic.incr ready;
   wait_until_all_ready t;
   (* all domains are up at this point *)
-  for i = 1 to Int.max_int do
+  for i = 1 to rounds do
     (* wait for signal to start work *)
     while Atomic.get round < i do
       ()
@@ -22,10 +22,10 @@ let worker ({ ready; round; _ } as t) f =
     f ();
     (* signal that we're done *)
     Atomic.incr ready;
-  done
+  done;
 ;;
 
-let run ({ ready = _; round; total_domains = _ } as t) ?(drop_first = true) rounds =
+let run ?(drop_first = true) ({ round; rounds; _ } as t) =
   wait_until_all_ready t;
   (* all domains are up, can start benchmarks *)
   let results = ref [] in

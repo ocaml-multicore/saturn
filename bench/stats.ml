@@ -1,3 +1,17 @@
+let median data = 
+  let data = List.sort Float.compare data in
+  let len = List.length data in 
+  if len mod 2 == 1 then 
+    List.nth data (List.length data / 2)
+  else 
+    let a = List.nth data (len/2-1) in 
+    let b = List.nth data (len/2) in 
+    ((a+.b) /. 2.)
+;;
+
+
+
+
 let mean data =
   let sum = List.fold_left (fun curr_sum b -> curr_sum +. b) 0. data in
   let n = Int.to_float (List.length data) in

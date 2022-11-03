@@ -3,6 +3,6 @@
 
 type t
 
-val init : total_domains:int -> t
+val init : total_domains:int -> rounds:int -> t
 val worker : t -> (unit -> unit) -> unit
-val run : t -> ?drop_first:bool -> int -> float List.t
+val run : ?drop_first:bool -> t -> float List.t

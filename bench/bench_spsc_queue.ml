@@ -1,6 +1,6 @@
 open Lockfree
 
-let item_count = 2_000_000
+let item_count = 10_000
 
 let rec try_until_success f =
   try f () with Spsc_queue.Full -> try_until_success f
