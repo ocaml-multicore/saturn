@@ -63,17 +63,7 @@ let push_steal () =
   assert_full t;
   ()
 
-let push_resize () =
-  let t = Spmc_queue.create ~size_exponent:1 () in
-  for i = 1 to 128 do
-    Spmc_queue.Local.push_with_autoresize t i
-  done;
-  assert_full t;
-  for i = 1 to 128 do
-    Alcotest.(check (option int))
-      "fifo violated" (Spmc_queue.Local.pop t) (Some i)
-  done;
-  assert_empty t
+
 
 let stress () =
   Random.init 123;
@@ -107,18 +97,18 @@ let stealer_domain from_queue wfo counter ~use_steal_one () =
   (* start stealing *)
   while true do
     
-    (* steal with [steal_one] *)
-    (if use_steal_one then
-     match Spmc_queue.M.steal from_queue with 
-     | exception _ -> () 
-     | item -> (
-      Spmc_queue.Local.push_with_autoresize t item;
-      Atomic.incr counter) 
+    let stolen = 
+      (* steal with [steal_one] *)
+      (if use_steal_one then
+        match Spmc_queue.Local.steal_one from_queue with 
+        | exception _ -> 0
+        | _ -> 1
 
-    (* steal with [steal] *)
-    else
-      let stolen = Spmc_queue.Local.steal ~from:from_queue t in
-      Atomic.fetch_and_add counter stolen |> ignore);
+        (* steal with [steal] *)
+      else
+        Spmc_queue.Local.steal ~from:from_queue t)
+    in
+    Atomic.fetch_and_add counter stolen |> ignore;
 
     (* drain local *)
     while not (Spmc_queue.Local.is_empty t) do
@@ -133,29 +123,21 @@ let stealer_domain from_queue wfo counter ~use_steal_one () =
     ()
   done
 
-let stress_with_stealers ?(with_resize = false) ?(use_steal_one = false) () =
+let stress_with_stealers ~use_steal_one () =
   let wfo = Wait_for_others.init ~total_expected:5 in
-  let t = Spmc_queue.create ~size_exponent:(if with_resize then 1 else 7) () in
+  let t = Spmc_queue.create ~size_exponent:7 () in
   let stealer_counter = Atomic.make 0 in
   let total_items = 500_000 in
   let _domains =
     Array.init 4 (fun _ ->
         Domain.spawn (stealer_domain t wfo stealer_counter ~use_steal_one))
   in
-  let push_f queue item =
-    match with_resize with
-    | false -> Spmc_queue.Local.push queue item
-    | true ->
-        Spmc_queue.Local.push_with_autoresize queue item;
-        true
-  in
-
   (* enqueuer thread starts here *)
   Wait_for_others.wait wfo;
   let i = ref 0 in
   let popped = ref 0 in
   while !i < total_items do
-    if push_f t !i then i := !i + 1;
+    if Spmc_queue.Local.push t !i then i := !i + 1;
 
     (* throw in some popping *)
     if !popped < !i / 2 && Random.int 100 == 0 then
@@ -180,15 +162,12 @@ let () =
         [
           test_case "is it a queue" `Quick push_pop;
           test_case "stealing" `Quick push_steal;
-          test_case "resize" `Quick push_resize;
           test_case "stress push pop" `Slow stress;
         ] );
       ( "multi-thread",
         [
           test_case "stress push pop steal" `Slow
-            stress_with_stealers;
-          test_case "stress push pop steal and resize " `Slow
-            (stress_with_stealers ~with_resize:true);          
+            (stress_with_stealers  ~use_steal_one:false);
           test_case "stress push pop steal one " `Slow
             (stress_with_stealers ~use_steal_one:true);
         ] );

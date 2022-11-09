@@ -1,10 +1,11 @@
 (* add lifo slot? *)
 
-type 'a t = private {
+type 'a t = {
   head : int Atomic.t;
+  mask : int;
+  size_exponent : int;
+  array : 'a option Atomic.t Array.t;
   tail : int Atomic.t;
-  mask : int Atomic.t;
-  array : 'a option Atomic.t Array.t Atomic.t;
 }
 
 val create : size_exponent:int -> unit -> 'a t
@@ -18,13 +19,33 @@ val create : size_exponent:int -> unit -> 'a t
 module Local : sig
   val push : 'a t -> 'a -> bool
   val pop : 'a t -> 'a option
-  val resize : 'a t -> unit
-  val push_with_autoresize : 'a t -> 'a -> unit
   val steal : from:'a t -> 'a t -> int
+  val steal_one : 'a t -> 'a
 
   val is_empty : 'a t -> bool
   (** [is_empty] thoroughly checks if there's any elements in the array.
-    Call before [steal], which assumes there's room in the queue. *)
+    Call before [steal], which assumes there's room in the queue. *)  
+end
+
+module Resizable : sig 
+  type 'a t 
+  
+  val create : size_exponent:int -> unit -> 'a t
+
+  (* [Local] functions to be called only from the owner thread. *)
+  module Local : sig 
+    val push : 'a t -> 'a -> bool
+    val pop : 'a t -> 'a option
+    val steal : from:'a t -> 'a t -> int
+    val steal_one : 'a t -> 'a
+
+    val is_empty : 'a t -> bool
+    (** [is_empty] thoroughly checks if there's any elements in the array.
+      Call before [steal], which assumes there's room in the queue. *)  
+
+    val resize : 'a t -> unit
+    val push_with_autoresize : 'a t -> 'a -> unit
+  end
 end
 
 (** [indicative_size] gives some idea about the size of the queue. 
@@ -34,5 +55,5 @@ val indicative_size : 'a t -> int
 
 (* [M] is the interface for Domainslib *)
 module M : sig 
-  include Ws_deque.S with type 'a t := 'a t
+  include Ws_deque.S with type 'a t := 'a Resizable.t
 end

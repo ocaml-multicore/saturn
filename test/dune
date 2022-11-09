@@ -22,3 +22,8 @@
  (name test_spmc_queue)
  (libraries lockfree alcotest utils)
  (modules test_spmc_queue))
+
+(test
+ (name test_spmc_queue_resizable)
+ (libraries lockfree alcotest utils)
+ (modules test_spmc_queue_resizable))
