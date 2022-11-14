@@ -58,7 +58,8 @@ let taker wfo queue num_of_elements () =
   Wait_for_others.wait wfo;
   let i = ref 0 in
   while !i < num_of_elements do
-    if Option.is_some (Mpmc_relaxed_queue.Not_lockfree.pop queue) then i := !i + 1
+    if Option.is_some (Mpmc_relaxed_queue.Not_lockfree.pop queue) then
+      i := !i + 1
   done
 
 let pusher wfo queue num_of_elements () =
@@ -97,6 +98,26 @@ let run_test num_takers num_pushers () =
         "ghost item in the queue!" None (Atomic.get item))
     array
 
+let smoke_test_spinning () =
+  let queue = Mpmc_relaxed_queue.create ~size_exponent:2 () in
+  (* enqueue 4 *)
+  for i = 1 to 4 do
+    Mpmc_relaxed_queue.Spin.push queue i
+  done;
+  assert (not (Mpmc_relaxed_queue.Not_lockfree.push queue 0));
+  let ({ tail; head; _ } : 'a Mpmc_relaxed_queue.t) = queue in
+  assert (Atomic.get tail = 4);
+  assert (Atomic.get head = 0);
+  (* dequeue 4 *)
+  for i = 1 to 4 do
+    Alcotest.(check (option int))
+      "items should come out in FIFO order" (Some i)
+      (Mpmc_relaxed_queue.Not_lockfree.pop queue)
+  done;
+  Alcotest.(check (option int))
+    "queue should be empty" None
+    (Mpmc_relaxed_queue.Not_lockfree.pop queue)
+
 let () =
   let open Alcotest in
   run "Mpmc_queue"
@@ -120,4 +141,8 @@ let () =
         [ test_case "is it a queue" `Quick (smoke_test (push, pop)) ] );
       ( "validate items-CAS-intf",
         [ test_case "1 prod. 1 cons." `Quick (two_threads_test (push, pop)) ] );
-    ])
+    ]
+    @ [
+        ( "spinning",
+          [ test_case "is it a queue" `Quick smoke_test_spinning ] );
+      ])
