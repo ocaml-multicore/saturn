@@ -118,6 +118,23 @@ let smoke_test_spinning () =
     "queue should be empty" None
     (Mpmc_relaxed_queue.Not_lockfree.pop queue)
 
+let two_threads_spin_test () =
+  let queue = Mpmc_relaxed_queue.create ~size_exponent:2 () in
+  let num_of_elements = 1_000_000 in
+  (* start dequeuer *)
+  let dequeuer =
+    Domain.spawn (fun () ->
+        for i = 1 to num_of_elements do
+          assert (Mpmc_relaxed_queue.Spin.pop queue == i)
+        done)
+  in
+  (* enqueue *)
+  for i = 1 to num_of_elements do
+    Mpmc_relaxed_queue.Spin.push queue i
+  done;
+  Domain.join dequeuer |> ignore;
+  ()
+
 let () =
   let open Alcotest in
   run "Mpmc_queue"
@@ -142,4 +159,9 @@ let () =
       ( "validate items-CAS-intf",
         [ test_case "1 prod. 1 cons." `Quick (two_threads_test (push, pop)) ] );
     ]
-    @ [ ("spinning", [ test_case "is it a queue" `Quick smoke_test_spinning ]) ])
+    @ [
+        ( "single-thread-spinning",
+          [ test_case "is it a queue" `Quick smoke_test_spinning ] );
+        ( "validate-items-spinning",
+          [ test_case "1 prod. 1 cons" `Quick two_threads_spin_test ] );
+      ])
