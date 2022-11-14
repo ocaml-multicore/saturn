@@ -1,5 +1,18 @@
 (** 
     A lock-free multi-producer, multi-consumer, thread-safe, relaxed-FIFO queue. 
+
+    It exposes two interfaces: [Spin] and [Not_lockfree]. [Spin] is lock-free 
+    formally, but the property is achieved in a fairly counterintuitive way - 
+    - by using the fact that lock-freedom does not impose any constraints on
+    partial methods. In simple words, an invocation of function that cannot 
+    logically terminate (`push` on full queue, `pop` on empty queue), it is 
+    allowed to *busy-wait* until the precondition is meet. 
+
+    Above interface is impractical outside specialized applications. Thus, 
+    [Mpmc_relaxed_queue] also exposes [Not_lockfree] interface. [Not_lockfree] 
+    contains non-lockfree paths. While formally a locked algorithm, it will 
+    often be the more practical solution as it allows having an overflow 
+    queue, etc. 
 *)
 
 type 'a t = private {

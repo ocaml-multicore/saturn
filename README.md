@@ -7,7 +7,9 @@ A collection of Concurrent Lockfree Data Structures for OCaml 5. It contains:
 
 * [SPSC Queue](src/spsc_queue.mli) Simple single-producer single-consumer fixed-size queue. Thread-safe as long as at most one thread acts as producer and at most one as consumer at any single point in time.
 
-* [MPMC Relaxed Queue](src/mpmc_queue.mli) Multi-producer, multi-consumer, fixed-size relaxed queue. Optimised for high number of threads. Not strictly FIFO. 
+* [MPMC Relaxed Queue](src/mpmc_relaxed_queue.mli) Multi-producer, multi-consumer, fixed-size relaxed queue. Optimised for high number of threads. Not strictly FIFO. Note, it exposes two interfaces: a lockfree and a non-lockfree (albeit more practical) one. See the mli for discussion. 
+
+
 
 ## Usage
 
