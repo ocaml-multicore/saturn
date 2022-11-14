@@ -1,5 +1,19 @@
-module type S = sig
+(** A lock-free single-producer, multi-consumer dynamic-size double-ended queue (deque). 
 
+    The main strength of deque in a typical work-stealing setup with per-core structure
+    is efficient work distribution. Owner uses [push] and [pop] method to operate at 
+    one end of the deque, while other (free) cores can efficiently steal work on the 
+    other side. 
+    
+    This approach is great for throughput. Stealers and owner working on different sides 
+    reduces contention in work distribution. Further, local LIFO order runs related tasks 
+    one after one improves locality. 
+
+    On the other hand, the local LIFO order does not offer any fairness guarantees. 
+    Thus, it is not the best choice when tail latency matters. 
+*)
+
+module type S = sig
   type 'a t
   (** Type of work-stealing queue *)
 
