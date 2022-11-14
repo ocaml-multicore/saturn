@@ -142,7 +142,4 @@ let () =
       ( "validate items-CAS-intf",
         [ test_case "1 prod. 1 cons." `Quick (two_threads_test (push, pop)) ] );
     ]
-    @ [
-        ( "spinning",
-          [ test_case "is it a queue" `Quick smoke_test_spinning ] );
-      ])
+    @ [ ("spinning", [ test_case "is it a queue" `Quick smoke_test_spinning ]) ])
