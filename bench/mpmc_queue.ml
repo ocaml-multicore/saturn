@@ -1,4 +1,4 @@
-open Lockfree.Mpmc_queue
+open Lockfree.Mpmc_relaxed_queue
 
 let num_of_elements = ref 500_000 
 let num_of_pushers = ref 4 
@@ -6,8 +6,8 @@ let num_of_takers = ref 4
 let num_of_iterations = ref 10
 let use_cas_intf = ref false 
 
-let pop = ref Lockfree.Mpmc_queue.pop
-let push = ref Lockfree.Mpmc_queue.push 
+let pop = ref Not_lockfree.pop
+let push = ref Not_lockfree.push 
 
 let taker queue num_of_elements () =
   let i = ref 0 in
@@ -59,8 +59,8 @@ let create_output ~time_median ~throughput_median ~throughput_stddev =
 
 let run_bench () =
   if !use_cas_intf then 
-    (push := Lockfree.Mpmc_queue.CAS_interface.push; 
-    pop := Lockfree.Mpmc_queue.CAS_interface.pop);
+    (push := Lockfree.Mpmc_relaxed_queue.Not_lockfree.CAS_interface.push; 
+    pop := Lockfree.Mpmc_relaxed_queue.Not_lockfree.CAS_interface.pop);
   let queue = create ~size_exponent:10 () in
   let orchestrator =
     Orchestrator.init ~total_domains:(!num_of_takers + !num_of_pushers) ~rounds:!num_of_iterations

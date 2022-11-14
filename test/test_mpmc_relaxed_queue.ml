@@ -1,14 +1,14 @@
 open Lockfree
 
 let smoke_test (push, pop) () =
-  let queue = Mpmc_queue.create ~size_exponent:2 () in
+  let queue = Mpmc_relaxed_queue.create ~size_exponent:2 () in
   (* enqueue 4 *)
   for i = 1 to 4 do
     Alcotest.(check bool)
       "there should be space in the queue" (push queue i) true
   done;
   assert (not (push queue 0));
-  let ({ tail; head; _ } : 'a Mpmc_queue.t) = queue in
+  let ({ tail; head; _ } : 'a Mpmc_relaxed_queue.t) = queue in
   assert (Atomic.get tail = 4);
   assert (Atomic.get head = 0);
   (* dequeue 4 *)
@@ -19,7 +19,7 @@ let smoke_test (push, pop) () =
   Alcotest.(check (option int)) "queue should be empty" None (pop queue)
 
 let two_threads_test (push, pop) () =
-  let queue = Mpmc_queue.create ~size_exponent:2 () in
+  let queue = Mpmc_relaxed_queue.create ~size_exponent:2 () in
   let num_of_elements = 1_000_000 in
   (* start dequeuer *)
   let dequeuer =
@@ -58,18 +58,18 @@ let taker wfo queue num_of_elements () =
   Wait_for_others.wait wfo;
   let i = ref 0 in
   while !i < num_of_elements do
-    if Option.is_some (Mpmc_queue.pop queue) then i := !i + 1
+    if Option.is_some (Mpmc_relaxed_queue.Not_lockfree.pop queue) then i := !i + 1
   done
 
 let pusher wfo queue num_of_elements () =
   Wait_for_others.wait wfo;
   let i = ref 0 in
   while !i < num_of_elements do
-    if Mpmc_queue.push queue !i then i := !i + 1
+    if Mpmc_relaxed_queue.Not_lockfree.push queue !i then i := !i + 1
   done
 
 let run_test num_takers num_pushers () =
-  let queue = Mpmc_queue.create ~size_exponent:3 () in
+  let queue = Mpmc_relaxed_queue.create ~size_exponent:3 () in
   let num_of_elements = 4_000_000 in
   let wfo = Wait_for_others.init ~total_expected:(num_takers + num_pushers) in
   let _ =
@@ -87,7 +87,7 @@ let run_test num_takers num_pushers () =
     in
     Sys.opaque_identity (List.map Domain.join (pushers @ takers))
   in
-  let ({ array; head; tail; _ } : 'a Mpmc_queue.t) = queue in
+  let ({ array; head; tail; _ } : 'a Mpmc_relaxed_queue.t) = queue in
   let head_val = Atomic.get head in
   let tail_val = Atomic.get tail in
   Alcotest.(check int) "hd an tl match" head_val tail_val;
@@ -100,7 +100,7 @@ let run_test num_takers num_pushers () =
 let () =
   let open Alcotest in
   run "Mpmc_queue"
-    (let open Mpmc_queue in
+    (let open Mpmc_relaxed_queue.Not_lockfree in
     [
       ( "single-thread",
         [ test_case "is it a queue" `Quick (smoke_test (push, pop)) ] );
@@ -114,7 +114,7 @@ let () =
         ] );
     ]
     @
-    let open Mpmc_queue.CAS_interface in
+    let open Mpmc_relaxed_queue.Not_lockfree.CAS_interface in
     [
       ( "single-thread-CAS-intf",
         [ test_case "is it a queue" `Quick (smoke_test (push, pop)) ] );
