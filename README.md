@@ -7,6 +7,9 @@ A collection of Concurrent Lockfree Data Structures for OCaml 5. It contains:
 
 * [SPSC Queue](src/spsc_queue.mli) Simple single-producer single-consumer fixed-size queue. Thread-safe as long as at most one thread acts as producer and at most one as consumer at any single point in time.
 
+* [MPSC Queue](src/mpsc_queue.mli) A multi-producer, single-consumer, thread-safe queue without support for cancellation. This makes a good data structure for a scheduler's run queue. It is used in [Eio](https://github.com/ocaml-multicore/eio). It is a single consumer version of the queue described in [Implementing lock-free queues](https://people.cs.pitt.edu/~jacklange/teaching/cs2510-f12/papers/implementing_lock_free.pdf).
+
+
 ## Usage
 
 lockfree cam be installed from `opam`: `opam install lockfree`. Sample usage of
