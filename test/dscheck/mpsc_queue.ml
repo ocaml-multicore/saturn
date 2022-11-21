@@ -41,7 +41,7 @@ let two_producers () =
       let queue = Mpsc_queue.create () in
       let items_total = 4 in
 
-      (* producer *)
+      (* producers *)
       for _ = 1 to 2 do
         Atomic.spawn (fun () ->
             for _ = 1 to items_total / 2 do
