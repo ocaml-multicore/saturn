@@ -4,3 +4,9 @@
  (libraries lockfree dscheck alcotest)
  (modules spsc_queue))
  
+
+(test
+ (name ws_deque)
+ (libraries lockfree dscheck alcotest)
+ (modules ws_deque))
+ 
