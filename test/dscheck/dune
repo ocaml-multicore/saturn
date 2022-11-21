@@ -1,0 +1,6 @@
+
+(test
+ (name spsc_queue)
+ (libraries lockfree dscheck alcotest)
+ (modules spsc_queue))
+ 
