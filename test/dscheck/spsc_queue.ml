@@ -42,13 +42,13 @@ let size_linearizes_with_1_thr () =
 
       Atomic.spawn (fun () ->
           for _ = 1 to 4 do
-            Spsc_queue.push queue (-1);
+            Spsc_queue.push queue (-1)
           done);
 
       let size = ref 0 in
-      Atomic.spawn (fun () -> 
-        assert (Option.is_some (Spsc_queue.pop queue));
-        size := Spsc_queue.size queue);
+      Atomic.spawn (fun () ->
+          assert (Option.is_some (Spsc_queue.pop queue));
+          size := Spsc_queue.size queue);
 
       Atomic.final (fun () -> Atomic.check (fun () -> 1 <= !size && !size <= 5)))
 
@@ -56,7 +56,7 @@ let () =
   let open Alcotest in
   run "Spsc_queue_dscheck"
     [
-      ("simple", [ test_case "simple-test" `Slow (with_trace create_test) ]);
+      ("basic", [ test_case "simple-test" `Slow (with_trace create_test) ]);
       ( "wrap-arounds",
         let with_shift s =
           test_case

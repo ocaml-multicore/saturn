@@ -67,13 +67,13 @@ let popper_stealer () =
 
 let () =
   let open Alcotest in
-  run "Ws_deque_dscheck"
+  run "ws_deque_dscheck"
     [
-      ( "simple",
+      ( "basic",
         [
           test_case "1-owner-1-stealer" `Slow owner_stealer;
           test_case "1-pusher-2-stealers" `Slow popper_stealer;
           (* we'd really want to test cases with more threads here,
-             but dscheck is not optimized enough for that yet  *)
+             but dscheck is not optimized enough for that yet *)
         ] );
     ]

@@ -10,3 +10,10 @@
  (libraries lockfree dscheck alcotest)
  (modules ws_deque))
  
+
+
+(test
+ (name mpsc_queue)
+ (libraries lockfree dscheck alcotest)
+ (modules mpsc_queue))
+ 

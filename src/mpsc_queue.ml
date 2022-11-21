@@ -7,6 +7,8 @@
    It is simplified slightly because we don't need multiple consumers.
    Therefore [head] is not atomic. *)
 
+module Atomic = Dscheck.TracedAtomic
+
 exception Closed
 
 module Node : sig
