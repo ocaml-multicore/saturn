@@ -1,17 +1,17 @@
-type t = int * int ref
+type t = { min_wait : int; max_wait : int; current : int ref }
 
-let k = Domain.DLS.new_key Random.State.make_self_init 
+let k = Domain.DLS.new_key Random.State.make_self_init
 
-let create ?(max = 32 * 4096) () = (max, ref 1)
+let create ?(min_wait = 1) ?(max_wait = 32 * 4096) () =
+  { max_wait; min_wait; current = ref min_wait }
 
-let once (maxv, r) =
-  let t = Random.State.int (Domain.DLS.get k) !r in
-  r := min (2 * !r) maxv;
+let once { max_wait; current; _ } =
+  let t = Random.State.int (Domain.DLS.get k) !current in
+  current := min (2 * !current) max_wait;
   if t = 0 then ()
-  else begin
-      for _ = 1 to t do
-        Domain.cpu_relax ()
-      done
-    end
+  else
+    for _ = 1 to t do
+      Domain.cpu_relax ()
+    done
 
-let reset (_, r) = r := 1
+let reset { min_wait; current; _ } = current := min_wait

@@ -1,4 +1,13 @@
-let benchmark_list = [ Bench_spsc_queue.bench ]
+let backoff_benchmarks =
+  let open Backoff in
+  [
+    bench_basic ~with_backoff:true;
+    bench_basic ~with_backoff:false;
+    bench_artificial ~with_backoff:true;
+    bench_artificial ~with_backoff:false;
+  ]
+
+let benchmark_list = [ Bench_spsc_queue.bench ] @ backoff_benchmarks
 
 let () =
   let results =
@@ -7,7 +16,7 @@ let () =
     |> String.concat ", "
   in
   let output =
-    Printf.sprintf {| {"name": "lockfree", "results": %s}|} results
+    Printf.sprintf {| {"name": "lockfree", "results": [%s]}|} results
     (* Cannot use Yojson rewriters as of today none works on OCaml 5.1.0.
        This at least verifies that the manually crafted JSON is well-formed.
 

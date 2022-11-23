@@ -25,28 +25,6 @@ let run () =
   let time_diff = end_time -. start_time in
   time_diff
 
-let create_output median_time median_throughput =
-  let time =
-    ({
-       name = "time";
-       value = `Numeric median_time;
-       units = "s";
-       description = "median time result";
-     }
-      : Benchmark_result.Metric.t)
-  in
-  let throughput =
-    ({
-       name = "throughput";
-       value = `Numeric median_throughput;
-       units = "item/s";
-       description = "median throughput result";
-     }
-      : Benchmark_result.Metric.t)
-  in
-  let metrics = [ time; throughput ] in
-  ({ name = "spsc-queue"; metrics } : Benchmark_result.t)
-
 let bench () =
   let results = ref [] in
   for i = 1 to 10 do
@@ -55,5 +33,5 @@ let bench () =
   done;
   let results = List.sort Float.compare !results in
   let median_time = List.nth results 4 in
-  let throughput = Float.of_int item_count /. median_time in
-  create_output median_time throughput
+  let median_throughput = Float.of_int item_count /. median_time in
+  Benchmark_result.create_generic ~median_time ~median_throughput "spsc-queue"

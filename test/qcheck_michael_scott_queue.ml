@@ -1,4 +1,4 @@
-module Mpsc_queue = Lockfree.Ms_queue
+module Mpsc_queue = Lockfree.Michael_scott_queue
 
 let extract_n q n =
   let rec loop acc = function
