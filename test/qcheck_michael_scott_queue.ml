@@ -4,13 +4,11 @@ let extract_n q n =
   let rec loop acc = function
     | 0 -> acc
     | m ->
-       let res =
-         match Mpsc_queue.pop q with
-         | Some elt -> `Some elt
-         | None -> `None
-       in
-       Domain.cpu_relax ();
-       loop (res :: acc) (m - 1)
+        let res =
+          match Mpsc_queue.pop q with Some elt -> `Some elt | None -> `None
+        in
+        Domain.cpu_relax ();
+        loop (res :: acc) (m - 1)
   in
   if n < 0 then failwith "Number of pop should be positive.";
   loop [] n |> List.rev
@@ -39,7 +37,6 @@ let tests_one_consumer =
 
           (* Testing property *)
           Mpsc_queue.pop queue = None && !count = List.length lpush);
-
       (* TEST 3 - single consumer no producer:
          forall q and i,  push q i; is_empty q = false *)
       Test.make ~name:"push_not_empty" (list int) (fun lpush ->
@@ -222,7 +219,6 @@ let tests_one_consumer_one_producer =
             @ List.init (Int.max 0 (npop - List.length lpush)) (fun _ -> `None)
           in
           popped = expected);
-
       (* TEST 2 - one consumer one producer:
          Parallel [push] and [pop]. *)
       Test.make ~name:"par_push_pop"
@@ -237,13 +233,12 @@ let tests_one_consumer_one_producer =
             Domain.spawn (fun () ->
                 Semaphore.Binary.release sema;
                 (* try *)
-                  List.iter
-                    (fun elt ->
-                      Mpsc_queue.push queue elt;
-                      Domain.cpu_relax ())
-                    lpush;
-                  false
-                (* with Mpsc_queue.Closed -> true *))
+                List.iter
+                  (fun elt ->
+                    Mpsc_queue.push queue elt;
+                    Domain.cpu_relax ())
+                  lpush;
+                false (* with Mpsc_queue.Closed -> true *))
           in
 
           (* Waiting to make sure the producer can start *)
@@ -270,6 +265,7 @@ let tests_one_consumer_one_producer =
                | `Closed -> false))
                popped);
     ]
+
 let main () =
   let to_alcotest = List.map QCheck_alcotest.to_alcotest in
   Alcotest.run "Mpsc_queue"

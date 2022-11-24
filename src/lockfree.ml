@@ -30,6 +30,4 @@ module Spsc_queue = Spsc_queue
 module Mpsc_queue = Mpsc_queue
 module Treiber_stack = Treiber_stack
 module Michael_scott_queue = Michael_scott_queue
-
-
 module Backoff = Backoff
