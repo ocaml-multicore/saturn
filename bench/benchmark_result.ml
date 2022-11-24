@@ -12,8 +12,9 @@ module Metric = struct
       | `Text text -> Printf.sprintf {|"%s"|} text
       | `Numeric number -> Printf.sprintf {|%f|} number
     in
-    Printf.sprintf {| {"name":"%s", "value":%s, "units":"%s", "description":"%s"} |}
-      name value_str units description
+    Printf.sprintf
+      {| {"name":"%s", "value":%s, "units":"%s", "description":"%s"} |} name
+      value_str units description
 end
 
 type t = { name : string; metrics : Metric.t list }

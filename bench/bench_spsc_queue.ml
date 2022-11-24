@@ -44,8 +44,8 @@ let create_output median_time median_throughput =
      }
       : Benchmark_result.Metric.t)
   in
-  let metrics = [time; throughput] in 
-  ({name = "spsc-queue"; metrics} : Benchmark_result.t);;
+  let metrics = [ time; throughput ] in
+  ({ name = "spsc-queue"; metrics } : Benchmark_result.t)
 
 let bench () =
   let results = ref [] in
@@ -56,6 +56,4 @@ let bench () =
   let results = List.sort Float.compare !results in
   let median_time = List.nth results 4 in
   let throughput = Float.of_int item_count /. median_time in
-  create_output median_time throughput;;
-  
-  
+  create_output median_time throughput

@@ -371,8 +371,7 @@ let tests_one_consumer_one_producer =
           let all_pushed = extract_n queue total_push (total_push + 1) in
 
           (* Testing property *)
-          (not closed)
-          && Mpsc_queue.is_empty queue
+          (not closed) && Mpsc_queue.is_empty queue
           && keep_n_first (List.length lpush_head) all_pushed
              = list_some (lpush_head |> List.rev)
           && keep_n_last (List.length lpush) all_pushed = list_some lpush);
@@ -485,8 +484,7 @@ let tests_one_consumer_two_producers =
              - no Close exception raised before the queue being actually closed
              - all pushed values are in the queue
           *)
-          (not closed1)
-          && (not closed2)
+          (not closed1) && (not closed2)
           && List.length popped_value = npush1 + npush2
           && compare popped_value lpush1 lpush2);
       (* TEST 2 - one consumer two producers:

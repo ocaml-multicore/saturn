@@ -37,7 +37,6 @@ module type S = sig
 
       @raise [Exit] if the queue is empty.
       *)
+end
 
-    end
-
-module M : S;;
+module M : S
