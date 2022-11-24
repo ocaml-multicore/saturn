@@ -4,13 +4,10 @@ type 'a node = Nil | Next of 'a * 'a node Atomic.t
 type 'a t = { head : 'a node Atomic.t }
 
 let create () =
-  let head = Next (Obj.magic (), Atomic.make Nil) in
+  let head = Nil in
   { head = Atomic.make head }
 
-let is_empty q =
-  match Atomic.get q.head with
-  | Nil -> failwith "Stack.is_empty: impossible"
-  | Next (_, x) -> ( match Atomic.get x with Nil -> true | _ -> false)
+let is_empty q = match Atomic.get q.head with Nil -> true | Next _ -> false
 
 let push q v =
   let rec loop b () =
@@ -34,29 +31,21 @@ let push q v =
 let pop q =
   let rec loop b () =
     let s = Atomic.get q.head in
-    let newhead =
-      match s with
-      | Nil -> failwith "Stack.pop: impossible"
-      | Next (_, x) -> Atomic.get x
-    in
-    match newhead with
+    match s with
     | Nil -> None
-    | Next (v, _) when Atomic.compare_and_set q.head s newhead -> Some v
-    | _ ->
-        Backoff.once b;
-        loop b ()
+    | Next (v, next) ->
+        if Atomic.compare_and_set q.head s (Atomic.get next) then Some v
+        else (
+          Backoff.once b;
+          loop b ())
   in
 
   let s = Atomic.get q.head in
-  let newhead =
-    match s with
-    | Nil -> failwith "Stack.pop: impossible"
-    | Next (_, x) -> Atomic.get x
-  in
-  match newhead with
+  match s with
   | Nil -> None
-  | Next (v, _) when Atomic.compare_and_set q.head s newhead -> Some v
-  | _ ->
-      let b = Backoff.create () in
-      Backoff.once b;
-      loop b ()
+  | Next (v, next) ->
+      if Atomic.compare_and_set q.head s (Atomic.get next) then Some v
+      else
+        let b = Backoff.create () in
+        Backoff.once b;
+        loop b ()

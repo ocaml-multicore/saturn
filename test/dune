@@ -20,10 +20,15 @@
 
 (test
  (name qcheck_mpsc_queue)
- (libraries lockfree qcheck qcheck-alcotest)
+ (libraries lockfree qcheck "qcheck-alcotest")
  (modules qcheck_mpsc_queue))
 
 (test
  (name qcheck_michael_scott_queue)
  (libraries lockfree qcheck qcheck-alcotest)
  (modules qcheck_michael_scott_queue))
+
+(test
+ (name qcheck_treiber_stack)
+ (libraries lockfree qcheck qcheck-alcotest)
+ (modules qcheck_treiber_stack))
