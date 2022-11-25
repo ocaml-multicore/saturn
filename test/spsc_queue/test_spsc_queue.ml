@@ -22,14 +22,14 @@ let test_full () =
   print_string "test_spsc_queue_full: ok\n"
 
 let test_parallel () =
-  let count = 100_000 in
+  let count = 1000 in
   let q = Spsc_queue.create ~size_exponent:2 in
   (* producer *)
   let producer =
     Domain.spawn (fun () ->
         for i = 1 to count do
           while not (push_not_full q i) do
-            ()
+            Domain.cpu_relax ()
           done
         done)
   in
