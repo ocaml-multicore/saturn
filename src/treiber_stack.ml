@@ -11,7 +11,7 @@ let is_empty q = match Atomic.get q.head with Nil -> true | Next _ -> false
 
 let push q v =
   let head = Atomic.get q.head in
-  let next_node = Atomic.make head in 
+  let next_node = Atomic.make head in
   let new_node = Next (v, next_node) in
   if Atomic.compare_and_set q.head head new_node then ()
   else
@@ -21,7 +21,7 @@ let push q v =
     (* retry *)
     let rec loop b () =
       let head = Atomic.get q.head in
-      Atomic.set next_node head; 
+      Atomic.set next_node head;
       if Atomic.compare_and_set q.head head new_node then ()
       else (
         Backoff.once b;

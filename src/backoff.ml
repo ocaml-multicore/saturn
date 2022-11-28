@@ -2,7 +2,7 @@ type t = { min_wait : int; max_wait : int; current : int ref }
 
 let k = Domain.DLS.new_key Random.State.make_self_init
 
-let create ?(min_wait = 1) ?(max_wait = 32 * 4096) () =
+let create ?(min_wait = 17) ?(max_wait = 32 * 4096) () =
   { max_wait; min_wait; current = ref min_wait }
 
 let once { max_wait; current; _ } =
