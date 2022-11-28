@@ -10,22 +10,23 @@ let create () =
 let is_empty q = match Atomic.get q.head with Nil -> true | Next _ -> false
 
 let push q v =
-  let rec loop b () =
-    let head = Atomic.get q.head in
-    let newnode = Next (v, Atomic.make head) in
-    if Atomic.compare_and_set q.head head newnode then ()
-    else (
-      Backoff.once b;
-      loop b ())
-    (* This can fail we need to loop *)
-  in
-
   let head = Atomic.get q.head in
-  let newnode = Next (v, Atomic.make head) in
-  if Atomic.compare_and_set q.head head newnode then ()
+  let next_node = Atomic.make head in 
+  let new_node = Next (v, next_node) in
+  if Atomic.compare_and_set q.head head new_node then ()
   else
     let b = Backoff.create () in
     Backoff.once b;
+
+    (* retry *)
+    let rec loop b () =
+      let head = Atomic.get q.head in
+      Atomic.set next_node head; 
+      if Atomic.compare_and_set q.head head new_node then ()
+      else (
+        Backoff.once b;
+        loop b ())
+    in
     loop b ()
 
 let pop q =
