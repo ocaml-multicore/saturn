@@ -21,7 +21,7 @@ module type S = sig
   (** Returns a fresh empty work-stealing queue *)
 
   val push : 'a t -> 'a -> unit
-  (** [push q v] pushes [v] to the back of the queue.
+  (** [push q v] pushes [v] to the front of the queue.
       It should only be invoked by the domain which owns the queue [q]. *)
 
   val pop : 'a t -> 'a
