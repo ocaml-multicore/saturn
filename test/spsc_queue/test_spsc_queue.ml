@@ -22,7 +22,10 @@ let test_full () =
   print_string "test_spsc_queue_full: ok\n"
 
 let test_parallel () =
-  let count = 1000 in
+  let count =
+    let ocaml_4 = Char.code (String.get Sys.ocaml_version 0) < Char.code '5' in
+    match ocaml_4 with true -> 100 | false -> 100_000
+  in
   let q = Spsc_queue.create ~size_exponent:2 in
   (* producer *)
   let producer =
