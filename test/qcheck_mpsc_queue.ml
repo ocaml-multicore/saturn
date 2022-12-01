@@ -434,7 +434,8 @@ let tests_one_consumer_two_producers =
 
           let multi_push lpush =
             Semaphore.Counting.acquire sema;
-            while Semaphore.Counting.get_value sema <> 0 do
+            while Semaphore.Counting.try_acquire sema do
+              Semaphore.Counting.release sema;
               Domain.cpu_relax ()
             done;
             try
@@ -505,7 +506,8 @@ let tests_one_consumer_two_producers =
 
           let guard_push lpush =
             Semaphore.Counting.acquire sema;
-            while Semaphore.Counting.get_value sema <> 0 do
+            while Semaphore.Counting.try_acquire sema do
+              Semaphore.Counting.release sema;
               Domain.cpu_relax ()
             done;
             let closed_when_pushing =
@@ -532,7 +534,8 @@ let tests_one_consumer_two_producers =
           (* Waiting to make sure the producers have time to
              start. However, as the consumer will [pop] until one of
              the producer closes the queue, it is not a requirement to wait here. *)
-          while Semaphore.Counting.get_value sema <> 0 do
+          while Semaphore.Counting.try_acquire sema do
+            Semaphore.Counting.release sema;
             Domain.cpu_relax ()
           done;
 
