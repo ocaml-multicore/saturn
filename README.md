@@ -27,6 +27,10 @@ let () = Ws_deque.push q 100
 let () = assert (Ws_deque.pop q = 100)
 ```
 
+## Benchmarks
+
+There is a number of benchmarks in `bench/` directory. You can run them with `make bench`. The output is JSON, as it was intended to be consumed by ocaml-benchmark CI (in progress). 
+
 ## Contributing
 
 Contributions of more lockfree data structures appreciated! Please create
