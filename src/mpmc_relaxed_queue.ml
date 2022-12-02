@@ -22,7 +22,7 @@
 
   Now, to make it work in real-world, simply treat finite array as circular, 
   i.e. wrap around when reached the end. Slots are now re-used, so we need to be 
-  a little bit more careful, but just a little. 
+  more careful. 
   
   Firstly, if there's too many items, enqueuer may witness a full slot. Let's assume 
   enqueuer simply spins on full slot until some dequeuer appears and takes the old
@@ -43,7 +43,7 @@
   ensuring size of array >> number of threads but it's never zero.
   (github.com/rigtorp/MPMCQueue has a nice way of fixing this, we could add it).
 
-  # Non-blocking operations
+  # Blocking (non-lockfree paths on full, empty)
 
   Up until now [push] and [pop] were allowed to block indefinitely on empty and full 
   queue. Overall, what can be done in those states?
