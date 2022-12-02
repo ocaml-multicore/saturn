@@ -44,7 +44,7 @@ end
 
 
 module Not_lockfree : sig     
-    (** [Non_lf] exposes an interface that contains non-lockfree paths, i.e. threads 
+    (** [Non_lockfree] exposes an interface that contains non-lockfree paths, i.e. threads 
     may need to cooperate to terminate. It is often more practical than [Spin], in 
     particular when using a fair OS scheduler. *)
 
