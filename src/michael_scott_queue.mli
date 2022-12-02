@@ -15,8 +15,12 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-(* Michael-Scott queue
-   inspired by https://www.cs.rochester.edu/research/synchronization/pseudocode/queues.html *)
+(**
+   Michael-Scott Queue. A classic multi-producer multi-consumer queue, robust and flexible.
+   Recommended starting point when needing FIFO structure. It is inspired by
+   [Simple, Fast, and Practical Non-Blocking and Blocking Concurrent Queue Algorithms]
+   (https://www.cs.rochester.edu/~scott/papers/1996_PODC_queues.pdf).
+*)
 
 type 'a t
 (** The type of lock-free queue. *)

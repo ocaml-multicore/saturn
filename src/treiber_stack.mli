@@ -1,4 +1,5 @@
-(** Classic multi-producer multi-consumer Treiber stack *)
+(** Classic multi-producer multi-consumer Treiber stack. Robust and flexible. 
+    Recommended starting point when needing LIFO structure. *)
 
 type 'a t
 (** Type of Treiber stack holding items of type [t]. *)
