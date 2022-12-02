@@ -1,4 +1,4 @@
-(** Trieber's Lock Free stack *)
+(** Treiber's Lock Free stack *)
 
 type 'a node = Nil | Next of 'a * 'a node Atomic.t
 type 'a t = { head : 'a node Atomic.t }
@@ -19,18 +19,18 @@ let push q v =
     Backoff.once b;
 
     (* retry *)
-    let rec loop b () =
+    let rec loop b =
       let head = Atomic.get q.head in
       Atomic.set next_node head;
       if Atomic.compare_and_set q.head head new_node then ()
       else (
         Backoff.once b;
-        loop b ())
+        loop b)
     in
-    loop b ()
+    loop b
 
 let pop q =
-  let rec loop b () =
+  let rec loop b =
     let s = Atomic.get q.head in
     match s with
     | Nil -> None
@@ -38,7 +38,7 @@ let pop q =
         if Atomic.compare_and_set q.head s (Atomic.get next) then Some v
         else (
           Backoff.once b;
-          loop b ())
+          loop b)
   in
 
   let s = Atomic.get q.head in
@@ -49,4 +49,4 @@ let pop q =
       else
         let b = Backoff.create () in
         Backoff.once b;
-        loop b ()
+        loop b
