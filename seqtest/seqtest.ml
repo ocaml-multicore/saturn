@@ -9,28 +9,19 @@ open Lockfree.Ws_deque
    implementation and the maximum length of the test scenarios that
    we use. *)
 
-let bound =
-  1050
+let bound = 1050
 
 module R (* Reference *) = struct
-
   (* To avoid difficuties with initialization problem, we specialize
      our deque: its elements are integers. This is good enough for
      our purposes. *)
 
-  type deque = {
-    mutable top: int;
-    mutable bottom: int;
-    data: int array;
-  }
+  type deque = { mutable top : int; mutable bottom : int; data : int array }
 
-  let default =
-    -1
+  let default = -1
 
   let create () =
-    let top = 0
-    and bottom = 0
-    and data = Array.make bound default in
+    let top = 0 and bottom = 0 and data = Array.make bound default in
     { top; bottom; data }
 
   let push deque x =
@@ -42,41 +33,33 @@ module R (* Reference *) = struct
 
   let pop deque =
     assert (deque.top <= deque.bottom);
-    if deque.top = deque.bottom then
-      raise Exit
-    else begin
+    if deque.top = deque.bottom then raise Exit
+    else (
       deque.bottom <- deque.bottom - 1;
       let x = deque.data.(deque.bottom) in
-      x
-    end
+      x)
 
   let steal deque =
     assert (deque.top <= deque.bottom);
-    if deque.top = deque.bottom then
-      raise Exit
-    else begin
+    if deque.top = deque.bottom then raise Exit
+    else
       let x = deque.data.(deque.top) in
       deque.top <- deque.top + 1;
       x
-    end
-
 end
 
 (* The work-stealing queue is the candidate implementation. *)
 
-module C (* Candidate *) =
-  M
+module C (* Candidate *) = M
 
 (* Define [element] as an alias for the concrete type [int]. Equip it with a
    deterministic generator of fresh elements. *)
 
-let element =
-  sequential()
+let element = sequential ()
 
 (* Declare an abstract type [stack]. *)
 
-let stack =
-  declare_abstract_type ()
+let stack = declare_abstract_type ()
 
 (* Declare the operations. *)
 

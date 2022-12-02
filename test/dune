@@ -7,15 +7,15 @@
  (name test_spsc_queue)
  (libraries lockfree)
  (modules test_spsc_queue))
- 
+
 (test
  (name qcheck_spsc_queue)
- (libraries lockfree qcheck qcheck-alcotest)
+ (libraries lockfree qcheck "qcheck-alcotest")
  (modules qcheck_spsc_queue))
- 
+
 (test
  (name qcheck_ws_deque)
- (libraries lockfree qcheck qcheck-alcotest)
+ (libraries lockfree qcheck "qcheck-alcotest")
  (modules qcheck_ws_deque))
 
 (test

@@ -10,7 +10,8 @@
 exception Closed
 
 module Node : sig
-  type 'a t = { next : 'a opt Atomic.t; mutable value : 'a } and +'a opt
+  type 'a t = { next : 'a opt Atomic.t; mutable value : 'a }
+  and +'a opt
 
   val make : next:'a opt -> 'a -> 'a t
 
