@@ -29,7 +29,7 @@ let () = assert (Ws_deque.pop q = 100)
 
 ## Benchmarks
 
-There is a number of benchmarks in `bench/` directory. You can run them with `make bench`. The output is JSON, as it was intended to be consumed by ocaml-benchmark CI (in progress). 
+There is a number of benchmarks in `bench/` directory. You can run them with `make bench`. See [bench/README.md](bench/README.md) for more details.
 
 ## Contributing
 
