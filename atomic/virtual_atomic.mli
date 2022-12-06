@@ -1,8 +1,3 @@
-(* module Atomic : sig
-     include module type of struct
-       open! Stdlib.Atomic
-     end
-   end *)
 module Atomic : sig
   type 'a t
   (** An atomic (mutable) reference to a value of type ['a]. *)
