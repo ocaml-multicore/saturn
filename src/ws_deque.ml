@@ -27,7 +27,7 @@
  *   https://dl.acm.org/doi/abs/10.1145/2442516.2442524
  *)
  
-module Atomic = Dscheck.TracedAtomic
+open Atomic_virtual
 
 module type S = sig
   type 'a t

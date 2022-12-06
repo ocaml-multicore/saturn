@@ -21,7 +21,7 @@
  * https://dl.acm.org/doi/pdf/10.1145/3437801.3441583
  *)
 
-module Atomic = Dscheck.TracedAtomic
+open Atomic_virtual
 
 type 'a t = {
   array : 'a Option.t Array.t;

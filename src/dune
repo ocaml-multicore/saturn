@@ -1,4 +1,6 @@
 (library
  (name lockfree)
  (public_name lockfree)
+ (virtual_modules atomic_virtual)
+ (default_implementation atomic_stdlib)
  (libraries dscheck))

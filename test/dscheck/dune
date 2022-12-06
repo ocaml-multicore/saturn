@@ -1,19 +1,15 @@
-
 (test
  (name spsc_queue)
- (libraries lockfree dscheck alcotest)
+ (libraries lockfree lockfree.atomic_traced dscheck alcotest)
  (modules spsc_queue))
  
-
 (test
  (name ws_deque)
- (libraries lockfree dscheck alcotest)
+ (libraries lockfree lockfree.atomic_traced dscheck alcotest)
  (modules ws_deque))
  
-
-
 (test
  (name mpsc_queue)
- (libraries lockfree dscheck alcotest)
+ (libraries lockfree lockfree.atomic_traced dscheck alcotest)
  (modules mpsc_queue))
  
