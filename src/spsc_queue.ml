@@ -21,7 +21,7 @@
  * https://dl.acm.org/doi/pdf/10.1145/3437801.3441583
  *)
 
-open Atomic_virtual
+open Virtual_atomic
 
 type 'a t = {
   array : 'a Option.t Array.t;

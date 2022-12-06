@@ -2,4 +2,4 @@
  (name atomic_traced)
  (public_name lockfree.atomic_traced)
  (libraries dscheck)
- (implements lockfree))
+ (implements virtual_atomic))

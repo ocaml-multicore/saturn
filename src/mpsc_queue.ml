@@ -7,7 +7,7 @@
    It is simplified slightly because we don't need multiple consumers.
    Therefore [head] is not atomic. *)
 
-open Atomic_virtual
+open Virtual_atomic
 
 exception Closed
 

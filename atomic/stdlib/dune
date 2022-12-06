@@ -1,4 +1,4 @@
 (library
  (name atomic_stdlib)
  (public_name lockfree.atomic_stdlib)
- (implements lockfree))
+ (implements virtual_atomic))
