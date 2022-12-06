@@ -26,7 +26,7 @@
  *   Correct and efficient work-stealing for weak memory models
  *   https://dl.acm.org/doi/abs/10.1145/2442516.2442524
  *)
- 
+
 open Virtual_atomic
 
 module type S = sig
