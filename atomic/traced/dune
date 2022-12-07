@@ -1,0 +1,5 @@
+(library
+ (name atomic_traced)
+ (public_name lockfree.atomic_traced)
+ (libraries dscheck)
+ (implements virtual_atomic))
