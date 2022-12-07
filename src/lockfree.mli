@@ -33,3 +33,4 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 module Ws_deque = Ws_deque
 module Spsc_queue = Spsc_queue
 module Mpsc_queue = Mpsc_queue
+module Mpmc_relaxed_queue = Mpmc_relaxed_queue
