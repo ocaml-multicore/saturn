@@ -10,4 +10,4 @@ clean:
 	dune clean
 
 bench:
-	@dune exec -- ./bench/main.exe --json
+	@dune exec -- ./bench/main.exe

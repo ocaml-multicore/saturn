@@ -13,7 +13,9 @@ depends: [
   "dune" {>= "3.0"}
   "qcheck" {with-test & >= "0.18.1"}
   "qcheck-alcotest" {with-test & >= "0.18.1"}
+  "alcotest" {>= "1.6.0"}
   "yojson" {>= "2.0.2"}
+  "dscheck" {>= "0.0.1"}
 ]
 depopts: []
 build: ["dune" "build" "-p" name "-j" jobs]

@@ -7,10 +7,20 @@ let backoff_benchmarks =
     bench_artificial ~with_backoff:false;
   ]
 
-let benchmark_list = [ Bench_spsc_queue.bench ] @ backoff_benchmarks
+let benchmark_list =
+  [
+    Bench_spsc_queue.bench;
+    Mpmc_queue.bench ~takers:4 ~pushers:4;
+    Mpmc_queue.bench ~takers:1 ~pushers:8;
+    Mpmc_queue.bench ~takers:8 ~pushers:1;
+    Mpmc_queue.bench ~use_cas:true ~takers:4 ~pushers:4;
+    Mpmc_queue.bench ~use_cas:true ~takers:1 ~pushers:8;
+    Mpmc_queue.bench ~use_cas:true ~takers:8 ~pushers:1;
+  ] @ backoff_benchmarks
 
 let () =
   let results =
+    (* todo: should assert no stranded domains between tests. *)
     List.map (fun f -> f ()) benchmark_list
     |> List.map Benchmark_result.to_json
     |> String.concat ", "
