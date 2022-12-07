@@ -237,7 +237,8 @@ let tests_one_producer_two_stealers =
           let multiple_steal deque nsteal =
             Semaphore.Counting.acquire sema;
             let res = Array.make nsteal None in
-            while Semaphore.Counting.get_value sema <> 0 do
+            while Semaphore.Counting.try_acquire sema do
+              Semaphore.Counting.release sema;
               Domain.cpu_relax ()
             done;
             for i = 0 to nsteal - 1 do

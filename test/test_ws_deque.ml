@@ -31,6 +31,8 @@ let test_push_and_steal () =
   Array.iter Domain.join domains;
   print_string "test_push_and_steal: ok\n"
 
+let tailrec_concat l1 l2 = List.rev_append (List.rev l1) l2
+
 let test_concurrent_workload () =
   (* The desired number of push events. *)
   let n = ref 100000 in
@@ -109,8 +111,10 @@ let test_concurrent_workload () =
   in
   assert (npushed = npopped + nstolen);
   let sort xs = List.sort compare xs in
-  let stolen = Array.fold_left (fun accu stolen -> accu @ stolen) [] stolen in
-  assert (sort pushed = sort (popped @ stolen));
+  let stolen =
+    Array.fold_left (fun accu stolen -> tailrec_concat accu stolen) [] stolen
+  in
+  assert (sort pushed = sort (tailrec_concat popped stolen));
   (* Print a completion message. *)
   Printf.printf
     "test_concurrent_workload: ok (pushed = %d, popped = %d, stolen = %d)\n"
