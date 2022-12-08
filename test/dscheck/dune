@@ -12,3 +12,13 @@
  (name mpsc_queue)
  (libraries lockfree lockfree.atomic_traced dscheck alcotest)
  (modules mpsc_queue))
+
+(test
+ (name michael_scott_queue)
+ (libraries lockfree lockfree.atomic_traced dscheck alcotest)
+ (modules michael_scott_queue))
+
+(test
+ (name treiber_stack)
+ (libraries lockfree lockfree.atomic_traced dscheck alcotest)
+ (modules treiber_stack))
