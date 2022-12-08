@@ -16,7 +16,8 @@ let benchmark_list =
     Mpmc_queue.bench ~use_cas:true ~takers:4 ~pushers:4;
     Mpmc_queue.bench ~use_cas:true ~takers:1 ~pushers:8;
     Mpmc_queue.bench ~use_cas:true ~takers:8 ~pushers:1;
-  ] @ backoff_benchmarks
+  ]
+  @ backoff_benchmarks
 
 let () =
   let results =

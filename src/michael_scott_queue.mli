@@ -16,10 +16,12 @@
  *)
 
 (**
-   Michael-Scott Queue. A classic multi-producer multi-consumer queue, robust and flexible.
-   Recommended starting point when needing FIFO structure. It is inspired by
-   [Simple, Fast, and Practical Non-Blocking and Blocking Concurrent Queue Algorithms]
-   (https://www.cs.rochester.edu/~scott/papers/1996_PODC_queues.pdf).
+   Michael-Scott Queue. A classic multi-producer multi-consumer queue,
+   robust and flexible.  Recommended starting point when needing FIFO
+   structure. It is inspired by {{:
+   https://www.cs.rochester.edu/~scott/papers/1996_PODC_queues.pdf}
+   Simple, Fast, and Practical Non-Blocking and Blocking Concurrent
+   Queue Algorithms}.
 *)
 
 type 'a t

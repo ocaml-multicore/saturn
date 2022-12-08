@@ -32,7 +32,7 @@
  (name qcheck_treiber_stack)
  (libraries lockfree qcheck qcheck-alcotest)
  (modules qcheck_treiber_stack))
- 
+
 (test
  (name test_mpmc_relaxed_queue)
  (libraries lockfree unix alcotest)
