@@ -10,7 +10,13 @@ struct
   type cmd =
     | Push of int
     | Pop
-    | Steal [@@deriving show { with_path = false }]
+    | Steal
+
+  let show_cmd c = match c with
+    | Push i -> "Push " ^ string_of_int i
+    | Pop -> "Pop"
+    | Steal -> "Steal"
+
   type state = int list
   type sut = int Ws_deque.M.t
 
