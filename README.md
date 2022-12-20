@@ -17,7 +17,7 @@ A collection of Concurrent Lockfree Data Structures for OCaml 5. It contains:
 
 ## Usage
 
-lockfree cam be installed from `opam`: `opam install lockfree`. Sample usage of
+lockfree can be installed from `opam`: `opam install lockfree`. Sample usage of
 `Ws_deque` is illustrated below.
 
 ```ocaml
