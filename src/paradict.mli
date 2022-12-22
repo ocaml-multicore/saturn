@@ -1,3 +1,16 @@
+(**
+    A Parallel Dictionnary, to be used as a thread-safe, lockfree alternative
+    to stdlib's Hashtbl or Map.
+    This is an implementation of CTries, described
+    {{:https://en.wikipedia.org/wiki/Ctrie}here on Wikipedia}.
+*)
+
+(**
+    CTries have the particular property of allowing for thread-safe O(1) snapshots.
+    This is done by the function {!Make.copy}.
+*)
+
+(** Output signature of the functor {!Make}. *)
 module type S = sig
   type key
   type 'a t
@@ -9,7 +22,7 @@ module type S = sig
   (** Empty the dictionnary. *)
 
   val find : key -> 'a t -> 'a
-  (** Return the current mapping of the key, or raises {!Not_found}. *)
+  (** Return the current mapping of the key, or raises [Not_found]. *)
 
   val find_opt : key -> 'a t -> 'a option
   (** Return [Some v] if [v] is mapped with the key, or [None]. *)
@@ -42,8 +55,8 @@ module type S = sig
 
   val iter : (key -> 'a -> unit) -> 'a t -> unit
   (** Apply a function to all mappings in unspecified order.
-      The behavior is not specified if the map is modified (by the function
-        or concurrent access) during the iteration. *)
+      If the map is modified during the iteration, newly added elements may
+      or may not be iterated on, and deleted elements may still get iterated on. *)
 
   val map : (key -> 'a -> 'b) -> 'a t -> 'b t
   (** [map f t] returns a new dictionnary where every pair (k,v) in t is replaced by (k, f k v);
@@ -53,13 +66,15 @@ module type S = sig
   (** [fold f t init] computes [f k1 v1 (f k2 v2 ... (f kN vN init))] where [k1...kN] are the keys
       and [v1...vN] the associated values, in unspecified order.
 
-      If [f] is side-effecting, those effects may happen an unspecified number of times, as operations are restarted in case of CAS conflicts.
+      If [f] is side-effecting, those effects may happen an unspecified number of times,
+      as operations are restarted in case of CAS conflicts.
       Use a pure function instead. *)
 
   val filter_map_inplace : (key -> 'a -> 'a option) -> 'a t -> unit
   (** [filter_map_inplace f t] applies [f] to all mappings, updating them depending on the result of [f k v], in unspecified order.
       - If [f] returns [None], the mapping is removed.
-      - If [f] is side-effecting, those effects may happen an unspecified number of times, as operations are restarted in case of CAS conflicts.
+      - If [f] is side-effecting, those effects may happen an unspecified number of times,
+      as operations are restarted in case of CAS conflicts.
       Use a pure function instead. *)
 
   val exists : (key -> 'a -> bool) -> 'a t -> bool
@@ -71,7 +86,7 @@ module type S = sig
   val save_as_dot : (key -> string) * ('a -> string) -> 'a t -> string -> unit
   (** Save the map as a graph in a .dot file.
 
-      Mainly for debugging purposes. *)
+      Mainly for debugging purposes, but it's very pretty so check it out! *)
 end
 
 module Make (H : Hashtbl.HashedType) : S with type key = H.t
