@@ -1,3 +1,4 @@
 (executables
  (names main mpmc_queue_cmd)
- (libraries lockfree unix yojson))
+ (libraries lockfree unix yojson)
+ (optional))
