@@ -3,7 +3,7 @@ maintainer: "KC Sivaramakrishnan <sk826@cl.cam.ac.uk>"
 authors: ["KC Sivaramakrishnan <sk826@cl.cam.ac.uk>"]
 homepage: "https://github.com/ocaml-multicore/lockfree"
 doc: "https://ocaml-multicore.github.io/lockfree"
-synopsis: "Lock-free data structures for multicore OCaml"
+synopsis: "Lock-free data structures for multicore OCaml (with benchmarks)"
 license: "ISC"
 dev-repo: "git+https://github.com/ocaml-multicore/lockfree.git"
 bug-reports: "https://github.com/ocaml-multicore/lockfree/issues"
