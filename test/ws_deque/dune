@@ -1,0 +1,20 @@
+(rule
+ (copy ../../src/ArrayExtra.ml ArrayExtra.ml))
+
+(rule
+ (copy ../../src/ws_deque.ml ws_deque.ml))
+
+(test
+ (name ws_deque_dscheck)
+ (libraries atomic dscheck alcotest)
+ (modules ArrayExtra ws_deque ws_deque_dscheck))
+
+(test
+ (name test_ws_deque)
+ (libraries lockfree)
+ (modules test_ws_deque))
+
+(test
+ (name qcheck_ws_deque)
+ (libraries lockfree qcheck "qcheck-alcotest")
+ (modules qcheck_ws_deque))

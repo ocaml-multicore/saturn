@@ -1,6 +1,3 @@
-module Atomic = Dscheck.TracedAtomic
-open Lockfree
-
 let drain_remaining queue =
   let remaining = ref 0 in
   (try

@@ -1,0 +1,15 @@
+(rule
+ (copy ../../src/backoff.ml backoff.ml))
+
+(rule
+ (copy ../../src/michael_scott_queue.ml michael_scott_queue.ml))
+
+(test
+ (name michael_scott_queue_dscheck)
+ (libraries atomic dscheck alcotest)
+ (modules backoff michael_scott_queue michael_scott_queue_dscheck))
+
+(test
+ (name qcheck_michael_scott_queue)
+ (libraries lockfree qcheck qcheck-alcotest)
+ (modules qcheck_michael_scott_queue))

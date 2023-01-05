@@ -1,6 +1,3 @@
-module Atomic = Dscheck.TracedAtomic
-open Lockfree
-
 let drain stack =
   let remaining = ref 0 in
   while not (Treiber_stack.is_empty stack) do
@@ -104,13 +101,13 @@ let two_consumers () =
 let two_domains () =
   Atomic.trace (fun () ->
       let stack = Treiber_stack.create () in
-      let items_by_domain = 2 in
+      let n1, n2 = (1, 2) in
 
       (* two producers *)
       let lists =
         [
-          (List.init items_by_domain (fun i -> i), ref []);
-          (List.init items_by_domain (fun i -> i + items_by_domain), ref []);
+          (List.init n1 (fun i -> i), ref []);
+          (List.init n2 (fun i -> i + n1), ref []);
         ]
       in
       List.iter
@@ -131,24 +128,24 @@ let two_domains () =
           let lpop2 = !(List.nth lists 1 |> snd) in
 
           (* got the same number of items out as in *)
-          Atomic.check (fun () -> items_by_domain = List.length lpop1);
-          Atomic.check (fun () -> items_by_domain = List.length lpop2);
+          Atomic.check (fun () -> List.length lpop1 = 1);
+          Atomic.check (fun () -> List.length lpop2 = 2);
 
           (* no element are missing *)
           Atomic.check (fun () ->
               List.sort Int.compare (lpop1 @ lpop2)
-              = List.init (items_by_domain * 2) (fun i -> i))))
+              = List.init (n1 + n2) (fun i -> i))))
 
 let two_domains_more_pop () =
   Atomic.trace (fun () ->
       let stack = Treiber_stack.create () in
-      let items_by_domain = 2 in
+      let n1, n2 = (2, 1) in
 
       (* two producers *)
       let lists =
         [
-          (List.init items_by_domain (fun i -> i), ref []);
-          (List.init items_by_domain (fun i -> i + items_by_domain), ref []);
+          (List.init n1 (fun i -> i), ref []);
+          (List.init n2 (fun i -> i + n1), ref []);
         ]
       in
       List.iter
@@ -176,12 +173,12 @@ let two_domains_more_pop () =
 
           (* got the same number of items out as in *)
           Atomic.check (fun () ->
-              2 * items_by_domain = List.length lpop1 + List.length lpop2);
+              n1 + n2 = List.length lpop1 + List.length lpop2);
 
           (* no element are missing *)
           Atomic.check (fun () ->
               List.sort Int.compare (lpop1 @ lpop2)
-              = List.init (items_by_domain * 2) (fun i -> i))))
+              = List.init (n1 + n2) (fun i -> i))))
 
 let () =
   let open Alcotest in

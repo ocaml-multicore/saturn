@@ -1,6 +1,3 @@
-module Atomic = Dscheck.TracedAtomic
-open Lockfree
-
 let drain queue =
   let remaining = ref 0 in
   while not (Mpsc_queue.is_empty queue) do

@@ -1,0 +1,17 @@
+(rule
+ (copy ../../src/spsc_queue.ml spsc_queue.ml))
+
+(test
+ (name spsc_queue_dscheck)
+ (libraries atomic dscheck alcotest)
+ (modules spsc_queue spsc_queue_dscheck))
+
+(test
+ (name test_spsc_queue)
+ (libraries lockfree)
+ (modules test_spsc_queue))
+
+(test
+ (name qcheck_spsc_queue)
+ (libraries lockfree qcheck "qcheck-alcotest")
+ (modules qcheck_spsc_queue))

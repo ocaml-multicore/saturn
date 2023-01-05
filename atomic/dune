@@ -1,5 +1,0 @@
-(library
- (name virtual_atomic)
- (public_name lockfree.virtual_atomic)
- (virtual_modules virtual_atomic)
- (default_implementation atomic_stdlib))
