@@ -15,6 +15,8 @@ A collection of Concurrent Lockfree Data Structures for OCaml 5. It contains:
 
 * [MPSC Queue](src/mpsc_queue.mli) A multi-producer, single-consumer, thread-safe queue without support for cancellation. This makes a good data structure for a scheduler's run queue. It is used in [Eio](https://github.com/ocaml-multicore/eio). It is a single consumer version of the queue described in [Implementing lock-free queues](https://people.cs.pitt.edu/~jacklange/teaching/cs2510-f12/papers/implementing_lock_free.pdf).
 
+* [CTrie](src/paradict.mli) A parallel dictionnary, to be used as a thread-safe, lockfree alternative to stdlib's Hashtbl or Map. See also [Wikipedia](https://en.wikipedia.org/wiki/Ctrie).
+
 ## Usage
 
 lockfree can be installed from `opam`: `opam install lockfree`. Sample usage of

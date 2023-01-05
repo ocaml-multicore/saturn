@@ -37,3 +37,8 @@
  (name test_mpmc_relaxed_queue)
  (libraries lockfree unix alcotest)
  (modules test_mpmc_relaxed_queue))
+
+(test
+ (name test_paradict)
+ (libraries lockfree alcotest)
+ (modules test_paradict))
