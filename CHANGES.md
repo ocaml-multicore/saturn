@@ -2,10 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
-## 0.3.1 
+## Not released
+
+* Add STM tests for current data structures (@lyrm, @jmid)
+
+## 0.3.1
 
 * Rework dscheck integration to work with utop (@lyrm)
-* Add OCaml 4 compatability (@sudha247) 
+* Add OCaml 4 compatability (@sudha247)
 * Add STM ws_deque tests (@jmid, @lyrm)
 
 ## 0.3.0

@@ -13,3 +13,10 @@
  (name qcheck_treiber_stack)
  (libraries lockfree qcheck qcheck-alcotest)
  (modules qcheck_treiber_stack))
+
+(test
+ (name stm_treiber_stack)
+ (modules stm_treiber_stack)
+ (libraries lockfree qcheck-stm.sequential qcheck-stm.domain)
+ (action
+  (run %{test} --verbose)))

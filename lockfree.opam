@@ -13,12 +13,15 @@ depends: [
   "dune" {>= "3.0"}
   "domain_shims" {>= "0.1.0"}
   "qcheck" {with-test & >= "0.18.1"}
-  "qcheck-stm" {with-test & >= "0.1"}
+  "qcheck-stm" {with-test & >= "0.1.1"}
   "qcheck-alcotest" {with-test & >= "0.18.1"}
   "alcotest" {with-test & >= "1.6.0"}
   "yojson" {>= "2.0.2"}
-  "dscheck" {with-test & >= "0.0.1"}
+  "dscheck" {with-test & >= "0.1.0"}
 ]
 available: arch != "x86_32" & arch != "arm32" & arch != "ppc64"
 depopts: []
 build: ["dune" "build" "-p" name "-j" jobs]
+pin-depends: [
+  [ "qcheck-stm.0.1.1"
+    "git+https://github.com/ocaml-multicore/multicoretests.git#4e2e1b22bffec3675a15cf6c2e05f733e9f8b66d" ] ]
