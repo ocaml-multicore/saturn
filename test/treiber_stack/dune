@@ -1,0 +1,15 @@
+(rule
+ (copy ../../src/backoff.ml backoff.ml))
+
+(rule
+ (copy ../../src/treiber_stack.ml treiber_stack.ml))
+
+(test
+ (name treiber_stack_dscheck)
+ (libraries atomic dscheck alcotest)
+ (modules backoff treiber_stack treiber_stack_dscheck))
+
+(test
+ (name qcheck_treiber_stack)
+ (libraries lockfree qcheck qcheck-alcotest)
+ (modules qcheck_treiber_stack))

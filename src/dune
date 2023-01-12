@@ -1,4 +1,3 @@
 (library
  (name lockfree)
- (public_name lockfree)
- (libraries dscheck virtual_atomic))
+ (public_name lockfree))

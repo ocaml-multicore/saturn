@@ -7,8 +7,6 @@
    It is simplified slightly because we don't need multiple consumers.
    Therefore [head] is not atomic. *)
 
-open Virtual_atomic
-
 exception Closed
 
 module Node : sig

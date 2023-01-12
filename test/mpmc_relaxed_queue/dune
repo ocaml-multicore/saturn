@@ -1,0 +1,4 @@
+(test
+ (name test_mpmc_relaxed_queue)
+ (libraries lockfree unix alcotest)
+ (modules test_mpmc_relaxed_queue))

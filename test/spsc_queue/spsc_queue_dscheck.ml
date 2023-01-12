@@ -1,6 +1,3 @@
-open Lockfree
-module Atomic = Dscheck.TracedAtomic
-
 let create_test ~shift_by () =
   let queue = Spsc_queue.create ~size_exponent:2 in
   let items_count = 3 in

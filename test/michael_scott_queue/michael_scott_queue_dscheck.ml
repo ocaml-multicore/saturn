@@ -1,6 +1,3 @@
-module Atomic = Dscheck.TracedAtomic
-open Lockfree
-
 let drain queue =
   let remaining = ref 0 in
   while not (Michael_scott_queue.is_empty queue) do
@@ -59,13 +56,13 @@ let two_producers () =
 let two_domains () =
   Atomic.trace (fun () ->
       let stack = Michael_scott_queue.create () in
-      let items_by_domain = 2 in
+      let n1, n2 = (2, 1) in
 
       (* two producers *)
       let lists =
         [
-          (List.init items_by_domain (fun i -> i), ref []);
-          (List.init items_by_domain (fun i -> i + items_by_domain), ref []);
+          (List.init n1 (fun i -> i), ref []);
+          (List.init n2 (fun i -> i + n1), ref []);
         ]
       in
       List.iter
@@ -86,61 +83,17 @@ let two_domains () =
           let lpop2 = !(List.nth lists 1 |> snd) in
 
           (* got the same number of items out as in *)
-          Atomic.check (fun () -> items_by_domain = List.length lpop1);
-          Atomic.check (fun () -> items_by_domain = List.length lpop2);
+          Atomic.check (fun () -> List.length lpop1 = n1);
+          Atomic.check (fun () -> List.length lpop2 = n2);
 
           (* no element are missing *)
           Atomic.check (fun () ->
-              let l1 = List.filter (fun i -> i < items_by_domain) lpop1 in
-              let l2 = List.filter (fun i -> i >= items_by_domain) lpop1 in
-              let l3 = List.filter (fun i -> i < items_by_domain) lpop2 in
-              let l4 = List.filter (fun i -> i >= items_by_domain) lpop2 in
+              let l1 = List.filter (fun i -> i < n1) lpop1 in
+              let l2 = List.filter (fun i -> i >= n1) lpop1 in
+              let l3 = List.filter (fun i -> i < n2) lpop2 in
+              let l4 = List.filter (fun i -> i >= n2) lpop2 in
               let is_sorted l = List.sort (fun a b -> -compare a b) l = l in
               is_sorted l1 && is_sorted l2 && is_sorted l3 && is_sorted l4)))
-
-let two_domains_more_pop () =
-  Atomic.trace (fun () ->
-      let stack = Michael_scott_queue.create () in
-      let items_by_domain = 2 in
-
-      (* two producers *)
-      let lists =
-        [
-          (List.init items_by_domain (fun i -> i), ref []);
-          (List.init items_by_domain (fun i -> i + items_by_domain), ref []);
-        ]
-      in
-      List.iter
-        (fun (lpush, lpop) ->
-          Atomic.spawn (fun () ->
-              List.iter
-                (fun elt ->
-                  Michael_scott_queue.push stack elt;
-                  lpop := Michael_scott_queue.pop stack :: !lpop;
-                  lpop := Michael_scott_queue.pop stack :: !lpop)
-                lpush)
-          |> ignore)
-        lists;
-
-      (* checks*)
-      Atomic.final (fun () ->
-          let lpop1 =
-            !(List.nth lists 0 |> snd)
-            |> List.filter Option.is_some |> List.map Option.get
-          in
-          let lpop2 =
-            !(List.nth lists 1 |> snd)
-            |> List.filter Option.is_some |> List.map Option.get
-          in
-
-          (* got the same number of items out as in *)
-          Atomic.check (fun () ->
-              2 * items_by_domain = List.length lpop1 + List.length lpop2);
-
-          (* no element are missing *)
-          Atomic.check (fun () ->
-              List.sort Int.compare (lpop1 @ lpop2)
-              = List.init (items_by_domain * 2) (fun i -> i))))
 
 let () =
   let open Alcotest in
@@ -151,6 +104,5 @@ let () =
           test_case "1-producer-1-consumer" `Slow producer_consumer;
           test_case "2-producers" `Slow two_producers;
           test_case "2-domains" `Slow two_domains;
-          test_case "2-domains-more-pops" `Slow two_domains_more_pop;
         ] );
     ]

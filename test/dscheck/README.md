@@ -1,1 +1,0 @@
-This directory contains tests using [DSCheck](https://github.com/ocaml-multicore/dscheck). DSCheck lets us verify that relevant invariants indeed hold under all possible interleavings. 
