@@ -9,8 +9,9 @@ dev-repo: "git+https://github.com/ocaml-multicore/lockfree.git"
 bug-reports: "https://github.com/ocaml-multicore/lockfree/issues"
 tags: []
 depends: [
-  "ocaml" {>= "5.0"}
+  "ocaml" {>= "4.12"}
   "dune" {>= "3.0"}
+  "domain_shims" {>= "0.1.0"}
   "qcheck" {with-test & >= "0.18.1"}
   "qcheck-alcotest" {with-test & >= "0.18.1"}
   "alcotest" {>= "1.6.0"}

@@ -1,3 +1,4 @@
 (library
  (name lockfree)
- (public_name lockfree))
+ (public_name lockfree)
+ (libraries domain_shims))
