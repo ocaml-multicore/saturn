@@ -23,5 +23,4 @@
  (name stm_ws_deque)
  (modules stm_ws_deque)
  (libraries lockfree qcheck-stm.sequential qcheck-stm.domain)
- (preprocess (pps ppx_deriving.show))
  (action (run %{test} --verbose)))
