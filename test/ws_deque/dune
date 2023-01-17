@@ -23,4 +23,5 @@
  (name stm_ws_deque)
  (modules stm_ws_deque)
  (libraries lockfree qcheck-stm.sequential qcheck-stm.domain)
- (action (run %{test} --verbose)))
+ (action
+  (run %{test} --verbose)))
