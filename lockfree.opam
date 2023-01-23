@@ -15,7 +15,7 @@ depends: [
   "qcheck" {with-test & >= "0.18.1"}
   "qcheck-stm" {with-test & >= "0.1"}
   "qcheck-alcotest" {with-test & >= "0.18.1"}
-  "alcotest" {>= "1.6.0"}
+  "alcotest" {with-test & >= "1.6.0"}
   "dscheck" {with-test & >= "0.0.1"}
 ]
 depopts: []

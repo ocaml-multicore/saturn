@@ -12,9 +12,9 @@ depends: [
   "ocaml" {>= "5.0"}
   "dune" {>= "3.0"}
   "qcheck" {with-test & >= "0.18.1"}
+  "qcheck-stm" {with-test & >= "0.1"}
   "qcheck-alcotest" {with-test & >= "0.18.1"}
-  "alcotest" {>= "1.6.0"}
-  "dscheck" {>= "0.0.1"}
+  "dscheck" {with-test & >= "0.0.1"}
   "yojson" {>= "2.0.2"}
 ]
 build: ["dune" "build" "-p" name "-j" jobs]
