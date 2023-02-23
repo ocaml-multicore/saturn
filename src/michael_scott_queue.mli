@@ -16,9 +16,10 @@
  *)
 
 (**
-   Michael-Scott Queue. A classic multi-producer multi-consumer queue,
-   robust and flexible.  Recommended starting point when needing FIFO
-   structure. It is inspired by {{:
+    Michael-Scott classic multi-producer multi-consumer queue.
+
+   All functions are lockfree. It is the recommended starting point
+   when needing FIFO structure. It is inspired by {{:
    https://www.cs.rochester.edu/~scott/papers/1996_PODC_queues.pdf}
    Simple, Fast, and Practical Non-Blocking and Blocking Concurrent
    Queue Algorithms}.
@@ -28,17 +29,17 @@ type 'a t
 (** The type of lock-free queue. *)
 
 val create : unit -> 'a t
-(** Create a new queue, which is initially empty. *)
+(** [create ()] returns a new queue, initially empty. *)
 
 val is_empty : 'a t -> bool
 (** [is_empty q] returns empty if [q] is empty. *)
 
 val push : 'a t -> 'a -> unit
-(** [push q v] pushes [v] to the back of the queue. *)
+(** [push q v] adds the element [v] at the end of the queue [q]. *)
 
 val pop : 'a t -> 'a option
-(** [pop q] pops an element [e] from the front of the queue and returns
-    [Some v] if the queue is non-empty. Otherwise, returns [None]. *)
+(** [pop q] removes and returns the first element in queue [q], or
+    returns [None] if the queue is empty. *)
 
 val clean_until : 'a t -> ('a -> bool) -> unit
 (** [clean_until q f] drops the prefix of the queue until the element [e],

@@ -2,7 +2,7 @@
 
 open QCheck
 open STM
-module Ms_queue = Lockfree.Michael_scott_queue
+module Ms_queue = Saturn.Queue
 
 module MSQConf = struct
   type cmd = Push of int | Pop | Is_empty
@@ -61,7 +61,7 @@ let () =
   QCheck_base_runner.run_tests_main
     [
       MSQ_seq.agree_test ~count
-        ~name:"STM Lockfree.Michael_scott_queue test sequential";
+        ~name:"STM Saturn.Michael_scott_queue test sequential";
       MSQ_dom.agree_test_par ~count
-        ~name:"STM Lockfree.Michael_scott_queue test parallel";
+        ~name:"STM Saturn.Michael_scott_queue test parallel";
     ]

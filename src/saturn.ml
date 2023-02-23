@@ -4,10 +4,6 @@
    %%NAME%% %%VERSION%%
   ---------------------------------------------------------------------------*)
 
-(** Lock-free data structures for Multicore OCaml *)
-
-(** {1 Lockfree} *)
-
 (*---------------------------------------------------------------------------
    Copyright (c) 2016 KC Sivaramakrishnan
 
@@ -30,10 +26,10 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 ########
 *)
 
-module Ws_deque = Ws_deque
-module Spsc_queue = Spsc_queue
-module Mpsc_queue = Mpsc_queue
-module Treiber_stack = Treiber_stack
-module Michael_scott_queue = Michael_scott_queue
-module Mpmc_relaxed_queue = Mpmc_relaxed_queue
+module Queue = Michael_scott_queue
+module Stack = Treiber_stack
+module Work_stealing_deque = Ws_deque
+module Single_prod_single_cons_queue = Spsc_queue
+module Single_consumer_queue = Mpsc_queue
+module Relaxed_queue = Mpmc_relaxed_queue
 module Backoff = Backoff

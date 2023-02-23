@@ -1,4 +1,4 @@
-open Lockfree
+open Saturn.Queue
 
 let tests_sequential =
   QCheck.
@@ -7,39 +7,37 @@ let tests_sequential =
       Test.make ~name:"push" (list int) (fun lpush ->
           assume (lpush <> []);
           (* Building a random queue *)
-          let queue = Michael_scott_queue.create () in
-          List.iter (Michael_scott_queue.push queue) lpush;
+          let queue = create () in
+          List.iter (push queue) lpush;
 
           (* Testing property *)
-          not (Michael_scott_queue.is_empty queue));
+          not (is_empty queue));
       (* TEST 2 - push, pop until empty *)
       Test.make ~name:"push_pop_until_empty" (list int) (fun lpush ->
           (* Building a random queue *)
-          let queue = Michael_scott_queue.create () in
-          List.iter (Michael_scott_queue.push queue) lpush;
+          let queue = create () in
+          List.iter (push queue) lpush;
 
           (* Popping until [is_empty q] is true *)
           let count = ref 0 in
-          while not (Michael_scott_queue.is_empty queue) do
+          while not (is_empty queue) do
             incr count;
-            ignore (Michael_scott_queue.pop queue)
+            ignore (pop queue)
           done;
 
           (* Testing property *)
-          Michael_scott_queue.pop queue = None && !count = List.length lpush);
+          pop queue = None && !count = List.length lpush);
       (* TEST 3 - push, pop, check FIFO  *)
       Test.make ~name:"fifo" (list int) (fun lpush ->
           (* Building a random queue *)
-          let queue = Michael_scott_queue.create () in
-          List.iter (Michael_scott_queue.push queue) lpush;
+          let queue = create () in
+          List.iter (push queue) lpush;
 
           let out = ref [] in
           let insert v = out := v :: !out in
 
           for _ = 1 to List.length lpush do
-            match Michael_scott_queue.pop queue with
-            | None -> assert false
-            | Some v -> insert v
+            match pop queue with None -> assert false | Some v -> insert v
           done;
 
           (* Testing property *)
@@ -53,12 +51,11 @@ let tests_one_consumer_one_producer =
          Parallel [push] and [pop]. *)
       Test.make ~count:10_000 ~name:"parallel_fifo" (list int) (fun lpush ->
           (* Initialization *)
-          let queue = Michael_scott_queue.create () in
+          let queue = create () in
 
           (* Producer pushes. *)
           let producer =
-            Domain.spawn (fun () ->
-                List.iter (Michael_scott_queue.push queue) lpush)
+            Domain.spawn (fun () -> List.iter (push queue) lpush)
           in
 
           let fifo =
@@ -66,12 +63,12 @@ let tests_one_consumer_one_producer =
               (fun acc item ->
                 let popped = ref None in
                 while Option.is_none !popped do
-                  popped := Michael_scott_queue.pop queue
+                  popped := pop queue
                 done;
                 acc && item = Option.get !popped)
               true lpush
           in
-          let empty = Michael_scott_queue.is_empty queue in
+          let empty = is_empty queue in
 
           (* Ensure nothing is left behind. *)
           Domain.join producer;
@@ -87,7 +84,7 @@ let tests_two_domains =
       Test.make ~count:10_000 ~name:"parallel_pop_push"
         (pair small_nat small_nat) (fun (npush1, npush2) ->
           (* Initialization *)
-          let queue = Michael_scott_queue.create () in
+          let queue = create () in
           let sema = Semaphore.Binary.make false in
 
           (* Using these lists instead of a random one enables to
@@ -98,9 +95,9 @@ let tests_two_domains =
           let work lpush =
             List.map
               (fun elt ->
-                Michael_scott_queue.push queue elt;
+                push queue elt;
                 Domain.cpu_relax ();
-                Michael_scott_queue.pop queue)
+                pop queue)
               lpush
           in
 
@@ -147,7 +144,7 @@ let tests_two_domains =
       Test.make ~count:10_000 ~name:"parallel_pop_push_random"
         (pair small_nat small_nat) (fun (npush1, npush2) ->
           (* Initialization *)
-          let queue = Michael_scott_queue.create () in
+          let queue = create () in
           let sema = Semaphore.Binary.make false in
 
           let lpush1 = List.init npush1 (fun i -> i) in
@@ -164,11 +161,11 @@ let tests_two_domains =
                 match lpush with
                 | [] -> popped
                 | elt :: xs ->
-                    Michael_scott_queue.push queue elt;
+                    push queue elt;
                     loop xs popped)
               else (
                 incr consecutive_pop;
-                let p = Michael_scott_queue.pop queue in
+                let p = pop queue in
                 loop lpush (p :: popped))
             in
             loop lpush []
@@ -200,7 +197,7 @@ let tests_two_domains =
           (* Pop everything that is still on the queue *)
           let popped3 =
             let rec loop popped =
-              match Michael_scott_queue.pop queue with
+              match pop queue with
               | None -> popped
               | Some v -> loop (v :: popped)
             in

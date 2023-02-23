@@ -3,7 +3,7 @@
 open QCheck
 open STM
 open Util
-module Mpsc_queue = Lockfree.Mpsc_queue
+module Mpsc_queue = Saturn.Single_consumer_queue
 
 module MPSCConf = struct
   type cmd = Push of int | Pop | Push_head of int | Is_empty | Close
@@ -105,8 +105,8 @@ let () =
   let count = 1000 in
   QCheck_base_runner.run_tests_main
     [
-      MPSC_seq.agree_test ~count ~name:"STM Lockfree.Mpsc_queue test sequential";
-      agree_test_par_asym ~count ~name:"STM Lockfree.Mpsc_queue test parallel";
+      MPSC_seq.agree_test ~count ~name:"STM Saturn.Mpsc_queue test sequential";
+      agree_test_par_asym ~count ~name:"STM Saturn.Mpsc_queue test parallel";
       MPSC_dom.neg_agree_test_par ~count
-        ~name:"STM Lockfree.Mpsc_queue test parallel, negative";
+        ~name:"STM Saturn.Mpsc_queue test parallel, negative";
     ]

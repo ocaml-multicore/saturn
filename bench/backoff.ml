@@ -5,7 +5,7 @@ type 'a t = { value : 'a; next : 'a t option Atomic.t }
 let empty () = { value = Obj.magic (); next = Atomic.make None }
 
 let push ~backoff_once t value =
-  let b = Lockfree.Backoff.create () in
+  let b = Saturn.Backoff.create () in
   let new_head = ({ value; next = Atomic.make None } : 'a t) in
   let rec push_f () =
     let head = Atomic.get t.next in
@@ -18,7 +18,7 @@ let push ~backoff_once t value =
   push_f ()
 
 let rec pop ?min_wait ~backoff_once t =
-  let b = Lockfree.Backoff.create ?min_wait () in
+  let b = Saturn.Backoff.create ?min_wait () in
   let head = Atomic.get t.next in
   match head with
   | None -> None
@@ -95,8 +95,8 @@ let run_artificial ~backoff_once () =
 
 let bench ~run_type ~with_backoff () =
   let backoff_once =
-    if with_backoff then Lockfree.Backoff.once
-    else fun (_ : Lockfree.Backoff.t) -> ()
+    if with_backoff then Saturn.Backoff.once
+    else fun (_ : Saturn.Backoff.t) -> ()
   in
   let results = ref [] in
   let run =

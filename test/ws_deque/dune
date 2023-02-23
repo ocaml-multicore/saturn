@@ -11,17 +11,17 @@
 
 (test
  (name test_ws_deque)
- (libraries lockfree)
+ (libraries saturn)
  (modules test_ws_deque))
 
 (test
  (name qcheck_ws_deque)
- (libraries lockfree qcheck "qcheck-alcotest")
+ (libraries saturn qcheck "qcheck-alcotest")
  (modules qcheck_ws_deque))
 
 (test
  (name stm_ws_deque)
  (modules stm_ws_deque)
- (libraries lockfree qcheck-stm.sequential qcheck-stm.domain)
+ (libraries saturn qcheck-stm.sequential qcheck-stm.domain)
  (action
   (run %{test} --verbose)))

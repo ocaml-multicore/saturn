@@ -1,5 +1,6 @@
-(** A lock-free multi-producer, single-consumer, thread-safe queue
+(** Lock-free multi-producer, single-consumer, domain-safe queue
     without support for cancellation.
+
     This makes a good data structure for a scheduler's run queue and
     is currently (September 2022) used for Eio's scheduler. *)
 
@@ -9,26 +10,35 @@ type 'a t
 exception Closed
 
 val create : unit -> 'a t
-(** [create ()] is a new empty queue. *)
+(** [create ()] returns a new empty queue. *)
 
 val push : 'a t -> 'a -> unit
-(** [push t x] adds [x] to the tail of the queue.
-    This can be used safely by multiple producer domains, in parallel with the other operations.
-    @raise Closed if [t] is closed. *)
+(** [push q v] adds the element [v] at the end of the queue [q].  This
+    can be used safely by multiple producer domains, in parallel with
+    the other operations.
 
-val push_head : 'a t -> 'a -> unit
-(** [push_head t x] inserts [x] at the head of the queue.
-    This can only be used by the consumer (if run in parallel with {!pop}, the item might be skipped).
-    @raise Closed if [t] is closed and empty. *)
+    @raise Closed if [q] is closed. *)
 
 val pop : 'a t -> 'a option
-(** [pop t] removes the head item from [t] and returns it.
-    Returns [None] if [t] is currently empty.
-    @raise Closed if [t] has been closed and is empty. *)
+(** [pop q] removes and returns the first element in queue [q] or
+    returns [None] if the queue is empty.
+
+    @raise Closed if [q] is closed and empty. *)
+
+val push_head : 'a t -> 'a -> unit
+(** [push_head q v] adds the element [v] at the head of the queue
+    [q]. This can only be used by the consumer (if run in parallel
+    with {!pop}, the item might be skipped).
+
+    @raise Closed if [q] is closed and empty. *)
 
 val is_empty : 'a t -> bool
-(** [is_empty t] is [true] if calling [pop] would return [None].
-    @raise Closed if [t] has been closed and is empty. *)
+(** [is_empty q] is [true] if calling [pop] would return [None].
+
+    @raise Closed if [q] is closed and empty. *)
 
 val close : 'a t -> unit
-(** [close t] marks [t] as closed, preventing any further items from being pushed. *)
+(** [close q] marks [q] as closed, preventing any further items from
+    being pushed by the producers (i.e. with {!push}).
+
+    @raise Closed if [q] has already been closed. *)
