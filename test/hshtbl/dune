@@ -1,0 +1,46 @@
+(rule
+ (copy ../../src/htbl.ml htbl.ml))
+
+(rule
+ (copy ../../src/htbl.ml htbl_resizable.ml))
+
+(test
+ (name htbl_dscheck)
+ (libraries atomic dscheck alcotest)
+ (modules htbl htbl_dscheck))
+
+(test
+ (name htbl_resizable_dscheck)
+ (libraries atomic dscheck alcotest)
+ (modules htbl_resizable htbl_resizable_dscheck))
+
+(test
+ (name qcheck_llist)
+ (libraries lockfree qcheck qcheck-alcotest)
+ (modules qcheck_llist))
+
+(test
+ (name qcheck_htbl)
+ (libraries lockfree qcheck qcheck-alcotest)
+ (modules qcheck_htbl))
+
+(test
+ (name stm_llist)
+ (modules stm_llist)
+ (libraries lockfree qcheck-stm.sequential qcheck-stm.domain)
+ (action
+  (run %{test} --verbose)))
+
+(test
+ (name stm_htbl)
+ (modules stm_htbl)
+ (libraries lockfree qcheck-stm.sequential qcheck-stm.domain)
+ (action
+  (run %{test} --verbose)))
+
+(test
+ (name stm_htbl_resizable)
+ (modules stm_htbl_resizable)
+ (libraries lockfree qcheck-stm.sequential qcheck-stm.domain)
+ (action
+  (run %{test} --verbose)))
