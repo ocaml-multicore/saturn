@@ -1,6 +1,7 @@
 (*
  * Copyright (c) 2015, Théo Laurent <theo.laurent@ens.fr>
  * Copyright (c) 2015, KC Sivaramakrishnan <sk826@cl.cam.ac.uk>
+ * Copyright (c) 2023, Vesa Karvonen <vesa.a.j.k@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -18,65 +19,63 @@
 (* Michael-Scott queue *)
 
 type 'a node = Nil | Next of 'a * 'a node Atomic.t
-type 'a t = { head : 'a node Atomic.t; tail : 'a node Atomic.t }
+
+type 'a t = {
+  head : 'a node Atomic.t Atomic.t;
+  tail : 'a node Atomic.t Atomic.t;
+}
 
 let create () =
-  let head = Next (Obj.magic (), Atomic.make Nil) in
-  { head = Atomic.make head; tail = Atomic.make head }
+  let next = Atomic.make Nil in
+  { head = Atomic.make next; tail = Atomic.make next }
 
-let is_empty q =
-  match Atomic.get q.head with
-  | Nil -> failwith "MSQueue.is_empty: impossible"
-  | Next (_, x) -> ( match Atomic.get x with Nil -> true | _ -> false)
+let is_empty { head; _ } = Atomic.get (Atomic.get head) == Nil
 
-let pop q =
+let pop { head; _ } =
   let b = Backoff.create () in
   let rec loop () =
-    let s = Atomic.get q.head in
-    let nhead =
-      match s with
-      | Nil -> failwith "MSQueue.pop: impossible"
-      | Next (_, x) -> Atomic.get x
-    in
-    match nhead with
+    let old_head = Atomic.get head in
+    match Atomic.get old_head with
     | Nil -> None
-    | Next (v, _) when Atomic.compare_and_set q.head s nhead -> Some v
+    | Next (value, next) when Atomic.compare_and_set head old_head next ->
+        Some value
     | _ ->
         Backoff.once b;
         loop ()
   in
   loop ()
 
-let push q v =
+let rec fix_tail tail old_tail new_tail =
+  if Atomic.compare_and_set tail old_tail new_tail then
+    match Atomic.get new_tail with
+    | Nil -> ()
+    | Next (_, new_new_tail) -> fix_tail tail new_tail new_new_tail
+
+let push { tail; _ } value =
   let rec find_tail_and_enq curr_end node =
-    if Atomic.compare_and_set curr_end Nil node then ()
-    else
+    if not (Atomic.compare_and_set curr_end Nil node) then
       match Atomic.get curr_end with
       | Nil -> find_tail_and_enq curr_end node
       | Next (_, n) -> find_tail_and_enq n node
   in
-  let newnode = Next (v, Atomic.make Nil) in
-  let tail = Atomic.get q.tail in
-  match tail with
-  | Nil -> failwith "HW_MSQueue.push: impossible"
-  | Next (_, n) ->
-      find_tail_and_enq n newnode;
-      ignore (Atomic.compare_and_set q.tail tail newnode)
+  let new_tail = Atomic.make Nil in
+  let newnode = Next (value, new_tail) in
+  let old_tail = Atomic.get tail in
+  find_tail_and_enq old_tail newnode;
+  if Atomic.compare_and_set tail old_tail new_tail then
+    match Atomic.get new_tail with
+    | Nil -> ()
+    | Next (_, new_new_tail) -> fix_tail tail new_tail new_new_tail
 
-let clean_until q f =
+let clean_until { head; _ } f =
   let b = Backoff.create () in
   let rec loop () =
-    let s = Atomic.get q.head in
-    let nhead =
-      match s with
-      | Nil -> failwith "MSQueue.pop: impossible"
-      | Next (_, x) -> Atomic.get x
-    in
-    match nhead with
+    let old_head = Atomic.get head in
+    match Atomic.get old_head with
     | Nil -> ()
-    | Next (v, _) ->
-        if not (f v) then
-          if Atomic.compare_and_set q.head s nhead then (
+    | Next (value, next) ->
+        if not (f value) then
+          if Atomic.compare_and_set head old_head next then (
             Backoff.reset b;
             loop ())
           else (
@@ -88,9 +87,5 @@ let clean_until q f =
 
 type 'a cursor = 'a node
 
-let snapshot q =
-  match Atomic.get q.head with
-  | Nil -> failwith "MSQueue.snapshot: impossible"
-  | Next (_, n) -> Atomic.get n
-
-let next c = match c with Nil -> None | Next (a, n) -> Some (a, Atomic.get n)
+let snapshot { head; _ } = Atomic.get (Atomic.get head)
+let next = function Nil -> None | Next (a, n) -> Some (a, Atomic.get n)
