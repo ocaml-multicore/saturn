@@ -1,6 +1,11 @@
 type 'a node = Nil | Next of 'a * 'a node Atomic.t * bool * int
 type 'a t = { head : 'a node Atomic.t }
-type 'a find_prev_result_t = { found : bool; prev : 'a node Atomic.t }
+
+type 'a find_prev_result_t = {
+  found : bool;
+  prev : 'a node Atomic.t;
+  prev_snapshot : 'a node;
+}
 
 let make_node v = Next (v, Atomic.make Nil, false, 0)
 
@@ -16,25 +21,27 @@ let find_prev s v =
     | Nil -> failwith "impossible: prev is Nil"
     | Next (pval, curr, pmark, ptag) -> (
         match Atomic.get curr with
-        | Nil -> { found = false; prev }
+        | Nil -> { found = false; prev; prev_snapshot }
         | Next (_, next, true, _) ->
             let new_prev = Next (pval, next, false, ptag + 1) in
             ignore (Atomic.compare_and_set prev prev_snapshot new_prev);
             aux s.head
         | Next (cval, next, false, ctag) when cval >= v ->
-            { found = cval = v; prev }
+            { found = cval = v; prev; prev_snapshot }
         | _ -> aux curr)
   in
   aux s.head
 
-let contains s v = (find_prev s v).found
+let contains s v =
+  match find_prev s v with
+  | { found = false } -> false
+  | { found = true } -> true
 
 let rec insert s v =
   match find_prev s v with
   | { found = true } -> false
-  | { found = false; prev } -> (
-      let prev_snapshot = Atomic.get prev in
-      match prev_snapshot with
+  | { found = false; prev; prev_snapshot } -> (
+      match Atomic.get prev with
       | Nil -> failwith "impossible case: prev is Nil"
       | Next (_, _, true, _) -> insert s v
       | Next (pval, curr, false, ptag) -> (
