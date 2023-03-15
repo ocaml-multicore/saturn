@@ -66,6 +66,29 @@ module Llist = struct
   let add (key : key) (value : 'a kind) (t : 'a t) =
     fst (unsafe_add key value t)
 
+  let exchange_value v = function
+    | Normal n ->
+        let prev_v = n.value in
+        (prev_v, Normal { n with value = v })
+    | Remove n ->
+        let prev_v = n.value in
+        (prev_v, Remove { n with value = v })
+    | _ -> failwith "Should not happen"
+
+  let rec replace (key : key) (value : 'a kind) (t : 'a t) =
+    let is_found, local = find key t in
+    if is_found then
+      let prev_value, new_node = exchange_value value local.curr in
+      if prev_value = value then `Replaced
+      else if Atomic.compare_and_set local.prev local.curr new_node then
+        `Replaced
+      else replace key value t
+    else if
+      Atomic.compare_and_set local.prev local.curr
+      @@ Normal { key; next = Atomic.make local.curr; value }
+    then `Added
+    else replace key value t
+
   let rec unsafe_remove (key : key) t =
     let is_found, local = find key t in
     if not is_found then (false, local)
@@ -162,10 +185,10 @@ module Htbl = struct
     let parent_bucket = buckets.(parent_ind) in
 
     (if parent_ind <> ind then
-     match Atomic.get parent_bucket with
-     | Llist.Last -> init_bucket buckets parent_ind
-     | LRemove -> failwith "Should never happen."
-     | _ -> ());
+       match Atomic.get parent_bucket with
+       | Llist.Last -> init_bucket buckets parent_ind
+       | LRemove -> failwith "Should never happen."
+       | _ -> ());
 
     new_dummy_node ind parent_bucket |> Atomic.set buckets.(ind)
 
@@ -182,10 +205,14 @@ module Htbl = struct
     | LRemove -> failwith "Should never happen."
     | _ -> bucket
 
-  (** [add key value t] *)
   let add key value { buckets; mask; _ } =
     Llist.add (compute_hkey key) (Regular value)
     @@ get_bucket_ind key buckets mask
+
+  let replace key value { buckets; mask; _ } =
+    Llist.replace (compute_hkey key) (Regular value)
+    @@ get_bucket_ind key buckets mask
+    |> ignore
 
   let find key { buckets; mask; _ } =
     let is_found, local =
@@ -283,10 +310,10 @@ module Htbl_resizable = struct
     let parent_ind = unset_msb bucket_ind in
     let parent_bucket = get_bucket_ref t parent_ind in
     (if parent_ind <> bucket_ind then
-     match Atomic.get parent_bucket with
-     | Llist.Last -> init_bucket t parent_bucket parent_ind
-     | LRemove -> failwith "Should never happen"
-     | _ -> ());
+       match Atomic.get parent_bucket with
+       | Llist.Last -> init_bucket t parent_bucket parent_ind
+       | LRemove -> failwith "Should never happen"
+       | _ -> ());
     new_dummy_node bucket_ind parent_bucket |> Atomic.set bucket
 
   let get_bucket key t =
@@ -313,7 +340,6 @@ module Htbl_resizable = struct
       then ()
       else grow t count
 
-  (** [add key value t] *)
   let add (key : key) (value : 'a) (t : 'a t) =
     let is_added =
       Llist.add (compute_hkey key) (Regular value) @@ get_bucket key t
@@ -322,6 +348,13 @@ module Htbl_resizable = struct
     else (
       Atomic.fetch_and_add t.count 1 |> grow t;
       true)
+
+  let replace (key : key) (value : 'a) (t : 'a t) =
+    match
+      Llist.replace (compute_hkey key) (Regular value) @@ get_bucket key t
+    with
+    | `Replaced -> ()
+    | `Added -> Atomic.fetch_and_add t.count 1 |> grow t
 
   let add_no_resize key value t =
     let is_added =

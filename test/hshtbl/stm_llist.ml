@@ -3,21 +3,27 @@ open STM
 module Llist = Lockfree__.Htbl.Llist
 
 module WSDConf = struct
-  type cmd = Add of int | Remove of int | Mem of int
+  type cmd =
+    | Add of int * int
+    | Replace of int * int
+    | Remove of int
+    | Mem of int
 
   let show_cmd c =
     match c with
-    | Add k -> "Add " ^ string_of_int k
+    | Add (k, v) -> "Add (" ^ string_of_int k ^ "," ^ string_of_int v ^ ")"
     | Remove k -> "Remove " ^ string_of_int k
     | Mem k -> "Mem " ^ string_of_int k
+    | Replace (k, v) ->
+        "Replace (" ^ string_of_int k ^ "," ^ string_of_int v ^ ")"
 
-  module S = Set.Make (struct
+  module S = Map.Make (struct
     type t = int
 
     let compare = compare
   end)
 
-  type state = S.t
+  type state = int S.t
   type sut = int Llist.t
 
   let arb_cmd _s =
@@ -25,7 +31,8 @@ module WSDConf = struct
     QCheck.make ~print:show_cmd
       (Gen.oneof
          [
-           Gen.map (fun k -> Add k) int_gen;
+           Gen.map2 (fun k v -> Add (k, v)) int_gen int_gen;
+           Gen.map2 (fun k v -> Replace (k, v)) int_gen int_gen;
            Gen.map (fun i -> Remove i) int_gen;
            Gen.map (fun i -> Mem i) int_gen;
          ])
@@ -36,7 +43,8 @@ module WSDConf = struct
 
   let next_state c s =
     match c with
-    | Add k -> if S.mem k s then s else S.add k s
+    | Add (k, v) -> if S.mem k s then s else S.add k v s
+    | Replace (k, v) -> S.add k v s
     | Mem _ -> s
     | Remove k -> if S.mem k s then S.remove k s else s
 
@@ -44,13 +52,15 @@ module WSDConf = struct
 
   let run c t =
     match c with
-    | Add k -> Res (bool, Llist.add k Llist.Dummy t)
+    | Add (k, v) -> Res (bool, Llist.add k (Llist.Regular v) t)
+    | Replace (k, v) -> Res (unit, Llist.replace k (Llist.Regular v) t |> ignore)
     | Remove k -> Res (bool, Llist.remove k t)
     | Mem k -> Res (bool, Llist.mem k t)
 
   let postcond c (s : state) res =
     match (c, res) with
-    | Add k, Res ((Bool, _), res) -> S.mem k s = not res
+    | Add (k, _v), Res ((Bool, _), res) -> S.mem k s = not res
+    | Replace (_k, _v), Res ((Unit, _), _) -> true
     | Mem k, Res ((Bool, _), res) -> S.mem k s = res
     | Remove k, Res ((Bool, _), res) -> S.mem k s = res
     | _, _ -> false

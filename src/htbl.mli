@@ -5,6 +5,7 @@ module Llist : sig
 
   val init : unit -> 'a t
   val add : key -> 'a kind -> 'a t -> bool
+  val replace : key -> 'a kind -> 'a t -> [ `Replaced | `Added ]
   val remove : key -> 'a t -> bool
   val mem : key -> 'a t -> bool
 end
@@ -15,6 +16,7 @@ module Htbl : sig
 
   val init : size_exponent:int -> 'a t
   val add : key -> 'a -> 'a t -> bool
+  val replace : key -> 'a -> 'a t -> unit
   val find : key -> 'a t -> 'a option
   val mem : key -> 'a t -> bool
   val remove : key -> 'a t -> bool
@@ -26,6 +28,7 @@ module Htbl_resizable : sig
 
   val init : size_exponent:int -> 'a t
   val add : key -> 'a -> 'a t -> bool
+  val replace : key -> 'a -> 'a t -> unit
   val add_no_resize : int -> 'a -> 'a t -> bool
   val find : key -> 'a t -> 'a option
   val mem : key -> 'a t -> bool

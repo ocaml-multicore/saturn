@@ -14,7 +14,38 @@ let two_domains_add () =
 
       Atomic.final (fun () ->
           Atomic.check (fun () ->
-              List.for_all (fun i -> Htbl.mem i htbl) (item1 @ item2))))
+              List.for_all
+                (fun i ->
+                  match Htbl.find i htbl with None -> false | Some j -> i = j)
+                (item1 @ item2))))
+
+let two_domains_replace () =
+  Atomic.trace (fun () ->
+      let htbl = Htbl.init ~size_exponent:2 in
+      let item1 = [ (0, "a"); (1, "b"); (2, "c") ] in
+      let item2 = [ (0, "d"); (4, "e"); (1, "f") ] in
+      let append = List.sort_uniq (fun (k, _) (k', _) -> compare k k') (item1 @ item2) in
+
+      Atomic.spawn (fun () ->
+          List.iter (fun (k, v) -> Htbl.replace k v htbl) item1);
+
+      Atomic.spawn (fun () ->
+          List.iter (fun (k, v) -> Htbl.replace k v htbl) item2);
+
+      Atomic.final (fun () ->
+          Atomic.check (fun () ->
+              List.for_all
+                (fun (k, _) ->
+                  match Htbl.find k htbl with
+                  | None -> false
+                  | Some v -> (
+                      match
+                        (List.assoc_opt k item1, List.assoc_opt k item2)
+                      with
+                      | None, Some v' | Some v', None -> v = v'
+                      | Some v1, Some v2 -> v = v1 || v = v2
+                      | None, None -> false))
+              append)))
 
 let two_domains_remove () =
   Atomic.trace (fun () ->
@@ -107,6 +138,7 @@ let () =
       ( "basic",
         [
           test_case "2-domains_add" `Slow two_domains_add;
+          test_case "2-domains_replace" `Slow two_domains_replace;
           test_case "2-domains_remove" `Slow two_domains_remove;
           test_case "2-domains_remove_bis" `Slow two_domains_remove_bis;
           test_case "2-domains_add_remove" `Slow two_domains_add_remove;
