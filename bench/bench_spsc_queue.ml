@@ -2,7 +2,8 @@ let item_count = 2_000_000
 
 module type QUEUE = sig
   type 'a t
-  val make : unit -> 'a t
+
+  val make : unit -> int t
   val push : 'a t -> 'a -> unit
   val pop : 'a t -> 'a option
   val name : string
@@ -28,7 +29,7 @@ module Bench (Q : QUEUE) = struct
     let start_time = Domain.join pusher in
     let time_diff = end_time -. start_time in
     time_diff
-  
+
   let bench () =
     let results = ref [] in
     for i = 1 to 10 do
@@ -45,16 +46,15 @@ module Spsc_queue = Bench (struct
   include Lockfree.Spsc_queue
 
   let make () = create ~size_exponent:3
-
-  let rec push t x =
-    try Lockfree.Spsc_queue.push t x
-    with Full -> push t x
-
+  let rec push t x = try Lockfree.Spsc_queue.push t x with Full -> push t x
   let name = "spsc-queue"
 end)
 
 module Mpmc_queue = Bench (struct
   include Lockfree.Mpmc_queue
-  let make () = make ()
+
+  let make () = make ~dummy:(-1) ()
   let name = "mpmc-queue"
 end)
+
+let bench = [ Spsc_queue.bench; Mpmc_queue.bench ]
