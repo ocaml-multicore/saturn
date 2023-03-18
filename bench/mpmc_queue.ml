@@ -11,7 +11,7 @@ module Bench (Q : QUEUE) = struct
   let num_of_elements = ref 2_100_000
   let num_of_pushers = ref 4
   let num_of_takers = ref 4
-  let num_of_iterations = ref 10
+  let num_of_iterations = ref 20
 
   let taker queue num_of_elements () =
     let i = ref 0 in
@@ -100,9 +100,10 @@ module Bench (Q : QUEUE) = struct
 
   let bench : (unit -> _) list =
     [
+      benchmark ~takers:1 ~pushers:1;
       benchmark ~takers:4 ~pushers:4;
-      benchmark ~takers:1 ~pushers:8;
-      benchmark ~takers:8 ~pushers:1;
+      benchmark ~takers:1 ~pushers:7;
+      benchmark ~takers:7 ~pushers:1;
     ]
 end
 
