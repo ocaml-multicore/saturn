@@ -45,11 +45,12 @@ let pop { head; _ } =
   in
   loop ()
 
-let rec fix_tail tail old_tail new_tail =
-  if Atomic.compare_and_set tail old_tail new_tail then
-    match Atomic.get new_tail with
-    | Nil -> ()
-    | Next (_, new_new_tail) -> fix_tail tail new_tail new_new_tail
+let rec fix_tail tail new_tail =
+  let old_tail = Atomic.get tail in
+  if
+    Atomic.get new_tail == Nil
+    && not (Atomic.compare_and_set tail old_tail new_tail)
+  then fix_tail tail new_tail
 
 let push { tail; _ } value =
   let rec find_tail_and_enq curr_end node =
@@ -62,10 +63,8 @@ let push { tail; _ } value =
   let newnode = Next (value, new_tail) in
   let old_tail = Atomic.get tail in
   find_tail_and_enq old_tail newnode;
-  if Atomic.compare_and_set tail old_tail new_tail then
-    match Atomic.get new_tail with
-    | Nil -> ()
-    | Next (_, new_new_tail) -> fix_tail tail new_tail new_new_tail
+  if not (Atomic.compare_and_set tail old_tail new_tail) then
+    fix_tail tail new_tail
 
 let clean_until { head; _ } f =
   let b = Backoff.create () in
