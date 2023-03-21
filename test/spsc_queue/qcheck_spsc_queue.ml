@@ -7,7 +7,7 @@ let pop_n_times q n =
   let rec loop count acc =
     if count = 0 then acc
     else
-      let v = Spsc_queue.pop q in
+      let v = Spsc_queue.try_pop q in
       Domain.cpu_relax ();
       loop (count - 1) (v :: acc)
   in
@@ -33,12 +33,7 @@ let tests =
 
           (* Sequential pushed : not Full exception should be
              raised. *)
-          let not_full_queue =
-            try
-              List.iter (Spsc_queue.push q) l;
-              true
-            with Spsc_queue.Full -> false
-          in
+          let not_full_queue = List.for_all (Spsc_queue.try_push q) l in
 
           (* Consumer domain pops *)
           let consumer = Domain.spawn (fun () -> pop_n_times q npop) in
@@ -63,7 +58,7 @@ let tests =
 
           (* Initialization *)
           let q = Spsc_queue.create ~size_exponent in
-          List.iter (Spsc_queue.push q) l;
+          List.iter (fun x -> assert (Spsc_queue.try_push q x)) l;
 
           (* Consumer pops *)
           let sema = Semaphore.Binary.make false in
@@ -82,7 +77,7 @@ let tests =
                 (* Main domain pushes.*)
                 List.iter
                   (fun elt ->
-                    Spsc_queue.push q elt;
+                    assert (Spsc_queue.try_push q elt);
                     Domain.cpu_relax ())
                   l')
           in
@@ -103,12 +98,7 @@ let tests =
 
           (* Initialization *)
           let q = Spsc_queue.create ~size_exponent in
-          let is_full =
-            try
-              List.iter (Spsc_queue.push q) l;
-              false
-            with Spsc_queue.Full -> true
-          in
+          let is_full = not (List.for_all (Spsc_queue.try_push q) l) in
 
           (* Property *)
           (List.length l > size_max && is_full)

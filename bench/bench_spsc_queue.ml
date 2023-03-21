@@ -1,24 +1,20 @@
 open Lockfree
 
 let item_count = 2_000_000
-
-let rec try_until_success f =
-  try f () with Spsc_queue.Full -> try_until_success f
+let rdv = Rendezvous.semaphore_unit
 
 let run () =
-  let queue = Spsc_queue.create ~size_exponent:3 in
+  let queue = Spsc_queue.create ~size_exponent:10 in
   let pusher =
     Domain.spawn (fun () ->
         let start_time = Unix.gettimeofday () in
         for i = 1 to item_count do
-          try_until_success (fun () -> Spsc_queue.push queue i)
+          Spsc_queue.push ~rdv queue i
         done;
         start_time)
   in
-  for _ = 1 to item_count do
-    while Option.is_none (Spsc_queue.pop queue) do
-      ()
-    done
+  for i = 1 to item_count do
+    assert (Spsc_queue.pop ~rdv queue = i)
   done;
   let end_time = Unix.gettimeofday () in
   let start_time = Domain.join pusher in
