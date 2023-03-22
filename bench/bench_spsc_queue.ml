@@ -57,4 +57,11 @@ module Mpmc_queue = Bench (struct
   let name = "mpmc-queue"
 end)
 
-let bench = [ Spsc_queue.bench; Mpmc_queue.bench ]
+module Michael_scott_queue = Bench (struct
+  include Lockfree.Michael_scott_queue
+
+  let make () = create ()
+  let name = "michael-scott-queue"
+end)
+
+let bench = [ Spsc_queue.bench; Mpmc_queue.bench; Michael_scott_queue.bench ]

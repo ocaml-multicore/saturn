@@ -107,6 +107,14 @@ module Bench (Q : QUEUE) = struct
     ]
 end
 
+module Michael_scott_queue = Bench (struct
+  let name = "michael-scott-queue"
+
+  include Lockfree.Michael_scott_queue
+
+  let make () = create ()
+end)
+
 module Relaxed = Bench (struct
   let name = "mpmc-relaxed-fad"
 
@@ -141,7 +149,9 @@ module Unbounded = Bench (struct
   let make () = make ~dummy:(-1) ()
 end)
 
-let bench = Relaxed.bench @ Relaxed_cas.bench @ Unbounded.bench
+let bench =
+  Michael_scott_queue.bench @ Relaxed.bench @ Relaxed_cas.bench
+  @ Unbounded.bench
 
 let benchmark ~takers ~pushers ~impl ~iterations ~elements () =
   let impl =
