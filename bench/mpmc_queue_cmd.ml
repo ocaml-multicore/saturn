@@ -5,11 +5,13 @@ let iterations = ref 10
 let impl = ref `FAD
 
 let use_impl = function
+  | "MS" -> impl := `MS
   | "CAS" -> impl := `CAS
   | "FAD" -> impl := `FAD
   | "UNBOUNDED" -> impl := `Unbounded
+  | "WS" -> impl := `WS
   | str ->
-      Printf.ksprintf failwith "-impl expected CAS or FAD or UNBOUNDED, got %S"
+      Printf.ksprintf failwith "-impl expected MS|CAS|FAD|UNBOUNDED|WS, got %S"
         str
 
 let speclist =
@@ -20,7 +22,7 @@ let speclist =
     ("-iterations", Arg.Set_int iterations, "run the benchmark this many times");
     ( "-impl",
       Arg.String use_impl,
-      "queue implementation to use: CAS or FAD or UNBOUNDED" );
+      "queue implementation to use: MS or CAS or FAD or UNBOUNDED or WS" );
   ]
 
 let () =

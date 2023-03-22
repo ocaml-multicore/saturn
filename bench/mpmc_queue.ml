@@ -98,13 +98,35 @@ module Bench (Q : QUEUE) = struct
     num_of_elements := Option.value elements ~default:!num_of_elements;
     run_bench ()
 
-  let bench : (unit -> _) list =
+  let bench_one_producer : (unit -> _) list =
     [
       benchmark ~takers:1 ~pushers:1;
-      benchmark ~takers:4 ~pushers:4;
-      benchmark ~takers:1 ~pushers:7;
+      benchmark ~takers:2 ~pushers:1;
+      benchmark ~takers:3 ~pushers:1;
+      benchmark ~takers:4 ~pushers:1;
+      benchmark ~takers:5 ~pushers:1;
+      benchmark ~takers:6 ~pushers:1;
       benchmark ~takers:7 ~pushers:1;
     ]
+
+  let bench_one_consumer : (unit -> _) list =
+    [
+      benchmark ~takers:1 ~pushers:2;
+      benchmark ~takers:1 ~pushers:3;
+      benchmark ~takers:1 ~pushers:4;
+      benchmark ~takers:1 ~pushers:5;
+      benchmark ~takers:1 ~pushers:6;
+      benchmark ~takers:1 ~pushers:7;
+    ]
+
+  let bench_balanced : (unit -> _) list =
+    [
+      benchmark ~takers:2 ~pushers:2;
+      benchmark ~takers:3 ~pushers:3;
+      benchmark ~takers:4 ~pushers:4;
+    ]
+
+  let bench = bench_one_producer @ bench_one_consumer @ bench_balanced
 end
 
 module Michael_scott_queue = Bench (struct
@@ -149,15 +171,26 @@ module Unbounded = Bench (struct
   let make () = make ~dummy:(-1) ()
 end)
 
+module Ws_deque = Bench (struct
+  let name = "work-stealing-deque"
+
+  include Lockfree.Ws_deque.M
+
+  let make () = create ()
+  let pop t = try Some (steal t) with Exit -> None
+end)
+
 let bench =
   Michael_scott_queue.bench @ Relaxed.bench @ Relaxed_cas.bench
-  @ Unbounded.bench
+  @ Unbounded.bench @ Ws_deque.bench_one_producer
 
 let benchmark ~takers ~pushers ~impl ~iterations ~elements () =
   let impl =
     match impl with
+    | `MS -> Michael_scott_queue.benchmark
     | `CAS -> Relaxed_cas.benchmark
     | `FAD -> Relaxed.benchmark
     | `Unbounded -> Unbounded.benchmark
+    | `WS -> Ws_deque.benchmark
   in
   impl ~takers ~pushers ~iterations ~elements ()
