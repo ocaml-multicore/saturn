@@ -20,6 +20,9 @@ jobs:
 
     runs-on: ${{ matrix.os }}
 
+    env:
+      QCHECK_MSG_INTERVAL: '60'
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
