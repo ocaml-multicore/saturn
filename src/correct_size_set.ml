@@ -90,7 +90,9 @@ let update_metadata (s : 'a t) (update : update_info option) : unit =
       ThreadMetadata.update_delete_count s.metadata thread_id old_val
 
 let help_delete node cur_node next_node =
-  ignore (Atomic.compare_and_set node cur_node { cur_node with next = next_node.next })
+  ignore
+    (Atomic.compare_and_set node cur_node
+       { cur_node with next = next_node.next })
 
 let insert s thread_id v =
   let rec insert_aux node =
@@ -109,7 +111,8 @@ let insert s thread_id v =
                 update_info =
                   Some
                     (Insert
-                       (thread_id, ThreadMetadata.get_insert_count s.metadata thread_id));
+                       ( thread_id,
+                         ThreadMetadata.get_insert_count s.metadata thread_id ));
               }
             in
             match
@@ -142,12 +145,16 @@ let insert s thread_id v =
                           Some (Insert (thread_id, old_insert_count));
                       }
                     in
+                    let atomic_new_node = Atomic.make new_node in
                     match
                       Atomic.compare_and_set node cur_node
-                        { cur_node with next = Some (Atomic.make new_node) }
+                        { cur_node with next = Some atomic_new_node }
                     with
                     | true ->
                         update_metadata s new_node.update_info;
+                        ignore
+                          (Atomic.compare_and_set atomic_new_node new_node
+                             { new_node with update_info = None });
                         true
                     | false -> insert_aux node)
                 | Some _ -> insert_aux next_node_atomic
