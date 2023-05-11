@@ -8,17 +8,8 @@ on:
     - cron: 0 1 * * MON
 
 jobs:
-  build:
-    strategy:
-      matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
-        ocaml-compiler:
-          - ocaml-base-compiler.5.0.0
-          - ocaml-variants.5.1.0+trunk
-
-    runs-on: ${{ matrix.os }}
+  windows:
+    runs-on: windows-latest
 
     env:
       QCHECK_MSG_INTERVAL: '60'
@@ -34,15 +25,18 @@ jobs:
           curl -sH "Accept: application/vnd.github.v3+json" \
           https://api.github.com/repos/ocaml/ocaml/commits/trunk \
           | jq .commit.tree.sha | xargs printf '::set-output name=commit::%s'
+
       - name: Use OCaml ${{ matrix.ocaml-compiler }}
         uses: ocaml/setup-ocaml@v2
         with:
-          ocaml-compiler: ${{ matrix.ocaml-compiler }}
-          opam-repositories: |
-            default: https://github.com/ocaml/opam-repository.git
-            alpha: https://github.com/kit-ty-kate/opam-alpha-repository.git
-          cache-prefix: ${{ steps.multicore_hash.outputs.commit }}
+          opam-pin: false
           opam-depext: false
+          ocaml-compiler: ocaml.5.0.0,ocaml-option-mingw
+          opam-repositories: |
+            dra27: https://github.com/dra27/opam-repository.git#windows-5.0
+            default: https://github.com/ocaml-opam/opam-repository-mingw.git#sunset
+            upstream: https://github.com/ocaml/opam-repository.git
+          cache-prefix: ${{ steps.multicore_hash.outputs.commit }}
 
       - run: opam install . --deps-only --with-test
 
