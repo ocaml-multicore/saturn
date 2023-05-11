@@ -35,3 +35,30 @@ module Htbl_resizable : sig
   val remove : key -> 'a t -> bool
   val is_empty : 'a t -> bool
 end
+
+(*
+            let rec find_loop key t prev curr_mkr =
+    match curr_mkr with
+    | Last | LRemove -> (false, { prev; curr = curr_mkr; next = Last })
+    | Normal curr | Remove curr ->
+        let rec snip_loop curr_key curr_mrk next_ptr =
+          let next_mrk = Atomic.get next_ptr in
+          match next_mrk with
+          | (Normal _ | Last) when curr_key >= key ->
+              (curr_key = key, { prev; curr = curr_mkr; next = next_mrk })
+          | Normal _ -> find_loop key t next_ptr next_mrk
+          | Last -> (false, { prev = next_ptr; curr = next_mrk; next = Last })
+          | Remove next ->
+              let new_curr = Normal next in
+              if not @@ Atomic.compare_and_set prev curr_mrk new_curr then
+                try_again key t
+              else
+                (*find_loop key t prev (Normal new_curr)*)
+                snip_loop curr_key new_curr next.next
+          | LRemove ->
+              if not @@ Atomic.compare_and_set prev curr_mkr Last then
+                try_again key t
+              else (false, { prev; curr = next_mrk; next = Last })
+        in
+        snip_loop curr.key curr_mkr curr.next
+        *)

@@ -4,6 +4,9 @@
 (rule
  (copy ../../src/htbl.ml htbl_resizable.ml))
 
+(rule
+ (copy ../../src/htbl.ml llist.ml))
+
 (test
  (name htbl_dscheck)
  (libraries atomic dscheck alcotest)
@@ -13,6 +16,11 @@
  (name htbl_resizable_dscheck)
  (libraries atomic dscheck alcotest)
  (modules htbl_resizable htbl_resizable_dscheck))
+
+(test
+ (name llist_dscheck)
+ (libraries atomic dscheck alcotest)
+ (modules llist llist_dscheck))
 
 (test
  (name qcheck_llist)

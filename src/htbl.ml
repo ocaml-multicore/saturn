@@ -23,34 +23,48 @@ module Llist = struct
 
   let init () : 'a t = Atomic.make Last
 
-  let convert_to_normal = function
-    | (Last | Normal _) as node -> node
-    | LRemove -> Last
-    | Remove node -> Normal node
-
   let mark_to_be_removed = function
     | Last -> LRemove
     | Normal node -> Remove node
     | _ as x -> x
 
+  let convert_to_normal = function
+    | (Last | Normal _) as node -> node
+    | LRemove -> Last
+    | Remove node -> Normal node
+
   let rec find_loop key t prev curr =
     match curr with
-    | Last | LRemove -> (false, { prev; curr; next = Last })
-    | Normal node | Remove node -> (
-        if Atomic.get prev != curr then try_again key t
-        else
-          let next = Atomic.get node.next in
-          match next with
-          | Normal _ | Last ->
-              if node.key >= key then (node.key = key, { prev; curr; next })
-              else find_loop key t node.next next
-          | _ ->
-              let next = convert_to_normal next in
-              if Atomic.compare_and_set prev curr next then
-                find_loop key t prev next
-              else try_again key t)
+    | LRemove | Remove _ -> assert false
+    | Last -> (false, { prev; curr; next = Last })
+    | Normal node -> (
+        let next = Atomic.get node.next in
+        match next with
+        | Normal _ | Last ->
+            if node.key >= key then (node.key = key, { prev; curr; next })
+            else find_loop key t node.next next
+        | _ ->
+            let next = convert_to_normal next in
+            if Atomic.compare_and_set prev curr next then
+              find_loop key t prev next
+            else try_again key t)
 
-  and try_again key t = find_loop key t t (Atomic.get t)
+  and try_again key t =
+    let prev, curr = (t, Atomic.get t) in
+    match curr with
+    | Last | LRemove -> (false, { prev; curr; next = Last })
+    | Remove curr_node | Normal curr_node -> (
+        let next = Atomic.get curr_node.next in
+        match next with
+        | (Normal _ | Last) when curr_node.key >= key ->
+            (curr_node.key = key, { prev; curr; next })
+        | Normal _ -> find_loop key t curr_node.next next
+        | Last -> (false, { prev = curr_node.next; curr = Last; next = Last })
+        | _ ->
+            let next = convert_to_normal next in
+            if Atomic.compare_and_set prev curr next then
+              find_loop key t prev next
+            else try_again key t)
 
   let find key t : bool * 'a local = try_again key t
 
@@ -73,7 +87,7 @@ module Llist = struct
     | Remove n ->
         let prev_v = n.value in
         (prev_v, Remove { n with value = v })
-    | _ -> failwith "Should not happen"
+    | _ -> assert false
 
   let rec replace (key : key) (value : 'a kind) (t : 'a t) =
     let is_found, local = find key t in
@@ -185,10 +199,10 @@ module Htbl = struct
     let parent_bucket = buckets.(parent_ind) in
 
     (if parent_ind <> ind then
-       match Atomic.get parent_bucket with
-       | Llist.Last -> init_bucket buckets parent_ind
-       | LRemove -> failwith "Should never happen."
-       | _ -> ());
+     match Atomic.get parent_bucket with
+     | Llist.Last -> init_bucket buckets parent_ind
+     | LRemove -> failwith "Should never happen."
+     | _ -> ());
 
     new_dummy_node ind parent_bucket |> Atomic.set buckets.(ind)
 
@@ -310,10 +324,10 @@ module Htbl_resizable = struct
     let parent_ind = unset_msb bucket_ind in
     let parent_bucket = get_bucket_ref t parent_ind in
     (if parent_ind <> bucket_ind then
-       match Atomic.get parent_bucket with
-       | Llist.Last -> init_bucket t parent_bucket parent_ind
-       | LRemove -> failwith "Should never happen"
-       | _ -> ());
+     match Atomic.get parent_bucket with
+     | Llist.Last -> init_bucket t parent_bucket parent_ind
+     | LRemove -> failwith "Should never happen"
+     | _ -> ());
     new_dummy_node bucket_ind parent_bucket |> Atomic.set bucket
 
   let get_bucket key t =
