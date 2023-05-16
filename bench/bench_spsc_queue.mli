@@ -1,1 +1,1 @@
-val bench : unit -> Benchmark_result.t
+val bench : (unit -> Benchmark_result.t) list

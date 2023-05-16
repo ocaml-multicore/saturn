@@ -1,0 +1,3 @@
+(test
+ (name lin_mpmc_queue)
+ (libraries lockfree qcheck-lin.domain))
