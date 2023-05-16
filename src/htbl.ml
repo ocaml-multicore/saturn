@@ -1,6 +1,8 @@
-(*
- * Copyright (c) 2023, Carine Morel <carine.morel.pro@gmail.com>
- *)
+(*  Copyright (c) 2023, Carine Morel <carine.morel.pro@gmail.com> *)
+
+(* Implementation from the algorithm in
+   Split-ordered lists: Lock-free extensible hash tables from O. Shalev and N. Shavit
+*)
 
 module Type = struct
   type 'b kind = Dummy | Regular of 'b
@@ -21,7 +23,7 @@ module Llist = struct
     next : 'a marked;
   }
 
-  let init () : 'a t = Atomic.make Last
+  let create () : 'a t = Atomic.make Last
 
   let mark_to_be_removed = function
     | Last -> LRemove
@@ -66,10 +68,10 @@ module Llist = struct
               find_loop key t prev next
             else try_again key t)
 
-  let find key t : bool * 'a local = try_again key t
+  let find_unsafe key t : bool * 'a local = try_again key t
 
   let rec unsafe_add (key : key) (value : 'a kind) t : bool * 'a local =
-    let is_found, local = find key t in
+    let is_found, local = find_unsafe key t in
     if is_found then (false, local)
     else if
       Atomic.compare_and_set local.prev local.curr
@@ -84,16 +86,14 @@ module Llist = struct
     | Normal n ->
         let prev_v = n.value in
         (prev_v, Normal { n with value = v })
-    | Remove n ->
-        let prev_v = n.value in
-        (prev_v, Remove { n with value = v })
+    | Remove _ -> assert false
     | _ -> assert false
 
   let rec replace (key : key) (value : 'a kind) (t : 'a t) =
-    let is_found, local = find key t in
+    let is_found, local = find_unsafe key t in
     if is_found then
-      let prev_value, new_node = exchange_value value local.curr in
-      if prev_value = value then `Replaced
+      let previous_value, new_node = exchange_value value local.curr in
+      if previous_value = value then `Replaced
       else if Atomic.compare_and_set local.prev local.curr new_node then
         `Replaced
       else replace key value t
@@ -104,7 +104,7 @@ module Llist = struct
     else replace key value t
 
   let rec unsafe_remove (key : key) t =
-    let is_found, local = find key t in
+    let is_found, local = find_unsafe key t in
     if not is_found then (false, local)
     else
       let curr =
@@ -117,14 +117,42 @@ module Llist = struct
           (Atomic.compare_and_set curr.next local.next
              (mark_to_be_removed local.next))
       then unsafe_remove key t
-      else if Atomic.compare_and_set local.prev local.curr local.next then
-        (true, local)
       else (
-        ignore (find key t);
+        ignore @@ Atomic.compare_and_set local.prev local.curr local.next;
         (true, local))
 
   let remove (key : key) (t : 'a t) = fst (unsafe_remove key t)
-  let mem key t = fst @@ find key t
+
+  let is_logically_removed node =
+    match Atomic.get node with LRemove | Remove _ -> true | _ -> false
+
+  let mem key t =
+    let rec loop prev =
+      match Atomic.get prev with
+      | LRemove | Last -> false
+      | Normal curr_node | Remove curr_node ->
+          if curr_node.key >= key then
+            curr_node.key = key && (not @@ is_logically_removed curr_node.next)
+          else loop curr_node.next
+    in
+    loop t
+
+  let find_opt key t =
+    let rec loop prev =
+      match Atomic.get prev with
+      | LRemove | Last -> None
+      | Normal curr_node | Remove curr_node ->
+          if curr_node.key < key then loop curr_node.next
+          else if
+            curr_node.key = key && (not @@ is_logically_removed curr_node.next)
+          then Some curr_node.value
+          else None
+    in
+    let res = loop t in
+    match res with
+    | Some Dummy -> assert false
+    | Some (Regular k) -> Some k
+    | None -> None
 end
 
 module Common = struct
@@ -171,7 +199,7 @@ module Common = struct
 
        If it failed that means another domain has already inserted
        this dummy node. In this case, [local.prev] also contains the
-       value we seek as the [Llist.find] function calls by
+       value we seek as the [Llist.find_unsafe] function calls by
        [Llist.unsafe_add] will have stopped at the right place. *)
     Atomic.get local.prev
 end
@@ -182,10 +210,10 @@ module Htbl = struct
 
   type 'a t = { mask : int; buckets : 'a Llist.marked Atomic.t array }
 
-  let init ~size_exponent =
+  let create ~size_exponent =
     let size = Int.shift_left 1 size_exponent in
     let mask = size - 1 in
-    let llist = Llist.init () in
+    let llist = Llist.create () in
     {
       mask;
       buckets =
@@ -228,19 +256,11 @@ module Htbl = struct
     @@ get_bucket_ind key buckets mask
     |> ignore
 
-  let find key { buckets; mask; _ } =
-    let is_found, local =
-      Llist.find (compute_hkey key) (get_bucket_ind key buckets mask)
-    in
-    if not is_found then None
-    else
-      match local.curr with
-      | Normal { value = Regular k; _ } | Remove { value = Regular k; _ } ->
-          Some k
-      | _ -> failwith "Should not happen"
+  let find_opt key { buckets; mask; _ } =
+    Llist.find_opt (compute_hkey key) (get_bucket_ind key buckets mask)
 
   let mem key { buckets; mask; _ } =
-    fst @@ Llist.find (compute_hkey key) (get_bucket_ind key buckets mask)
+    Llist.mem (compute_hkey key) (get_bucket_ind key buckets mask)
 
   let remove key { buckets; mask; _ } =
     Llist.remove (compute_hkey key) (get_bucket_ind key buckets mask)
@@ -267,10 +287,10 @@ module Htbl_resizable = struct
     segment_size : int;
   }
 
-  let init ~size_exponent =
+  let create ~size_exponent =
     let max = 2 in
     let grow_exp = 10 in
-    let llist = Llist.init () in
+    let llist = Llist.create () in
 
     let segment_size = Int.shift_left 1 size_exponent in
 
@@ -379,18 +399,8 @@ module Htbl_resizable = struct
       Atomic.incr t.count;
       true)
 
-  let find key t =
-    let is_found, local = Llist.find (compute_hkey key) (get_bucket key t) in
-    if not is_found then None
-    else
-      match local.curr with
-      | Normal { value = Regular k; _ } | Remove { value = Regular k; _ } ->
-          Some k
-      | _ -> failwith "Should not happen"
-
-  let mem key t =
-    let is_found, _ = Llist.find (compute_hkey key) (get_bucket key t) in
-    is_found
+  let find_opt key t = Llist.find_opt (compute_hkey key) (get_bucket key t)
+  let mem key t = Llist.mem (compute_hkey key) (get_bucket key t)
 
   let remove key t =
     let is_removed = Llist.remove (compute_hkey key) (get_bucket key t) in

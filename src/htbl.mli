@@ -3,62 +3,87 @@ module Llist : sig
   type key = int
   type 'a kind = Dummy | Regular of 'a
 
-  val init : unit -> 'a t
+  val create : unit -> 'a t
   val add : key -> 'a kind -> 'a t -> bool
   val replace : key -> 'a kind -> 'a t -> [ `Replaced | `Added ]
   val remove : key -> 'a t -> bool
   val mem : key -> 'a t -> bool
+  val find_opt : key -> 'a t -> 'a option
 end
 
 module Htbl : sig
   type 'a t
   type key = int
 
-  val init : size_exponent:int -> 'a t
+  val create : size_exponent:int -> 'a t
+  (** [create ~size_exponent:exp] creates a new, empty map, with
+      initial size [2^exp]. *)
+
   val add : key -> 'a -> 'a t -> bool
-  val replace : key -> 'a -> 'a t -> unit
-  val find : key -> 'a t -> 'a option
+  (** [add key data tbl] atomically adds a binding of [key] to [data]
+      in table [tbl] if no previous binding exists and returns
+      [true]. If a binding of [key] already exists, it returns
+      [false]. *)
+
+  val find_opt : key -> 'a t -> 'a option
+  (** [find_opt key tbl] atomically returns the current binding of [key] in
+      [tbl], or [None] if no such binding exists. This function is
+      wait-free. *)
+
   val mem : key -> 'a t -> bool
+  (** [mem key tbl] atomically checks if [key] is bound in [tbl]. This function
+      is wait-free.*)
+
   val remove : key -> 'a t -> bool
+  (** [remove key tbl] atomically removes a binding of [key] to [data]
+      in table [tbl]. It returns [true] if [key] was bound in [tbl]
+      and [false] if it was not. *)
+
+  val replace : key -> 'a -> 'a t -> unit
+  (** [replace key data tbl] atomically replaces the current binding
+      of [key] in [tbl] by a binding of [key] to [data]. If [key] is
+      unbound in [tbl], a binding of [key] to [data] is added to
+      [tbl]. *)
 end
 
 module Htbl_resizable : sig
   type 'a t
   type key = int
 
-  val init : size_exponent:int -> 'a t
-  val add : key -> 'a -> 'a t -> bool
-  val replace : key -> 'a -> 'a t -> unit
-  val add_no_resize : int -> 'a -> 'a t -> bool
-  val find : key -> 'a t -> 'a option
-  val mem : key -> 'a t -> bool
-  val remove : key -> 'a t -> bool
-  val is_empty : 'a t -> bool
-end
+  val create : size_exponent:int -> 'a t
+  (** [create ~size_exponent:exp] creates a new, empty map, with
+      initial size [2^exp]. *)
 
-(*
-            let rec find_loop key t prev curr_mkr =
-    match curr_mkr with
-    | Last | LRemove -> (false, { prev; curr = curr_mkr; next = Last })
-    | Normal curr | Remove curr ->
-        let rec snip_loop curr_key curr_mrk next_ptr =
-          let next_mrk = Atomic.get next_ptr in
-          match next_mrk with
-          | (Normal _ | Last) when curr_key >= key ->
-              (curr_key = key, { prev; curr = curr_mkr; next = next_mrk })
-          | Normal _ -> find_loop key t next_ptr next_mrk
-          | Last -> (false, { prev = next_ptr; curr = next_mrk; next = Last })
-          | Remove next ->
-              let new_curr = Normal next in
-              if not @@ Atomic.compare_and_set prev curr_mrk new_curr then
-                try_again key t
-              else
-                (*find_loop key t prev (Normal new_curr)*)
-                snip_loop curr_key new_curr next.next
-          | LRemove ->
-              if not @@ Atomic.compare_and_set prev curr_mkr Last then
-                try_again key t
-              else (false, { prev; curr = next_mrk; next = Last })
-        in
-        snip_loop curr.key curr_mkr curr.next
-        *)
+  val add : key -> 'a -> 'a t -> bool
+  (** [add key data tbl] atomically adds a binding of [key] to [data]
+      in table [tbl] if no previous binding exists and returns
+      [true]. If a binding of [key] already exists, it returns
+      [false]. *)
+
+  val add_no_resize : int -> 'a -> 'a t -> bool
+  (** [add_no_resize key data tbl] behaves as [add key data tbl]
+      except no resize is performed. *)
+
+  val find_opt : key -> 'a t -> 'a option
+  (** [find_opt key tbl] atomically returns the current binding of [key] in
+      [tbl], or [None] if no such binding exists. This function is
+      wait-free. *)
+
+  val mem : key -> 'a t -> bool
+  (** [mem key tbl] atomically checks if [key] is bound in [tbl]. This function
+      is wait-free.*)
+
+  val remove : key -> 'a t -> bool
+  (** [remove key tbl] atomically removes a binding of [key] to [data]
+      in table [tbl]. It returns [true] if [key] was bound in [tbl]
+      and [false] if it was not. *)
+
+  val replace : key -> 'a -> 'a t -> unit
+  (** [replace key data tbl] atomically replaces the current binding
+      of [key] in [tbl] by a binding of [key] to [data]. If [key] is
+      unbound in [tbl], a binding of [key] to [data] is added to
+      [tbl]. *)
+
+  val is_empty : 'a t -> bool
+  (** [is_empty tbl] atomically checks if [tbl] is empty.  *)
+end

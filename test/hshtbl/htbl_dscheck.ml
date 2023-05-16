@@ -2,7 +2,7 @@ module Htbl = Htbl.Htbl
 
 let two_domains_add () =
   Atomic.trace (fun () ->
-      let htbl = Htbl.init ~size_exponent:2 in
+      let htbl = Htbl.create ~size_exponent:2 in
       let item1 = [ 0; 1; 2 ] in
       let item2 = [ 3; 4; 1 ] in
 
@@ -16,15 +16,19 @@ let two_domains_add () =
           Atomic.check (fun () ->
               List.for_all
                 (fun i ->
-                  match Htbl.find i htbl with None -> false | Some j -> i = j)
+                  match Htbl.find_opt i htbl with
+                  | None -> false
+                  | Some j -> i = j)
                 (item1 @ item2))))
 
 let two_domains_replace () =
   Atomic.trace (fun () ->
-      let htbl = Htbl.init ~size_exponent:2 in
+      let htbl = Htbl.create ~size_exponent:2 in
       let item1 = [ (0, "a"); (1, "b"); (2, "c") ] in
       let item2 = [ (0, "d"); (4, "e"); (1, "f") ] in
-      let append = List.sort_uniq (fun (k, _) (k', _) -> compare k k') (item1 @ item2) in
+      let append =
+        List.sort_uniq (fun (k, _) (k', _) -> compare k k') (item1 @ item2)
+      in
 
       Atomic.spawn (fun () ->
           List.iter (fun (k, v) -> Htbl.replace k v htbl) item1);
@@ -36,7 +40,7 @@ let two_domains_replace () =
           Atomic.check (fun () ->
               List.for_all
                 (fun (k, _) ->
-                  match Htbl.find k htbl with
+                  match Htbl.find_opt k htbl with
                   | None -> false
                   | Some v -> (
                       match
@@ -45,11 +49,11 @@ let two_domains_replace () =
                       | None, Some v' | Some v', None -> v = v'
                       | Some v1, Some v2 -> v = v1 || v = v2
                       | None, None -> false))
-              append)))
+                append)))
 
 let two_domains_remove () =
   Atomic.trace (fun () ->
-      let htbl = Htbl.init ~size_exponent:2 in
+      let htbl = Htbl.create ~size_exponent:2 in
       let items = [ 0; 1; 2; 3 ] in
       let res1 = ref [] in
       let res2 = ref [] in
@@ -75,7 +79,7 @@ let two_domains_remove () =
 
 let two_domains_remove_bis () =
   Atomic.trace (fun () ->
-      let htbl = Htbl.init ~size_exponent:2 in
+      let htbl = Htbl.create ~size_exponent:2 in
       let items = [ 0; 1; 2; 3 ] in
       let to_remove = [ 0; 0; 1; 1 ] in
       let res1 = ref [] in
@@ -104,7 +108,7 @@ let two_domains_remove_bis () =
 
 let two_domains_add_remove () =
   Atomic.trace (fun () ->
-      let htbl = Htbl.init ~size_exponent:3 in
+      let htbl = Htbl.create ~size_exponent:3 in
       let items_seq = [ 0; 1; 2 ] in
       let to_add = [ 4; 5; 6 ] in
       let to_remove = [ 5; 0; 4; 10 ] in

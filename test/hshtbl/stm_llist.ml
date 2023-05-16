@@ -8,12 +8,14 @@ module WSDConf = struct
     | Replace of int * int
     | Remove of int
     | Mem of int
+    | Find_opt of int
 
   let show_cmd c =
     match c with
     | Add (k, v) -> "Add (" ^ string_of_int k ^ "," ^ string_of_int v ^ ")"
     | Remove k -> "Remove " ^ string_of_int k
     | Mem k -> "Mem " ^ string_of_int k
+    | Find_opt k -> "Find_opt " ^ string_of_int k
     | Replace (k, v) ->
         "Replace (" ^ string_of_int k ^ "," ^ string_of_int v ^ ")"
 
@@ -35,10 +37,11 @@ module WSDConf = struct
            Gen.map2 (fun k v -> Replace (k, v)) int_gen int_gen;
            Gen.map (fun i -> Remove i) int_gen;
            Gen.map (fun i -> Mem i) int_gen;
+           Gen.map (fun i -> Find_opt i) int_gen;
          ])
 
   let init_state = S.empty
-  let init_sut () = Llist.init ()
+  let init_sut () = Llist.create ()
   let cleanup _ = ()
 
   let next_state c s =
@@ -46,6 +49,7 @@ module WSDConf = struct
     | Add (k, v) -> if S.mem k s then s else S.add k v s
     | Replace (k, v) -> S.add k v s
     | Mem _ -> s
+    | Find_opt _ -> s
     | Remove k -> if S.mem k s then S.remove k s else s
 
   let precond _ _ = true
@@ -56,6 +60,7 @@ module WSDConf = struct
     | Replace (k, v) -> Res (unit, Llist.replace k (Llist.Regular v) t |> ignore)
     | Remove k -> Res (bool, Llist.remove k t)
     | Mem k -> Res (bool, Llist.mem k t)
+    | Find_opt k -> Res (option int, Llist.find_opt k t)
 
   let postcond c (s : state) res =
     match (c, res) with
@@ -63,6 +68,7 @@ module WSDConf = struct
     | Replace (_k, _v), Res ((Unit, _), _) -> true
     | Mem k, Res ((Bool, _), res) -> S.mem k s = res
     | Remove k, Res ((Bool, _), res) -> S.mem k s = res
+    | Find_opt k, Res ((Option Int, _), res) -> S.find_opt k s = res
     | _, _ -> false
 end
 

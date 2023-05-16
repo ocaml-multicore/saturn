@@ -2,7 +2,7 @@ module Llist = Llist.Llist
 
 let two_domains_remove_add () =
   Atomic.trace (fun () ->
-      let l = Llist.init () in
+      let l = Llist.create () in
       let item = [ 0; 1; 3; 4 ] in
 
       List.iter (fun elt -> Llist.add elt Llist.Dummy l |> ignore) item;
@@ -19,7 +19,7 @@ let two_domains_remove_add () =
 
 let two_domains_remove_same () =
   Atomic.trace (fun () ->
-      let l = Llist.init () in
+      let l = Llist.create () in
       let item = [ 0; 1; 3; 4 ] in
       let removed1, removed2 = (ref false, ref false) in
 
@@ -38,7 +38,7 @@ let two_domains_remove_same () =
 let two_domains_add_remove_same () =
   Atomic.trace (fun () ->
       Random.init 0;
-      let l = Llist.init () in
+      let l = Llist.create () in
       let nelt = 3 in
       let item_seq = List.init nelt (fun i -> i * 2) in
       let item_par =

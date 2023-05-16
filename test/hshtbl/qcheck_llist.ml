@@ -21,7 +21,7 @@ let tests_one_domain =
          insertion should success. *)
       Test.make ~name:"seq_add" int_list (fun l ->
           let open Llist in
-          let t = init () in
+          let t = create () in
 
           let l = List.sort_uniq (fun a b -> -compare a b) l in
           List.for_all (fun elt -> add elt Dummy t) l);
@@ -34,7 +34,7 @@ let tests_one_domain =
       *)
       Test.make ~name:"seq_add2" int_list (fun l ->
           let open Llist in
-          let t = init () in
+          let t = create () in
 
           let has_been_added = List.map (fun elt -> add elt Dummy t) l in
 
@@ -60,7 +60,7 @@ let tests_two_domains =
       Test.make ~name:"add_add1" ~count:10000 (pair int_list int_list)
         (fun (l, l') ->
           let open Llist in
-          let t = init () in
+          let t = create () in
           let sema = Semaphore.Binary.make false in
 
           let l = List.sort_uniq compare l in
@@ -86,7 +86,7 @@ let tests_two_domains =
       Test.make ~name:"add_add" ~count:10000 (pair int_list int_list)
         (fun (l, l') ->
           let open Llist in
-          let t = init () in
+          let t = create () in
           let sema = Semaphore.Binary.make false in
 
           let d1 =
@@ -109,7 +109,7 @@ let tests_two_domains =
         (pair int_list (pair int_list int_list))
         (fun (l, (l', l'')) ->
           let open Llist in
-          let t = init () in
+          let t = create () in
           let sema = Semaphore.Binary.make false in
           List.iter (fun i -> ignore @@ add i Dummy t) (l @ l' @ l'');
 
@@ -132,7 +132,7 @@ let tests_two_domains =
           && List.for_all (fun elt -> mem elt t) (exclusion l'' (l @ l')));
       Test.make ~name:"add_remove" ~count:1000 small_nat (fun n ->
           let open Llist in
-          let t = init () in
+          let t = create () in
           let sema = Semaphore.Binary.make false in
 
           let l = List.init n (fun i -> i) in

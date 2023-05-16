@@ -7,7 +7,7 @@ module WSDConf = struct
     | Add of int * int
     | Replace of int * int
     | Remove of int
-    | Find of int
+    | Find_opt of int
     | Mem of int
 
   let show_cmd c =
@@ -16,7 +16,7 @@ module WSDConf = struct
     | Replace (k, v) ->
         "Replace (" ^ string_of_int k ^ ", " ^ string_of_int v ^ ")"
     | Remove k -> "Remove " ^ string_of_int k
-    | Find k -> "Find " ^ string_of_int k
+    | Find_opt k -> "Find_opt " ^ string_of_int k
     | Mem k -> "Mem" ^ string_of_int k
 
   module S = Map.Make (struct
@@ -36,19 +36,19 @@ module WSDConf = struct
            Gen.map2 (fun k v -> Add (k, v)) int_gen int_gen;
            Gen.map2 (fun k v -> Replace (k, v)) int_gen int_gen;
            Gen.map (fun i -> Remove i) int_gen;
-           Gen.map (fun i -> Find i) int_gen;
+           Gen.map (fun i -> Find_opt i) int_gen;
            Gen.map (fun i -> Mem i) int_gen;
          ])
 
   let init_state = S.empty
-  let init_sut () = Htbl.init ~size_exponent:12
+  let init_sut () = Htbl.create ~size_exponent:12
   let cleanup _ = ()
 
   let next_state c s =
     match c with
     | Add (k, v) -> if S.mem k s then s else S.add k v s
     | Replace (k, v) -> S.add k v s
-    | Find _ -> s
+    | Find_opt _ -> s
     | Remove k -> if S.mem k s then S.remove k s else s
     | Mem _k -> s
 
@@ -59,14 +59,14 @@ module WSDConf = struct
     | Add (k, v) -> Res (bool, Htbl.add k v t)
     | Replace (k, v) -> Res (unit, Htbl.replace k v t)
     | Remove k -> Res (bool, Htbl.remove k t)
-    | Find k -> Res (option int, Htbl.find k t)
+    | Find_opt k -> Res (option int, Htbl.find_opt k t)
     | Mem k -> Res (bool, Htbl.mem k t)
 
   let postcond c (s : state) res =
     match (c, res) with
     | Add (k, _), Res ((Bool, _), res) -> S.mem k s = not res
     | Replace (_, _), Res ((Unit, _), ()) -> true
-    | Find k, Res ((Option Int, _), res) -> S.find_opt k s = res
+    | Find_opt k, Res ((Option Int, _), res) -> S.find_opt k s = res
     | Remove k, Res ((Bool, _), res) -> S.mem k s = res
     | Mem k, Res ((Bool, _), res) -> S.mem k s = res
     | _, _ -> false

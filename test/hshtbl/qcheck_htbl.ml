@@ -36,7 +36,7 @@ let tests_one_domain =
          insertion should success. *)
       Test.make ~count ~name:"seq_add" nat_int_list (fun l ->
           let open Htbl in
-          let t = init ~size_exponent:4 in
+          let t = create ~size_exponent:4 in
           let l = List.sort_uniq (fun (a, _) (b, _) -> compare a b) l in
           List.for_all (fun (k, v) -> add k v t) l);
       (* Add a list of elements in a linked list and checks :
@@ -48,7 +48,7 @@ let tests_one_domain =
       *)
       Test.make ~count ~name:"seq_add_mem" nat_int_list (fun l ->
           let open Htbl in
-          let t = init ~size_exponent:4 in
+          let t = create ~size_exponent:4 in
 
           let has_been_added = List.map (fun (k, v) -> add k v t) l in
 
@@ -72,7 +72,7 @@ let tests_one_domain =
       *)
       Test.make ~count ~name:"seq_remove" nat_int_list (fun l ->
           let open Htbl in
-          let t = init ~size_exponent:4 in
+          let t = create ~size_exponent:4 in
 
           let has_been_added = List.map (fun (k, v) -> add k v t) l in
           let has_been_removed = List.map (fun (k, _) -> remove k t) l in
@@ -82,16 +82,16 @@ let tests_one_domain =
           && List.for_all (fun (k, _) -> not (mem k t)) l);
       (* Add a list of elements and then search random keys.
          This test checks that
-         forall k, l,  List.assoc_opt k l = Htbl.find k t
-         where t = List.iter (fun (k, v) -> Htbl.add k v t |> ignore) l (Htbl.init ~size_exponent:n)
+         forall k, l,  List.assoc_opt k l = Htbl.find_opt k t
+         where t = List.iter (fun (k, v) -> Htbl.add k v t |> ignore) l (Htbl.create ~size_exponent:n)
       *)
       Test.make ~count ~name:"seq_find" (pair nat_int_list nat_list)
         (fun (to_add, to_search_for) ->
           let open Htbl in
-          let t = init ~size_exponent:4 in
+          let t = create ~size_exponent:4 in
 
           List.iter (fun (k, v) -> add k v t |> ignore) to_add;
-          let found = List.map (fun k -> find k t) to_search_for in
+          let found = List.map (fun k -> find_opt k t) to_search_for in
 
           (* Tested properties *)
           List.for_all2
@@ -101,10 +101,10 @@ let tests_one_domain =
       *)
       Test.make ~count ~name:"seq_find2" nat_int_list (fun l ->
           let open Htbl in
-          let t = init ~size_exponent:4 in
+          let t = create ~size_exponent:4 in
 
           let has_been_added = List.map (fun (k, v) -> add k v t) l in
-          let should_be_found = List.map (fun (k, _) -> find k t) l in
+          let should_be_found = List.map (fun (k, _) -> find_opt k t) l in
           let res = List.combine has_been_added should_be_found in
 
           (* Tested properties *)
@@ -125,7 +125,7 @@ let tests_one_domain =
       *)
       Test.make ~count ~name:"seq_replace" nat_int_list (fun l ->
           let open Htbl in
-          let t = init ~size_exponent:4 in
+          let t = create ~size_exponent:4 in
           let l = List.sort_uniq (fun (k, _) (k', _) -> compare k k') l in
 
           List.iter (fun (k, v) -> replace k v t) l;
@@ -134,7 +134,7 @@ let tests_one_domain =
           (* Tested properties *)
           List.for_all
             (fun (k, v) ->
-              match find k t with None -> false | Some v' -> v' = v + 1)
+              match find_opt k t with None -> false | Some v' -> v' = v + 1)
             l);
     ]
 
@@ -148,7 +148,7 @@ let tests_two_domain =
         (fun (l1, l2) ->
           let l1, l2 = avoid_dup_keys l1 l2 in
           let open Htbl in
-          let t = init ~size_exponent:4 in
+          let t = create ~size_exponent:4 in
           let sema = Semaphore.Binary.make false in
 
           let domain2 =
@@ -178,12 +178,12 @@ let tests_two_domain =
              sequentially found *)
           List.for_all (fun a -> a) added_by_d1
           && List.for_all (fun a -> a) added_by_d2
-          && List.for_all (fun (k, v) -> find k t = Some v) l1
-          && List.for_all (fun (k, v) -> find k t = Some v) l2);
+          && List.for_all (fun (k, v) -> find_opt k t = Some v) l1
+          && List.for_all (fun (k, v) -> find_opt k t = Some v) l2);
       (* Parallel removal of elements in a sequentially built hash table. *)
       Test.make ~count ~name:"par_remove" nat_int_list (fun to_add ->
           let open Htbl in
-          let t = init ~size_exponent:4 in
+          let t = create ~size_exponent:4 in
           let sema = Semaphore.Binary.make false in
           (* Sequential add *)
           let added = List.map (fun (k, v) -> add k v t) to_add in
@@ -228,7 +228,7 @@ let tests_two_domain =
           let to_add_seq, to_add_par = avoid_dup_keys lseq lpar in
           let to_remove = List.rev lpar in
           let open Htbl in
-          let t = init ~size_exponent:4 in
+          let t = create ~size_exponent:4 in
           let sema = Semaphore.Binary.make false in
 
           (* sequential adds *)
