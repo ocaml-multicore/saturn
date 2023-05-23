@@ -10,3 +10,10 @@
  (name qcheck_mpsc_queue)
  (libraries lockfree qcheck qcheck-alcotest)
  (modules qcheck_mpsc_queue))
+
+(test
+ (name stm_mpsc_queue)
+ (modules stm_mpsc_queue)
+ (libraries lockfree qcheck-stm.sequential qcheck-stm.domain)
+ (action
+  (run %{test} --verbose)))

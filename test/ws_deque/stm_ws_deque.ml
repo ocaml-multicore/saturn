@@ -63,56 +63,24 @@ end
 module WSDT_seq = STM_sequential.Make (WSDConf)
 module WSDT_dom = STM_domain.Make (WSDConf)
 
-(* The following definitions differ slightly from those in multicoretests:lib/STM.ml.
-   This has to do with how work-stealing deques are supposed to be used according to spec:
-   - [agree_prop_par] differs in that it only spawns one domain ("a stealer domain")
-     in parallel with the original "owner domain" (it also uses [Semaphore.Binary]) *)
-let agree_prop_par (seq_pref, owner, stealer) =
-  assume (WSDT_seq.cmds_ok WSDConf.init_state (seq_pref @ owner));
-  assume (WSDT_seq.cmds_ok WSDConf.init_state (seq_pref @ stealer));
-  let sut = WSDConf.init_sut () in
-  let pref_obs = WSDT_dom.interp_sut_res sut seq_pref in
-  let sema = Semaphore.Binary.make false in
-  let stealer_dom =
-    Domain.spawn (fun () ->
-        Semaphore.Binary.release sema;
-        WSDT_dom.interp_sut_res sut stealer)
-  in
-  while not (Semaphore.Binary.try_acquire sema) do
-    Domain.cpu_relax ()
-  done;
-  let own_obs = WSDT_dom.interp_sut_res sut owner in
-  let stealer_obs = Domain.join stealer_dom in
-  let res =
-    WSDT_dom.check_obs pref_obs own_obs stealer_obs WSDConf.init_state
-  in
-  let () = WSDConf.cleanup sut in
-  res
-  || Test.fail_reportf "  Results incompatible with linearized model:\n\n%s"
-     @@ Util.print_triple_vertical ~center_prefix:false STM.show_res
-          (List.map snd pref_obs, List.map snd own_obs, List.map snd stealer_obs)
-
-(* [arb_cmds_par] differs in what each triple component generates:
-   "Owner domain" cmds can't be [Steal], "stealer domain" cmds can only be [Steal]. *)
-let arb_cmds_par =
-  WSDT_dom.arb_triple 20 15 WSDConf.arb_cmd WSDConf.arb_cmd WSDConf.stealer_cmd
-
 (* A parallel agreement test - w/repeat and retries combined *)
-let agree_test_par ~count ~name =
-  let rep_count = 50 in
-  Test.make ~retries:10 ~count ~name arb_cmds_par
-    (repeat rep_count agree_prop_par)
-
-(* Note: this can generate, e.g., pop commands/actions in different threads, thus violating the spec. *)
-let agree_test_par_negative ~count ~name =
-  WSDT_dom.neg_agree_test_par ~count ~name
+let agree_test_par_asym ~count ~name =
+  let rep_count = 20 in
+  let seq_len, par_len = (20, 12) in
+  Test.make ~retries:10 ~count ~name
+    (* "Owner domain" cmds can't be [Steal], "stealer domain" cmds can only be [Steal]. *)
+    (WSDT_dom.arb_triple_asym seq_len par_len WSDConf.arb_cmd WSDConf.arb_cmd
+       WSDConf.stealer_cmd) (fun triple ->
+      assume (WSDT_dom.all_interleavings_ok triple);
+      repeat rep_count WSDT_dom.agree_prop_par_asym triple)
 
 let () =
   let count = 1000 in
   QCheck_base_runner.run_tests_main
     [
       WSDT_seq.agree_test ~count ~name:"STM Lockfree.Ws_deque test sequential";
-      agree_test_par ~count ~name:"STM Lockfree.Ws_deque test parallel";
-      agree_test_par_negative ~count
+      agree_test_par_asym ~count ~name:"STM Lockfree.Ws_deque test parallel";
+      (* Note: this can generate, e.g., pop commands/actions in different threads, thus violating the spec. *)
+      WSDT_dom.neg_agree_test_par ~count
         ~name:"STM Lockfree.Ws_deque test parallel, negative";
     ]
