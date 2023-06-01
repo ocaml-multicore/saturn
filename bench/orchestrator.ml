@@ -13,9 +13,10 @@ let wait_until_all_ready ?(round = 0) { ready; total_domains; _ } =
     ()
   done
 
-let worker ({ ready; round; rounds; _ } as t) f =
+let worker ({ ready; round; rounds; total_domains; _ } as t) f =
   Atomic.incr ready;
   wait_until_all_ready t;
+  assert (Atomic.get ready == total_domains);
   (* all domains are up at this point *)
   for i = 1 to rounds do
     (* wait for signal to start work *)

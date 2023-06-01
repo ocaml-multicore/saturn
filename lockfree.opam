@@ -18,6 +18,7 @@ depends: [
   "alcotest" {>= "1.6.0"}
   "yojson" {>= "2.0.2"}
   "dscheck" {with-test & >= "0.0.1"}
+  "cmdliner" {with-test & >= "1.2.0"}
 ]
 depopts: []
 build: ["dune" "build" "-p" name "-j" jobs]
