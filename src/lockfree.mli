@@ -37,3 +37,4 @@ module Treiber_stack = Treiber_stack
 module Michael_scott_queue = Michael_scott_queue
 module Mpmc_relaxed_queue = Mpmc_relaxed_queue
 module Backoff = Backoff
+module Spmc_queue = Spmc_queue
