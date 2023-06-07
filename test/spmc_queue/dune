@@ -1,0 +1,12 @@
+(rule
+ (copy ../../src/spmc_queue.ml spmc_queue.ml))
+
+(test
+ (name spmc_queue_dscheck)
+ (libraries atomic dscheck alcotest)
+ (modules spmc_queue spmc_queue_dscheck))
+
+(test
+ (name test_spmc_queue)
+ (libraries lockfree alcotest)
+ (modules test_spmc_queue))
