@@ -1,4 +1,4 @@
-open Atomicskiplist
+open Skiplist
 
 let _two_mem () =
   Atomic.trace (fun () ->
@@ -80,7 +80,7 @@ let _two_remove () =
       Atomic.final (fun () ->
           Atomic.check (fun () ->
               let found1 = mem sl 1 in
-              !added1 && !removed1 && not !removed2 && not found1)))
+              !added1 && !removed1 && (not !removed2) && not found1)))
 
 let () =
   let open Alcotest in

@@ -1,0 +1,22 @@
+(rule
+ (copy ../../src/backoff.ml backoff.ml))
+
+(rule
+ (copy ../../src/skiplist.ml skiplist.ml))
+
+(test
+ (name skiplist_dscheck)
+ (libraries atomic dscheck alcotest)
+ (modules skiplist skiplist_dscheck))
+
+(test
+ (name qcheck_skiplist)
+ (libraries lockfree qcheck qcheck-alcotest)
+ (modules qcheck_skiplist))
+
+(test
+ (name stm_skiplist)
+ (modules stm_skiplist)
+ (libraries lockfree qcheck-stm.sequential qcheck-stm.domain)
+ (action
+  (run %{test} --verbose)))
