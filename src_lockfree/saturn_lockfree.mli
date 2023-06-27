@@ -37,3 +37,4 @@ module Single_prod_single_cons_queue = Spsc_queue
 module Single_consumer_queue = Mpsc_queue
 module Relaxed_queue = Mpmc_relaxed_queue
 module Size = Size
+module Atomicskiplist = Atomicskiplist

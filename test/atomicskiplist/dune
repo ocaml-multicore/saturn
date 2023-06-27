@@ -1,0 +1,15 @@
+(rule
+ (copy ../../src/backoff.ml backoff.ml))
+
+(rule
+ (copy ../../src/atomicskiplist.ml atomicskiplist.ml))
+
+(test
+ (name atomic_skiplist_dscheck)
+ (libraries atomic dscheck alcotest)
+ (modules atomicskiplist atomic_skiplist_dscheck))
+
+(test
+ (name qcheck_atomic_skiplist)
+ (libraries lockfree qcheck qcheck-alcotest)
+ (modules qcheck_atomic_skiplist))
