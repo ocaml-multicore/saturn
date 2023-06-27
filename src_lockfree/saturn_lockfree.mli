@@ -40,3 +40,4 @@ module Relaxed_queue = Mpmc_relaxed_queue
 (** {2 Other} *)
 
 module Backoff = Backoff
+module Atomicskiplist = Atomicskiplist
