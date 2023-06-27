@@ -1,7 +1,7 @@
 open Lockfree
 
 let workload num_elems num_threads add remove =
-  let sl = Atomicskiplist.create () in
+  let sl = Skiplist.create () in
   let elems = Array.init num_elems (fun _ -> Random.int 10000) in
   let push () =
     Domain.spawn (fun () ->
@@ -9,10 +9,10 @@ let workload num_elems num_threads add remove =
         for i = 0 to (num_elems - 1) / num_threads do
           Domain.cpu_relax ();
           let prob = Random.float 1.0 in
-          if prob < add then Atomicskiplist.add sl (Random.int 10000) |> ignore
+          if prob < add then Skiplist.add sl (Random.int 10000) |> ignore
           else if prob >= add && prob < add +. remove then
-            Atomicskiplist.remove sl (Random.int 10000) |> ignore
-          else Atomicskiplist.mem sl elems.(i) |> ignore
+            Skiplist.remove sl (Random.int 10000) |> ignore
+          else Skiplist.mem sl elems.(i) |> ignore
         done;
         start_time)
   in

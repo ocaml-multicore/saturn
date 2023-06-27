@@ -31,7 +31,7 @@ let get_random_level sl =
   count_level 1
 
 (** Create a new skiplist *)
-let create ?(max_height=10) () =
+let create ?(max_height = 10) () =
   let tail = create_new_node Int.max_int max_height in
   let next =
     Array.init (max_height + 1) (fun _ ->

@@ -2,7 +2,7 @@
 
 open QCheck
 open STM
-module Skiplist = Lockfree.Atomicskiplist
+module Skiplist = Lockfree.Skiplist
 
 module WSDConf = struct
   type cmd = Mem of int | Add of int | Remove of int
@@ -13,11 +13,11 @@ module WSDConf = struct
     | Add i -> "Add " ^ string_of_int i
     | Remove i -> "Remove " ^ string_of_int i
 
-  module Sint = Set.Make (
-                    struct
-                      type t = int
-                      let compare = compare
-                    end)
+  module Sint = Set.Make (struct
+    type t = int
+
+    let compare = compare
+  end)
 
   type state = Sint.t
   type sut = Skiplist.t
@@ -67,4 +67,4 @@ let () =
     [
       WSDT_seq.agree_test ~count ~name:"STM Lockfree.Skiplist test sequential";
       WSDT_dom.agree_test_par ~count ~name:"STM Lockfree.Skiplist test parallel";
-       ]
+    ]
