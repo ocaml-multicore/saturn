@@ -1,9 +1,7 @@
 open Lockfree
 
-let max_height = 10
-
 let workload num_elems num_threads add remove =
-  let sl = Atomicskiplist.create max_height in
+  let sl = Atomicskiplist.create () in
   let elems = Array.init num_elems (fun _ -> Random.int 10000) in
   let push () =
     Domain.spawn (fun () ->

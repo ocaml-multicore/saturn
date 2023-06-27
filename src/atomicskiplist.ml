@@ -1,13 +1,9 @@
-type 'a markable_reference = { node : 'a; marked : bool }
+type markable_reference = { node : node; marked : bool }
 (** markable reference: stores a reference to a node and has a field to specify if it is marked *)
 
-exception Failed_snip
+and node = { key : int; height : int; next : markable_reference Atomic.t array }
 
-type node = {
-  key : int;
-  height : int;
-  next : node markable_reference Atomic.t array;
-}
+exception Failed_snip
 
 type t = { head : node; max_height : int }
 
@@ -35,7 +31,7 @@ let get_random_level sl =
   count_level 1
 
 (** Create a new skiplist *)
-let create max_height =
+let create ?(max_height=10) () =
   let tail = create_new_node Int.max_int max_height in
   let next =
     Array.init (max_height + 1) (fun _ ->
@@ -44,7 +40,7 @@ let create max_height =
   let head = { key = Int.min_int; height = max_height; next } in
   { head; max_height }
 
-(** Compares old_node and old_mark with the atomic reference and if they are the same then 
+(** Compares old_node and old_mark with the atomic reference and if they are the same then
     Replaces the value in the atomic with node and mark *)
 let compare_and_set_mark_ref (atomic, old_node, old_mark, node, mark) =
   let current = Atomic.get atomic in
@@ -56,9 +52,9 @@ let compare_and_set_mark_ref (atomic, old_node, old_mark, node, mark) =
   && ((current_node == node && current.marked = mark) || set_mark_ref ())
 
 (** Returns true if key is found within the skiplist else false;
-    Irrespective of return value, fills the preds and succs array with 
-    the predecessors nodes with smaller key and successors nodes with greater than 
-    or equal to key 
+    Irrespective of return value, fills the preds and succs array with
+    the predecessors nodes with smaller key and successors nodes with greater than
+    or equal to key
   *)
 let find_in (key, preds, succs, sl) =
   let head = sl.head in

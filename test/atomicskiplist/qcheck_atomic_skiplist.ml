@@ -1,14 +1,12 @@
 module Atomicskiplist = Lockfree.Atomicskiplist
 
-let max_height = 10
-
 let tests_sequential =
   QCheck.
     [
       (* TEST 1: add*)
       Test.make ~name:"add" (list int) (fun lpush ->
           assume (lpush <> []);
-          let sl = Atomicskiplist.create max_height in
+          let sl = Atomicskiplist.create () in
           let rec add_all_elems l =
             match l with
             | h :: t ->
@@ -19,7 +17,7 @@ let tests_sequential =
       (*TEST 2: add_remove*)
       Test.make ~name:"add_remove" (list int) (fun lpush ->
           let lpush = List.sort_uniq Int.compare lpush in
-          let sl = Atomicskiplist.create max_height in
+          let sl = Atomicskiplist.create () in
           List.iter (fun key -> ignore (Atomicskiplist.add sl key)) lpush;
           let rec remove_all_elems l =
             match l with
@@ -32,7 +30,7 @@ let tests_sequential =
       Test.make ~name:"add_find" (list int) (fun lpush ->
           let lpush = List.sort_uniq Int.compare lpush in
           let lpush = Array.of_list lpush in
-          let sl = Atomicskiplist.create max_height in
+          let sl = Atomicskiplist.create () in
           let len = Array.length lpush in
           let pos = Array.sub lpush 0 (len / 2) in
           let neg = Array.sub lpush (len / 2) (len / 2) in
@@ -54,7 +52,7 @@ let tests_sequential =
       (* TEST 4: add_remove_find *)
       Test.make ~name:"add_remove_find" (list int) (fun lpush ->
           let lpush = List.sort_uniq Int.compare lpush in
-          let sl = Atomicskiplist.create max_height in
+          let sl = Atomicskiplist.create () in
           List.iter (fun key -> ignore @@ Atomicskiplist.add sl key) lpush;
           List.iter (fun key -> ignore @@ Atomicskiplist.remove sl key) lpush;
           let rec not_find_all_elems l =
@@ -74,7 +72,7 @@ let tests_two_domains =
       (* TEST 1: Two domains doing multiple adds *)
       Test.make ~name:"parallel_add" (pair small_nat small_nat)
         (fun (npush1, npush2) ->
-          let sl = Atomicskiplist.create max_height in
+          let sl = Atomicskiplist.create () in
           let sema = Semaphore.Binary.make false in
           let lpush1 = List.init npush1 (fun i -> i) in
           let lpush2 = List.init npush2 (fun i -> i + npush1) in
@@ -109,7 +107,7 @@ let tests_two_domains =
       (* TEST 2: Two domains doing multiple one push and one pop in parallel *)
       Test.make ~count:10000 ~name:"parallel_add_remove"
         (pair small_nat small_nat) (fun (npush1, npush2) ->
-          let sl = Atomicskiplist.create max_height in
+          let sl = Atomicskiplist.create () in
           let sema = Semaphore.Binary.make false in
 
           let lpush1 = List.init npush1 (fun i -> i) in
@@ -147,7 +145,7 @@ let tests_two_domains =
       (* TEST 3: Parallel push and pop using the same elements in two domains
  *)
       Test.make ~name:"parallel_add_remove_same_list" (list int) (fun lpush ->
-          let sl = Atomicskiplist.create max_height in
+          let sl = Atomicskiplist.create () in
           let sema = Semaphore.Binary.make false in
           let add_all_elems l = List.map (Atomicskiplist.add sl) l in
           let remove_all_elems l = List.map (Atomicskiplist.remove sl) l in

@@ -13,3 +13,10 @@
  (name qcheck_atomic_skiplist)
  (libraries lockfree qcheck qcheck-alcotest)
  (modules qcheck_atomic_skiplist))
+
+(test
+ (name stm_atomicskiplist)
+ (modules stm_atomicskiplist)
+ (libraries lockfree qcheck-stm.sequential qcheck-stm.domain)
+ (action
+  (run %{test} --verbose)))
