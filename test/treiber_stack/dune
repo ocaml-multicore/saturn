@@ -1,8 +1,8 @@
 (rule
- (copy ../../src/backoff.ml backoff.ml))
+ (copy ../../src_lockfree/backoff.ml backoff.ml))
 
 (rule
- (copy ../../src/treiber_stack.ml treiber_stack.ml))
+ (copy ../../src_lockfree/treiber_stack.ml treiber_stack.ml))
 
 (test
  (name treiber_stack_dscheck)

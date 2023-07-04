@@ -1,5 +1,5 @@
 (rule
- (copy ../../src/spsc_queue.ml spsc_queue.ml))
+ (copy ../../src_lockfree/spsc_queue.ml spsc_queue.ml))
 
 (test
  (name spsc_queue_dscheck)

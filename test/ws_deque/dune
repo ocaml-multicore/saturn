@@ -1,8 +1,8 @@
 (rule
- (copy ../../src/ArrayExtra.ml ArrayExtra.ml))
+ (copy ../../src_lockfree/ArrayExtra.ml ArrayExtra.ml))
 
 (rule
- (copy ../../src/ws_deque.ml ws_deque.ml))
+ (copy ../../src_lockfree/ws_deque.ml ws_deque.ml))
 
 (test
  (name ws_deque_dscheck)
