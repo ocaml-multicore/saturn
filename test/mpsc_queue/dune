@@ -8,7 +8,7 @@
 
 (test
  (name qcheck_mpsc_queue)
- (libraries saturn qcheck qcheck-alcotest)
+ (libraries saturn barrier qcheck qcheck-alcotest)
  (modules qcheck_mpsc_queue))
 
 (test

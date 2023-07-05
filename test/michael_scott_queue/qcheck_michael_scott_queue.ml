@@ -85,7 +85,7 @@ let tests_two_domains =
         (pair small_nat small_nat) (fun (npush1, npush2) ->
           (* Initialization *)
           let queue = create () in
-          let sema = Semaphore.Binary.make false in
+          let barrier = Barrier.create 2 in
 
           (* Using these lists instead of a random one enables to
              check for more properties. *)
@@ -103,13 +103,11 @@ let tests_two_domains =
 
           let domain1 =
             Domain.spawn (fun () ->
-                Semaphore.Binary.release sema;
+                Barrier.await barrier;
                 work lpush1)
           in
           let popped2 =
-            while not (Semaphore.Binary.try_acquire sema) do
-              Domain.cpu_relax ()
-            done;
+            Barrier.await barrier;
             work lpush2
           in
 
@@ -145,7 +143,7 @@ let tests_two_domains =
         (pair small_nat small_nat) (fun (npush1, npush2) ->
           (* Initialization *)
           let queue = create () in
-          let sema = Semaphore.Binary.make false in
+          let barrier = Barrier.create 2 in
 
           let lpush1 = List.init npush1 (fun i -> i) in
           let lpush2 = List.init npush2 (fun i -> i + npush1) in
@@ -173,13 +171,11 @@ let tests_two_domains =
 
           let domain1 =
             Domain.spawn (fun () ->
-                Semaphore.Binary.release sema;
+                Barrier.await barrier;
                 work lpush1)
           in
           let popped2 =
-            while not (Semaphore.Binary.try_acquire sema) do
-              Domain.cpu_relax ()
-            done;
+            Barrier.await barrier;
             work lpush2
           in
 
