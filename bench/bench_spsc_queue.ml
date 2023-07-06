@@ -1,4 +1,4 @@
-open Lockfree
+module Spsc_queue = Saturn.Single_prod_single_cons_queue
 
 let item_count = 2_000_000
 

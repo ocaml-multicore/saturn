@@ -1,4 +1,4 @@
-module Spsc_queue = Lockfree.Spsc_queue
+module Spsc_queue = Saturn.Single_prod_single_cons_queue
 
 let keep_some l = List.filter Option.is_some l |> List.map Option.get
 let keep_n_first n = List.filteri (fun i _ -> i < n)

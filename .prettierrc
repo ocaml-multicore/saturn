@@ -1,0 +1,14 @@
+{
+  "arrowParens": "avoid",
+  "bracketSpacing": false,
+  "printWidth": 80,
+  "semi": false,
+  "singleQuote": true,
+  "proseWrap": "always",
+  "overrides": [
+    {
+      "files": ["*.md"],
+      "excludeFiles": "_build/*"
+    }
+  ]
+}

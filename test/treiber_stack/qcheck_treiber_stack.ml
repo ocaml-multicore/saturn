@@ -1,4 +1,4 @@
-open Lockfree
+open Saturn.Stack
 
 let tests_sequential =
   QCheck.
@@ -7,39 +7,37 @@ let tests_sequential =
       Test.make ~name:"push" (list int) (fun lpush ->
           assume (lpush <> []);
           (* Building a random stack *)
-          let stack = Treiber_stack.create () in
-          List.iter (Treiber_stack.push stack) lpush;
+          let stack = create () in
+          List.iter (push stack) lpush;
 
           (* Testing property *)
-          not (Treiber_stack.is_empty stack));
+          not (is_empty stack));
       (* TEST 2 - push, pop until empty *)
       Test.make ~name:"push_pop_until_empty" (list int) (fun lpush ->
           (* Building a random stack *)
-          let stack = Treiber_stack.create () in
-          List.iter (Treiber_stack.push stack) lpush;
+          let stack = create () in
+          List.iter (push stack) lpush;
 
           (* Popping until [is_empty q] is true *)
           let count = ref 0 in
-          while not (Treiber_stack.is_empty stack) do
+          while not (is_empty stack) do
             incr count;
-            ignore (Treiber_stack.pop stack)
+            ignore (pop stack)
           done;
 
           (* Testing property *)
-          Treiber_stack.pop stack = None && !count = List.length lpush);
+          pop stack = None && !count = List.length lpush);
       (* TEST 3 - push, pop, check LIFO  *)
       Test.make ~name:"lifo" (list int) (fun lpush ->
           (* Building a random stack *)
-          let stack = Treiber_stack.create () in
-          List.iter (Treiber_stack.push stack) lpush;
+          let stack = create () in
+          List.iter (push stack) lpush;
 
           let out = ref [] in
           let insert v = out := v :: !out in
 
           for _ = 1 to List.length lpush do
-            match Treiber_stack.pop stack with
-            | None -> assert false
-            | Some v -> insert v
+            match pop stack with None -> assert false | Some v -> insert v
           done;
 
           Printf.printf "------\n";
@@ -59,28 +57,28 @@ let tests_one_consumer_one_producer =
          Parallel [push] and [pop]. *)
       Test.make ~count:10_000 ~name:"parallel" (list int) (fun lpush ->
           (* Initialization *)
-          let stack = Treiber_stack.create () in
+          let stack = create () in
           let sema = Semaphore.Binary.make false in
 
           (* Producer pushes. *)
           let producer =
             Domain.spawn (fun () ->
                 Semaphore.Binary.release sema;
-                List.iter (Treiber_stack.push stack) lpush)
+                List.iter (push stack) lpush)
           in
 
           while not (Semaphore.Binary.try_acquire sema) do
             Domain.cpu_relax ()
           done;
           for _ = 1 to List.length lpush do
-            while Option.is_none (Treiber_stack.pop stack) do
+            while Option.is_none (pop stack) do
               ()
             done
           done;
 
           (* Ensure nothing is left behind. *)
           Domain.join producer;
-          Treiber_stack.is_empty stack);
+          is_empty stack);
     ]
 
 let tests_two_domains =
@@ -92,7 +90,7 @@ let tests_two_domains =
       Test.make ~count:10_000 ~name:"parallel_pop_push"
         (pair small_nat small_nat) (fun (npush1, npush2) ->
           (* Initialization *)
-          let stack = Treiber_stack.create () in
+          let stack = create () in
           let sema = Semaphore.Binary.make false in
 
           let lpush1 = List.init npush1 (fun i -> i) in
@@ -101,9 +99,9 @@ let tests_two_domains =
           let work lpush =
             List.map
               (fun elt ->
-                Treiber_stack.push stack elt;
+                push stack elt;
                 Domain.cpu_relax ();
-                Treiber_stack.pop stack)
+                pop stack)
               lpush
           in
 
@@ -141,7 +139,7 @@ let tests_two_domains =
       Test.make ~count:10_000 ~name:"parallel_pop_push_random"
         (pair small_nat small_nat) (fun (npush1, npush2) ->
           (* Initialization *)
-          let stack = Treiber_stack.create () in
+          let stack = create () in
 
           let lpush1 = List.init npush1 (fun i -> i) in
           let lpush2 = List.init npush2 (fun i -> i + npush1) in
@@ -158,11 +156,11 @@ let tests_two_domains =
                 match lpush with
                 | [] -> popped
                 | elt :: xs ->
-                    Treiber_stack.push stack elt;
+                    push stack elt;
                     loop xs popped)
               else (
                 incr consecutive_pop;
-                let p = Treiber_stack.pop stack in
+                let p = pop stack in
                 loop lpush (p :: popped))
             in
             loop lpush []
@@ -194,7 +192,7 @@ let tests_two_domains =
           (* Pop everything that is still on the queue *)
           let popped3 =
             let rec loop popped =
-              match Treiber_stack.pop stack with
+              match pop stack with
               | None -> popped
               | Some v -> loop (v :: popped)
             in

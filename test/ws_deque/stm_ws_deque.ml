@@ -3,7 +3,7 @@
 open QCheck
 open STM
 open Util
-module Ws_deque = Lockfree.Ws_deque
+module Ws_deque = Saturn.Work_stealing_deque
 
 module WSDConf = struct
   type cmd = Push of int | Pop | Steal
@@ -78,9 +78,9 @@ let () =
   let count = 1000 in
   QCheck_base_runner.run_tests_main
     [
-      WSDT_seq.agree_test ~count ~name:"STM Lockfree.Ws_deque test sequential";
-      agree_test_par_asym ~count ~name:"STM Lockfree.Ws_deque test parallel";
+      WSDT_seq.agree_test ~count ~name:"STM Saturn.Ws_deque test sequential";
+      agree_test_par_asym ~count ~name:"STM Saturn.Ws_deque test parallel";
       (* Note: this can generate, e.g., pop commands/actions in different threads, thus violating the spec. *)
       WSDT_dom.neg_agree_test_par ~count
-        ~name:"STM Lockfree.Ws_deque test parallel, negative";
+        ~name:"STM Saturn.Ws_deque test parallel, negative";
     ]

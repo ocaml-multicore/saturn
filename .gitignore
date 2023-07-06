@@ -7,3 +7,5 @@ tmp
 *.native
 *.byte
 *.merlin
+*.json
+node_modules

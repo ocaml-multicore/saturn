@@ -1,4 +1,4 @@
-open Lockfree.Mpmc_relaxed_queue
+open Saturn.Relaxed_queue
 
 let num_of_elements = ref 500_000
 let num_of_pushers = ref 4
@@ -57,8 +57,8 @@ let create_output ~time_median ~throughput_median ~throughput_stddev =
 
 let run_bench () =
   if !use_cas_intf then (
-    push := Lockfree.Mpmc_relaxed_queue.Not_lockfree.CAS_interface.push;
-    pop := Lockfree.Mpmc_relaxed_queue.Not_lockfree.CAS_interface.pop);
+    push := Saturn.Relaxed_queue.Not_lockfree.CAS_interface.push;
+    pop := Saturn.Relaxed_queue.Not_lockfree.CAS_interface.pop);
   let queue = create ~size_exponent:10 () in
   let orchestrator =
     Orchestrator.init
