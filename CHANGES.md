@@ -1,10 +1,11 @@
-# Release notes
-
-All notable changes to this project will be documented in this file.
-
-## Not released
+## 0.4.0
 
 - Add docs and rename/refactor to add a lockfree package (@lyrm)
+- CI clean up and set up Windows CI (@lyrm)
+- Adopt OCaml Code of Conduct (@Sudha247)
+- Mark alcotest as a test dependency (@Khady)
+- Set QCHECK_MSG_INTERVAL to avoid clutter in CI logs (@jmid)
+- Fix space leaks in MS Queue (@polytypic, @lyrm)
 - Add STM tests for current data structures (@lyrm, @jmid)
 
 ## 0.3.1
