@@ -26,10 +26,10 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 ########
 *)
 
-module Queue = Michael_scott_queue
-module Stack = Treiber_stack
-module Work_stealing_deque = Ws_deque
-module Single_prod_single_cons_queue = Spsc_queue
-module Single_consumer_queue = Mpsc_queue
+module Queue = Lockfree.Queue
+module Stack = Lockfree.Stack
+module Work_stealing_deque = Lockfree.Work_stealing_deque
+module Single_prod_single_cons_queue = Lockfree.Single_prod_single_cons_queue
+module Single_consumer_queue = Lockfree.Single_consumer_queue
 module Relaxed_queue = Mpmc_relaxed_queue
-module Backoff = Backoff
+module Backoff = Lockfree.Backoff

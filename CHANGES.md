@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## Not released
 
-- Rename data structures and package, add docs (@lyrm)
+- Add docs and rename/refactor to add a lockfree package (@lyrm)
 - Add STM tests for current data structures (@lyrm, @jmid)
 
 ## 0.3.1

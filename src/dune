@@ -1,4 +1,4 @@
 (library
  (name saturn)
  (public_name saturn)
- (libraries domain_shims))
+ (libraries saturn_lockfree domain_shims))

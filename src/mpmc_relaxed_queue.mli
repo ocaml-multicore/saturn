@@ -1,5 +1,5 @@
 (**
-    A multi-producer, multi-consumer, thread-safe, relaxed-FIFO queue.
+    A multi-producer, multi-consumer, thread-safe, bounded relaxed-FIFO queue.
 
     It exposes two interfaces: [Spin] and [Not_lockfree]. [Spin] is lock-free
     formally, but the property is achieved in a fairly counterintuitive way -
