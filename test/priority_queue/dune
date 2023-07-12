@@ -1,0 +1,12 @@
+(rule
+ (copy ../../src_lockfree/priority_queue.ml priority_queue.ml))
+
+(test
+ (name qcheck_priority_queue)
+ (libraries saturn qcheck qcheck-alcotest)
+ (modules qcheck_priority_queue))
+
+(test
+ (name dscheck_priority_queue)
+ (libraries atomic dscheck alcotest)
+ (modules priority_queue dscheck_priority_queue))
