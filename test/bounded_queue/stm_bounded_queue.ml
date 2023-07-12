@@ -29,7 +29,7 @@ module MSQBConf = struct
          ])
 
   let init_state = []
-  let init_sut () = Bounded_queue.init ()
+  let init_sut () = Bounded_queue.create ()
   let cleanup _ = ()
 
   (* next stage after performing operation on current state *)

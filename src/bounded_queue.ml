@@ -17,7 +17,7 @@ type 'a t = {
 }
 
 (* create and initialize the 2 lock queue *)
-let init () =
+let create () =
   let dummy = ref Nil in
   {
     head = dummy;
