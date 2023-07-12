@@ -36,6 +36,7 @@ module Work_stealing_deque = Lockfree.Work_stealing_deque
 module Single_prod_single_cons_queue = Lockfree.Single_prod_single_cons_queue
 module Single_consumer_queue = Lockfree.Single_consumer_queue
 module Relaxed_queue = Mpmc_relaxed_queue
+module Fine_list = Fine_list
 
 module Backoff = Lockfree.Backoff
 (** {2 Other} *)
