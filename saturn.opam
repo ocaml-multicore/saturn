@@ -12,6 +12,8 @@ depends: [
   "dune" {>= "3.9"}
   "ocaml" {>= "4.13"}
   "domain_shims" {>= "0.1.0" & with-test}
+  "domain-local-await" {>= "1.0.0"}
+  "backoff" {>= "0.1.0"}
   "saturn_lockfree" {= version}
   "multicore-magic" {>= "2.1.0" & with-test}
   "multicore-bench" {>= "0.1.2" & with-test}
