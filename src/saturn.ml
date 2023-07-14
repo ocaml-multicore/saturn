@@ -26,6 +26,7 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 ########
 *)
 
+module Cue = Saturn_lockfree.Cue
 module Queue = Saturn_lockfree.Queue
 module Queue_unsafe = Saturn_lockfree.Queue_unsafe
 module Stack = Saturn_lockfree.Stack

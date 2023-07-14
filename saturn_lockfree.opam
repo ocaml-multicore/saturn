@@ -10,6 +10,7 @@ bug-reports: "https://github.com/ocaml-multicore/saturn/issues"
 depends: [
   "dune" {>= "3.14"}
   "ocaml" {>= "4.13"}
+  "picos" {>= "0.5.0"}
   "domain_shims" {>= "0.1.0" & with-test}
   "backoff" {>= "0.1.0"}
   "multicore-magic" {>= "2.3.0"}

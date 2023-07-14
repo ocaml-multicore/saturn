@@ -1,0 +1,7 @@
+(test
+ (package saturn_lockfree)
+ (name stm_cue)
+ (modules stm_cue)
+ (libraries saturn qcheck-core qcheck-stm.stm stm_run)
+ (action
+  (run %{test} --verbose)))
