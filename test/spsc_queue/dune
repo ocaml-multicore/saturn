@@ -20,5 +20,6 @@
  (name stm_spsc_queue)
  (modules stm_spsc_queue)
  (libraries saturn qcheck-stm.sequential qcheck-stm.domain)
+ (enabled_if (= %{arch_sixtyfour} true))
  (action
   (run %{test} --verbose)))
