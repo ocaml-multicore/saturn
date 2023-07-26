@@ -10,7 +10,7 @@
 type 'a t
 (** The type of 2-lock queue *)
 
-val create : unit -> 'a t
+val create : ?max_size:int -> unit -> 'a t
 (** new queue with dummy node *)
 
 val push : 'a t -> 'a -> unit

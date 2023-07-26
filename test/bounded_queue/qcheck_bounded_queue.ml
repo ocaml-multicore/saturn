@@ -7,7 +7,7 @@ let tests_sequential =
       Test.make ~name:"push" (list int) (fun lpush ->
           assume (lpush <> []);
           (* Building a random queue *)
-          let queue = Bounded_queue.create () in
+          let queue = Bounded_queue.create ~max_size:1_000_000 () in
           List.iter (Bounded_queue.push queue) lpush;
 
           (* Testing property *)
@@ -15,7 +15,7 @@ let tests_sequential =
       (* TEST 2 - push, pop until empty *)
       Test.make ~name:"push_pop_until_empty" (list int) (fun lpush ->
           (* Building a random queue *)
-          let queue = Bounded_queue.create () in
+          let queue = Bounded_queue.create ~max_size:1_000_000 () in
           List.iter (Bounded_queue.push queue) lpush;
 
           (* Popping until [is_empty q] is true *)
@@ -30,7 +30,7 @@ let tests_sequential =
       (* TEST 3 - push, pop, check FIFO  *)
       Test.make ~name:"fifo" (list int) (fun lpush ->
           (* Building a random queue *)
-          let queue = Bounded_queue.create () in
+          let queue = Bounded_queue.create ~max_size:1_000_000 () in
           List.iter (Bounded_queue.push queue) lpush;
 
           (* Construct list of elements popped in order *)
@@ -52,7 +52,7 @@ let tests_one_consumer_one_producer =
       (* TEST 1 - one consumer one producer: Parallel [push] and [pop]. *)
       Test.make ~count:10_000 ~name:"parallel_fifo" (list int) (fun lpush ->
           (* Creating a queue *)
-          let queue = Bounded_queue.create () in
+          let queue = Bounded_queue.create ~max_size:1_000_000 () in
 
           (* Producer pushes a random list of numbers to queue *)
           let producer =
@@ -80,7 +80,7 @@ let tests_two_domains =
       Test.make ~count:10_000 ~name:"parallel_push_pop"
         (pair small_nat small_nat) (fun (npush1, npush2) ->
           (* Initialization *)
-          let queue = Bounded_queue.create () in
+          let queue = Bounded_queue.create ~max_size:1_000_000 () in
           let sema = Semaphore.Binary.make false in
 
           (* Using these lists instead of a random one enables to
