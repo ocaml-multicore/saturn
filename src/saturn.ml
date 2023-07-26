@@ -26,10 +26,13 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 ########
 *)
 
-module Queue = Lockfree.Queue
-module Stack = Lockfree.Stack
-module Work_stealing_deque = Lockfree.Work_stealing_deque
-module Single_prod_single_cons_queue = Lockfree.Single_prod_single_cons_queue
-module Single_consumer_queue = Lockfree.Single_consumer_queue
+module Queue = Saturn_lockfree.Queue
+module Stack = Saturn_lockfree.Stack
+module Work_stealing_deque = Saturn_lockfree.Work_stealing_deque
+
+module Single_prod_single_cons_queue =
+  Saturn_lockfree.Single_prod_single_cons_queue
+
+module Single_consumer_queue = Saturn_lockfree.Single_consumer_queue
 module Relaxed_queue = Mpmc_relaxed_queue
-module Backoff = Lockfree.Backoff
+module Backoff = Saturn_lockfree.Backoff
