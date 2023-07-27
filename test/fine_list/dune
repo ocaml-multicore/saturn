@@ -1,0 +1,11 @@
+(test
+ (name qcheck_fine_list)
+ (libraries saturn qcheck qcheck-alcotest)
+ (modules qcheck_fine_list))
+
+(test
+ (name stm_fine_list)
+ (modules stm_fine_list)
+ (libraries saturn qcheck-stm.sequential qcheck-stm.domain)
+ (action
+  (run %{test} --verbose)))
