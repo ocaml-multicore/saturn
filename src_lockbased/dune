@@ -1,0 +1,3 @@
+(library
+ (name lockbased)
+ (libraries threads))

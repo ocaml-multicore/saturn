@@ -242,57 +242,49 @@ module Make (V : Compare) = struct
         if lfound <> -1 then (
           let node_found = succs.(lfound) in
           if not (Atomic.get !^node_found.marked) then (
-            while not (Atomic.get !^node_found.fully_linked) do
-              ()
-            done;
+            while not (Atomic.get !^node_found.fully_linked) do () done;
             raise False);
           skip := true);
         if not !skip then (
           let highestlocked = ref (-1) in
-          try
-            let pred, succ = (ref Null, ref Null) in
-            let valid = ref true in
-            let level = ref 0 in
-            while !valid && !level <= toplevel do
-              pred := preds.(!level);
-              succ := succs.(!level);
-              lock !pred;
-              highestlocked := !level;
-              valid :=
-                (not (Atomic.get !!^pred.marked))
-                && (not (Atomic.get !!^succ.marked))
-                && !!^pred.next.(!level) == !succ;
-              level := !level + 1
-            done;
-            if not !valid then skip := true;
-            if not !skip then (
-              let new_node = make ~item toplevel in
-              (* first link succs *)
-              for lvl = 0 to toplevel do
-                !^new_node.next.(lvl) <- succs.(lvl)
+          Fun.protect (fun () ->
+              let pred, succ = (ref Null, ref Null) in
+              let valid = ref true in
+              let level = ref 0 in
+              while !valid && !level <= toplevel do
+                pred := preds.(!level);
+                succ := succs.(!level);
+                lock !pred;
+                highestlocked := !level;
+                valid :=
+                  (not (Atomic.get !!^pred.marked))
+                  && (not (Atomic.get !!^succ.marked))
+                  && !!^pred.next.(!level) == !succ;
+                level := !level + 1
               done;
-              (* then link next fields of preds *)
-              for lvl = 0 to toplevel do
-                !^(preds.(lvl)).next.(lvl) <- new_node
-              done;
-              Atomic.set !^new_node.fully_linked true;
-              raise True);
-            for lvl = 0 to !highestlocked do
-              unlock preds.(lvl)
-            done
-          with True ->
-            for lvl = 0 to !highestlocked do
-              unlock preds.(lvl)
-            done;
-            raise True)
-      done
+              if not !valid then skip := true;
+              if not !skip then (
+                let new_node = make ~item toplevel in
+                (* first link succs *)
+                for lvl = 0 to toplevel do
+                  !^new_node.next.(lvl) <- succs.(lvl)
+                done;
+                (* then link next fields of preds *)
+                for lvl = 0 to toplevel do
+                  !^(preds.(lvl)).next.(lvl) <- new_node
+                done;
+                Atomic.set !^new_node.fully_linked true;
+                raise True))
+            ~finally:(fun () ->
+              for lvl = 0 to !highestlocked do
+                unlock preds.(lvl)
+              done));
+      done;
+      failwith "[add] This is unreachable"
     in
-    let result = ref None in
-    (try aux_add () with
-     | False -> result := Some false
-     | True -> result := Some true);
-    if !result = None then failwith "[add] This is unreachable"
-    else Option.get !result
+    try aux_add () with
+    | False -> false
+    | True -> true
 
   let remove item : bool =
     let open Node in
@@ -306,51 +298,51 @@ module Make (V : Compare) = struct
 
     let aux_remove () =
       while true do
-        let lfound = find item preds succs in
-        if lfound <> -1 then victim := succs.(lfound);
-        if !is_marked ||
-             (lfound <> -1 &&
-                (Atomic.get !!^victim.fully_linked
-                 && !!^victim.toplevel = lfound
-                 && (not (Atomic.get !!^victim.marked))))
-        then
-          begin
-            if not !is_marked then
-              (
-                toplevel := !!^victim.toplevel;
-                lock !victim;
-                if Atomic.get !!^victim.marked then
-                  (lock !victim; raise False);
-                Atomic.set !!^victim.marked true;
-                is_marked := true
-              );
-            let highest_locked = ref (-1) in
-            Fun.protect (fun () ->
-                let pred = ref Node.Null in
-                let valid = ref true in
-                let level = ref 0 in
-                while (!valid && !level <= !toplevel) do
-                  pred := preds.(!level);
-                  lock !pred;
-                  highest_locked := !level;
-                  valid := (not (Atomic.get !!^pred.marked))
-                           && (!!^pred.next.(!level) == !victim);
-                  incr level
+      let lfound = find item preds succs in
+      if lfound <> -1 then victim := succs.(lfound);
+      if !is_marked ||
+           (lfound <> -1 &&
+              (Atomic.get !!^victim.fully_linked
+               && !!^victim.toplevel = lfound
+               && (not (Atomic.get !!^victim.marked))))
+      then
+        begin
+          if not !is_marked then
+            (
+              toplevel := !!^victim.toplevel;
+              lock !victim;
+              if Atomic.get !!^victim.marked then
+                (lock !victim; raise False);
+              Atomic.set !!^victim.marked true;
+              is_marked := true
+            );
+          let highest_locked = ref (-1) in
+          Fun.protect (fun () ->
+              let pred = ref Node.Null in
+              let valid = ref true in
+              let level = ref 0 in
+              while (!valid && !level <= !toplevel) do
+                pred := preds.(!level);
+                lock !pred;
+                highest_locked := !level;
+                valid := (not (Atomic.get !!^pred.marked))
+                         && (!!^pred.next.(!level) == !victim);
+                incr level
+              done;
+              if not !valid then ()
+              else (
+                for level = !toplevel downto 0 do
+                  !^(preds.(level)).next.(level) <- !!^victim.next.(level)
                 done;
-                if not !valid then ()
-                else (
-                  for level = !toplevel downto 0 do
-                    !^(preds.(level)).next.(level) <- !!^victim.next.(level)
-                  done;
-                  unlock !victim;
-                  raise True)
-              )
-              ~finally:(fun () ->
-                for i = 0 to !highest_locked do
-                  unlock preds.(i)
-                done)
-          end
-        else  raise False
+                unlock !victim;
+                raise True)
+            )
+            ~finally:(fun () ->
+              for i = 0 to !highest_locked do
+                unlock preds.(i)
+              done)
+        end
+      else  raise False
       done;
       failwith "[remove] This is unreachable"
     in
