@@ -1,0 +1,16 @@
+(test
+ (name lazy_skiplist_qcheck)
+ (libraries lockbased qcheck qcheck-alcotest)
+ (modules lazy_skiplist_qcheck))
+
+; (test
+;  (name lazy_skiplist_dscheck)
+;  (libraries lockbased atomic dscheck alcotest)
+;  (modules lazy_skiplist_dscheck))
+
+; (test
+;  (name lazy_skiplist_stm)
+;  (libraries lockbased qcheck-stm.sequential qcheck-stm.domain)
+;  (modules lazy_skiplist_stm)
+;  (action
+;   (run %{test} --verbose)))

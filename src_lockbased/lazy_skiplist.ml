@@ -174,8 +174,15 @@ module Node (V : Compare) = struct
     | Node { lock; _ } -> RMutex.unlock lock
 end
 
+(* Caveats: If the hash algorithm encounters a collision, the element
+   will fail to be added to the list *)
 module Make (V : Compare) = struct
   module Node = Node (V)
+
+  type t = {
+      head : Node.t;
+      tail : Node.t;
+    }
 
   let maxlevel = 32
 
@@ -191,17 +198,15 @@ module Make (V : Compare) = struct
     Node.overide_key key node;
     node
 
-  let head = mk_sentinel min_int
-  let tail = mk_sentinel max_int
-
   (* Initial structure between the sentinels *)
-  let init () =
+  let create () =
     let open Node in
-    Array.iteri (fun i _ -> !^head.next.(i) <- tail) !^head.next
+    let head = mk_sentinel min_int in
+    let tail = mk_sentinel max_int in
+    Array.iteri (fun i _ -> !^head.next.(i) <- tail) !^head.next;
+    {head; tail}
 
-  let () = init ()
-
-  let find (item : V.t) (preds : Node.t array) (succs : Node.t array) : int =
+  let find {head; _} (item : V.t) (preds : Node.t array) (succs : Node.t array) : int =
     let open Node in
     let v = V.hash item in
     let lfound = ref (-1) in
@@ -218,16 +223,16 @@ module Make (V : Compare) = struct
     done;
     !lfound
 
-  let contains (item : V.t) : bool =
+  let contains t (item : V.t) : bool =
     let open Node in
     let preds = Array.make (maxlevel + 1) Node.Null in
     let succs = Array.make (maxlevel + 1) Node.Null in
-    let lfound = find item preds succs in
+    let lfound = find t item preds succs in
     lfound <> -1
     && Atomic.get !^(succs.(lfound)).fully_linked
     && not (Atomic.get !^(succs.(lfound)).marked)
 
-  let add (item : V.t) : bool =
+  let add t (item : V.t) : bool =
     let open Node in
     let exception False in
     let exception True in
@@ -238,7 +243,7 @@ module Make (V : Compare) = struct
     let aux_add () =
       while true do
         let skip = ref false in
-        let lfound = find item preds succs in
+        let lfound = find t item preds succs in
         if lfound <> -1 then (
           let node_found = succs.(lfound) in
           if not (Atomic.get !^node_found.marked) then (
@@ -286,7 +291,7 @@ module Make (V : Compare) = struct
     | False -> false
     | True -> true
 
-  let remove item : bool =
+  let remove t item : bool =
     let open Node in
     let exception False in
     let exception True in
@@ -298,7 +303,7 @@ module Make (V : Compare) = struct
 
     let aux_remove () =
       while true do
-      let lfound = find item preds succs in
+      let lfound = find t item preds succs in
       if lfound <> -1 then victim := succs.(lfound);
       if !is_marked ||
            (lfound <> -1 &&
