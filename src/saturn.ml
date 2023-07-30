@@ -33,3 +33,5 @@ module Single_prod_single_cons_queue = Lockfree.Single_prod_single_cons_queue
 module Single_consumer_queue = Lockfree.Single_consumer_queue
 module Relaxed_queue = Mpmc_relaxed_queue
 module Backoff = Lockfree.Backoff
+
+module Skiplist = Lazy_skiplist
