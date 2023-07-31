@@ -37,6 +37,19 @@
 
        List.iter Domain.join domains
     ]}
+
+   It also enables to have rounds such as a domain can not begin a new
+   round before all other domains have finished the previous one. This
+   can be easily observed by changing the printer function in the
+   previous example by this one :
+
+    {[
+    let printer i () =
+      Barrier.await barrier;
+      Format.printf "First round - Domain spawn in %dth position@." i;
+      Barrier.await barrier;
+      Format.printf "Second round - Domain spawn in %dth position@." i
+    ]}
 *)
 
 type t
