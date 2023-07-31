@@ -13,7 +13,8 @@ let await { waiters; size; passed } =
   while Atomic.get waiters < size do
     Domain.cpu_relax ()
   done;
-  (* Have passed. Increased [passed]. If last one to pass, reset the barrier.  *)
+  (* Have passed. Increased [passed]. If last one to pass, reset the
+     barrier. *)
   if Atomic.fetch_and_add passed 1 = size - 1 then (
     Atomic.set passed 0;
     Atomic.set waiters 0)

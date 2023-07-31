@@ -1,11 +1,10 @@
 (** A barrier is a synchronisation tool.
 
-    A barrier of capacity [n] blocks domains until [n] of them are
-    waiting. Then these [n] domains can pass. Then the barrier is
-    reset.
+    A barrier of capacity [n] blocks domains until [n] of them are waiting. Then
+    these [n] domains can pass. Then the barrier is reset.
 
-    Note that this barrier is not starvation-free if there is more
-    domains trying to pass it than its capacity.
+    Note that this barrier is not starvation-free if there is more domains
+    trying to pass it than its capacity.
 
     This module has been written to help make sure that in `qcheck` tests and
     unitary tests, multiple domains are actually running in parallel.
@@ -21,9 +20,8 @@
        List.iter Domain.join domains
     ]}
 
-    you are most likely going to get the number in order (or almost),
-    because printing a line is way much cheaper than spawning a
-    domain.
+    you are most likely going to get the number in order (or almost), because
+    printing a line is way much cheaper than spawning a domain.
 
     Whereas with the barrier, you should get a random order :
     {[
@@ -47,6 +45,6 @@ val create : int -> t
 (** [create c] returns a barrier of capacity [c]. *)
 
 val await : t -> unit
-(** A domain calling [await barrier] will only be able to
-    progress past this function once the number of domains waiting at
-    the barrier is egal to its capacity . *)
+(** A domain calling [await barrier] will only be able to progress past this
+    function once the number of domains waiting at the barrier is egal to its
+    capacity . *)
