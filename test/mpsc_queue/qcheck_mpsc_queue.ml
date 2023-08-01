@@ -295,12 +295,12 @@ let tests_one_consumer_one_producer =
         (fun (lpush, npop) ->
           (* Initialization *)
           let queue = Mpsc_queue.create () in
-          let sema = Semaphore.Binary.make false in
+          let barrier = Barrier.create 2 in
 
           (* Producer pushes. *)
           let producer =
             Domain.spawn (fun () ->
-                Semaphore.Binary.release sema;
+                Barrier.await barrier;
                 try
                   List.iter
                     (fun elt ->
@@ -312,15 +312,11 @@ let tests_one_consumer_one_producer =
           in
 
           (* Waiting to make sure the producer can start *)
-          while not (Semaphore.Binary.try_acquire sema) do
-            Domain.cpu_relax ()
-          done;
+          Barrier.await barrier;
 
           (* Consumer pops. *)
           let popped = extract_n queue npop (npop + 1) in
-
           let closed = Domain.join producer in
-
           let popped_value =
             List.filter (function `Some _ -> true | _ -> false) popped
           in
@@ -341,12 +337,12 @@ let tests_one_consumer_one_producer =
         (fun (lpush, lpush_head) ->
           (* Initialization *)
           let queue = Mpsc_queue.create () in
-          let sema = Semaphore.Binary.make false in
+          let barrier = Barrier.create 2 in
 
           (* Producer pushes. *)
           let producer =
             Domain.spawn (fun () ->
-                Semaphore.Binary.release sema;
+                Barrier.await barrier;
                 try
                   List.iter
                     (fun elt ->
@@ -358,9 +354,7 @@ let tests_one_consumer_one_producer =
           in
 
           (* Waiting to make sure the producer can start *)
-          while not (Semaphore.Binary.try_acquire sema) do
-            Domain.cpu_relax ()
-          done;
+          Barrier.await barrier;
 
           List.iter (fun elt -> Mpsc_queue.push_head queue elt) lpush_head;
 
@@ -376,18 +370,17 @@ let tests_one_consumer_one_producer =
              = list_some (lpush_head |> List.rev)
           && keep_n_last (List.length lpush) all_pushed = list_some lpush);
       (* TEST 4 - one consumer one producer
-
          Consumer push then close while consumer pop until the queue
          is empty and closed. *)
       Test.make ~name:"par_pop_push2" (list int) (fun lpush ->
           (* Initialisation*)
           let queue = Mpsc_queue.create () in
-          let sema = Semaphore.Binary.make false in
+          let barrier = Barrier.create 2 in
 
           (* Sequential [push_head] *)
           let producer =
             Domain.spawn (fun () ->
-                Semaphore.Binary.release sema;
+                Barrier.await barrier;
                 let res =
                   try
                     List.iter
@@ -402,14 +395,9 @@ let tests_one_consumer_one_producer =
                 res)
           in
 
-          while not (Semaphore.Binary.try_acquire sema) do
-            Domain.cpu_relax ()
-          done;
-
+          Barrier.await barrier;
           let popped = popped_until_empty_and_closed queue in
-
           let unexpected_closed = Domain.join producer in
-
           let popped_value =
             List.filter (function Some _ -> true | _ -> false) popped
           in
@@ -430,14 +418,10 @@ let tests_one_consumer_two_producers =
           (* Initialization *)
           let npush1, npush2 = (List.length lpush1, List.length lpush2) in
           let queue = Mpsc_queue.create () in
-          let sema = Semaphore.Counting.make 2 in
+          let barrier = Barrier.create 2 in
 
           let multi_push lpush =
-            Semaphore.Counting.acquire sema;
-            while Semaphore.Counting.try_acquire sema do
-              Semaphore.Counting.release sema;
-              Domain.cpu_relax ()
-            done;
+            Barrier.await barrier;
             try
               List.iter
                 (fun elt ->
@@ -502,14 +486,10 @@ let tests_one_consumer_two_producers =
           (* Initialization *)
           let npush1, npush2 = (List.length lpush1, List.length lpush2) in
           let queue = Mpsc_queue.create () in
-          let sema = Semaphore.Counting.make 2 in
+          let barrier = Barrier.create 3 in
 
           let guard_push lpush =
-            Semaphore.Counting.acquire sema;
-            while Semaphore.Counting.try_acquire sema do
-              Semaphore.Counting.release sema;
-              Domain.cpu_relax ()
-            done;
+            Barrier.await barrier;
             let closed_when_pushing =
               try
                 List.iter
@@ -534,10 +514,7 @@ let tests_one_consumer_two_producers =
           (* Waiting to make sure the producers have time to
              start. However, as the consumer will [pop] until one of
              the producer closes the queue, it is not a requirement to wait here. *)
-          while Semaphore.Counting.try_acquire sema do
-            Semaphore.Counting.release sema;
-            Domain.cpu_relax ()
-          done;
+          Barrier.await barrier;
 
           let popped = popped_until_empty_and_closed queue in
 

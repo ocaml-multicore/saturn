@@ -58,18 +58,16 @@ let tests_one_consumer_one_producer =
       Test.make ~count:10_000 ~name:"parallel" (list int) (fun lpush ->
           (* Initialization *)
           let stack = create () in
-          let sema = Semaphore.Binary.make false in
+          let barrier = Barrier.create 2 in
 
           (* Producer pushes. *)
           let producer =
             Domain.spawn (fun () ->
-                Semaphore.Binary.release sema;
+                Barrier.await barrier;
                 List.iter (push stack) lpush)
           in
 
-          while not (Semaphore.Binary.try_acquire sema) do
-            Domain.cpu_relax ()
-          done;
+          Barrier.await barrier;
           for _ = 1 to List.length lpush do
             while Option.is_none (pop stack) do
               ()
@@ -91,7 +89,7 @@ let tests_two_domains =
         (pair small_nat small_nat) (fun (npush1, npush2) ->
           (* Initialization *)
           let stack = create () in
-          let sema = Semaphore.Binary.make false in
+          let barrier = Barrier.create 2 in
 
           let lpush1 = List.init npush1 (fun i -> i) in
           let lpush2 = List.init npush2 (fun i -> i + npush1) in
@@ -107,13 +105,11 @@ let tests_two_domains =
 
           let domain1 =
             Domain.spawn (fun () ->
-                Semaphore.Binary.release sema;
+                Barrier.await barrier;
                 work lpush1)
           in
           let popped2 =
-            while not (Semaphore.Binary.try_acquire sema) do
-              Domain.cpu_relax ()
-            done;
+            Barrier.await barrier;
             work lpush2
           in
 
@@ -143,7 +139,7 @@ let tests_two_domains =
 
           let lpush1 = List.init npush1 (fun i -> i) in
           let lpush2 = List.init npush2 (fun i -> i + npush1) in
-          let sema = Semaphore.Binary.make false in
+          let barrier = Barrier.create 2 in
 
           let work lpush =
             let consecutive_pop = ref 0 in
@@ -168,13 +164,11 @@ let tests_two_domains =
 
           let domain1 =
             Domain.spawn (fun () ->
-                Semaphore.Binary.release sema;
+                Barrier.await barrier;
                 work lpush1)
           in
           let popped2 =
-            while not (Semaphore.Binary.try_acquire sema) do
-              Domain.cpu_relax ()
-            done;
+            Barrier.await barrier;
             work lpush2
           in
 

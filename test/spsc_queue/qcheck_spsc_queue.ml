@@ -62,23 +62,20 @@ let tests =
           assume (List.length l + List.length l' < size_max);
 
           (* Initialization *)
+          let barrier = Barrier.create 2 in
           let q = Spsc_queue.create ~size_exponent in
           List.iter (Spsc_queue.push q) l;
 
           (* Consumer pops *)
-          let sema = Semaphore.Binary.make false in
           let consumer =
             Domain.spawn (fun () ->
-                Semaphore.Binary.release sema;
+                Barrier.await barrier;
                 pop_n_times q npop)
           in
 
           let producer =
             Domain.spawn (fun () ->
-                (* Making sure the consumer can start *)
-                while not (Semaphore.Binary.try_acquire sema) do
-                  Domain.cpu_relax ()
-                done;
+                Barrier.await barrier;
                 (* Main domain pushes.*)
                 List.iter
                   (fun elt ->
@@ -95,7 +92,7 @@ let tests =
           List.length popped = npop
           && popped_val = keep_n_first (List.length popped_val) (l @ l')));
     (* TEST 3 - one producer, one consumer:
-       Checks that pushing to much raise exception Full. *)
+       Checks that pushing too much raise exception Full. *)
     QCheck.(
       Test.make ~name:"push_full" (list int) (fun l ->
           let size_exponent = 4 in

@@ -16,7 +16,7 @@
 
 (test
  (name qcheck_ws_deque)
- (libraries saturn qcheck "qcheck-alcotest")
+ (libraries barrier saturn qcheck "qcheck-alcotest")
  (modules qcheck_ws_deque))
 
 (test
