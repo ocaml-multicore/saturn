@@ -37,14 +37,26 @@ val is_empty : 'a t -> bool
 val push : 'a t -> 'a -> unit
 (** [push q v] adds the element [v] at the end of the queue [q]. *)
 
-val pop : 'a t -> 'a option
+exception Empty
+(** Raised when {!pop} or {!peek} is applied to an empty queue. *)
+
+val pop : 'a t -> 'a
+(** [pop q] removes and returns the first element in queue [q].
+
+    @raise Empty if [q] is empty. *)
+
+val pop_opt : 'a t -> 'a option
 (** [pop q] removes and returns the first element in queue [q], or
     returns [None] if the queue is empty. *)
 
-val clean_until : 'a t -> ('a -> bool) -> unit
-(** [clean_until q f] drops the prefix of the queue until the element [e],
-    where [f e] is [true]. If no such element exists, then the queue is
-    emptied. *)
+val peek : 'a t -> 'a
+(** [peek q] returns the first element in queue [q].
+
+    @raise Empty if [q] is empty. *)
+
+val peek_opt : 'a t -> 'a option
+(** [peek q] returns the first element in queue [q], or
+    returns [None] if the queue is empty. *)
 
 type 'a cursor
 (** The type of cursor. *)

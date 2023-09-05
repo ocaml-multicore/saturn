@@ -15,6 +15,17 @@ val is_empty : 'a t -> bool
 val push : 'a t -> 'a -> unit
 (** [push s v] adds the element [v] at the top of stack [s]. *)
 
-val pop : 'a t -> 'a option
-(** [pop a] removes and returns the topmost element in the
-    stack [s], or returns [None] if the stack is empty. *)
+exception Empty
+(** Raised when {!pop} or {!peek} is applied to an empty queue. *)
+
+val pop : 'a t -> 'a
+(** [pop s] removes and returns the topmost element in the
+    stack [s].
+
+    @raise Empty if [a] is empty.
+*)
+
+val pop_opt : 'a t -> 'a option
+(** [pop_opt s] removes and returns the topmost element in the
+    stack [s], or returns [None] if the stack is empty.
+*)

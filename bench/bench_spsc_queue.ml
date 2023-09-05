@@ -16,7 +16,7 @@ let run () =
         start_time)
   in
   for _ = 1 to item_count do
-    while Option.is_none (Spsc_queue.pop queue) do
+    while Option.is_none (Spsc_queue.pop_opt queue) do
       ()
     done
   done;

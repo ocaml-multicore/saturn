@@ -6,10 +6,13 @@ open Util
 module Spsc_queue = Saturn.Single_prod_single_cons_queue
 
 module SPSCConf = struct
-  type cmd = Push of int | Pop
+  type cmd = Push of int | Pop | Peek
 
   let show_cmd c =
-    match c with Push i -> "Push " ^ string_of_int i | Pop -> "Pop"
+    match c with
+    | Push i -> "Push " ^ string_of_int i
+    | Pop -> "Pop"
+    | Peek -> "Peek"
 
   type state = int * int list
   type sut = int Spsc_queue.t
@@ -18,12 +21,14 @@ module SPSCConf = struct
     let int_gen = Gen.nat in
     QCheck.make ~print:show_cmd (Gen.map (fun i -> Push i) int_gen)
 
-  let consumer_cmd _s = QCheck.make ~print:show_cmd (Gen.return Pop)
+  let consumer_cmd _s =
+    QCheck.make ~print:show_cmd (Gen.oneof [ Gen.return Pop; Gen.return Peek ])
 
   let arb_cmd _s =
     let int_gen = Gen.nat in
     QCheck.make ~print:show_cmd
-      (Gen.oneof [ Gen.return Pop; Gen.map (fun i -> Push i) int_gen ])
+      (Gen.oneof
+         [ Gen.return Pop; Gen.return Peek; Gen.map (fun i -> Push i) int_gen ])
 
   let size_exponent = 4
   let max_size = Int.shift_left 1 size_exponent
@@ -36,13 +41,15 @@ module SPSCConf = struct
     | Push i -> if n = max_size then (n, s) else (n + 1, i :: s)
     | Pop -> (
         match List.rev s with [] -> (0, s) | _ :: s' -> (n - 1, List.rev s'))
+    | Peek -> (n, s)
 
   let precond _ _ = true
 
   let run c d =
     match c with
     | Push i -> Res (result unit exn, protect (fun d -> Spsc_queue.push d i) d)
-    | Pop -> Res (result (option int) exn, protect Spsc_queue.pop d)
+    | Pop -> Res (result int exn, protect Spsc_queue.pop d)
+    | Peek -> Res (result int exn, protect Spsc_queue.peek d)
 
   let postcond c ((n, s) : state) res =
     match (c, res) with
@@ -51,10 +58,10 @@ module SPSCConf = struct
         | Error Spsc_queue.Full -> n = max_size
         | Ok () -> n < max_size
         | _ -> false)
-    | Pop, Res ((Result (Option Int, Exn), _), res) -> (
+    | (Pop | Peek), Res ((Result (Int, Exn), _), res) -> (
         match (res, List.rev s) with
-        | Ok None, [] -> true
-        | Ok (Some j), x :: _ -> x = j
+        | Error Spsc_queue.Empty, [] -> true
+        | Ok popped, x :: _ -> x = popped
         | _ -> false)
     | _, _ -> false
 end

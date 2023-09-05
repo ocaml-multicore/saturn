@@ -22,12 +22,12 @@ let tests_sequential =
           let count = ref 0 in
           while not (is_empty stack) do
             incr count;
-            ignore (pop stack)
+            ignore (pop_opt stack)
           done;
 
           (* Testing property *)
-          pop stack = None && !count = List.length lpush);
-      (* TEST 3 - push, pop, check LIFO  *)
+          pop_opt stack = None && !count = List.length lpush);
+      (* TEST 3 - push, pop_opt, check LIFO  *)
       Test.make ~name:"lifo" (list int) (fun lpush ->
           (* Building a random stack *)
           let stack = create () in
@@ -37,14 +37,8 @@ let tests_sequential =
           let insert v = out := v :: !out in
 
           for _ = 1 to List.length lpush do
-            match pop stack with None -> assert false | Some v -> insert v
+            match pop_opt stack with None -> assert false | Some v -> insert v
           done;
-
-          Printf.printf "------\n";
-          Printf.printf "lpush: %s\n"
-            (List.map Int.to_string lpush |> String.concat ",");
-          Printf.printf "out: %s\n"
-            (List.map Int.to_string !out |> String.concat ",");
 
           (* Testing property *)
           lpush = !out);
@@ -54,8 +48,8 @@ let tests_one_consumer_one_producer =
   QCheck.
     [
       (* TEST 1 - one consumer one producer:
-         Parallel [push] and [pop]. *)
-      Test.make ~count:10_000 ~name:"parallel" (list int) (fun lpush ->
+         Parallel [push] and [pop_opt]. *)
+      Test.make ~name:"parallel" (list int) (fun lpush ->
           (* Initialization *)
           let stack = create () in
           let barrier = Barrier.create 2 in
@@ -69,7 +63,7 @@ let tests_one_consumer_one_producer =
 
           Barrier.await barrier;
           for _ = 1 to List.length lpush do
-            while Option.is_none (pop stack) do
+            while Option.is_none (pop_opt stack) do
               ()
             done
           done;
@@ -85,8 +79,8 @@ let tests_two_domains =
       (* TEST 1 - two domains doing multiple times one push then one pop.
          Parallel [push] and [pop].
       *)
-      Test.make ~count:10_000 ~name:"parallel_pop_push"
-        (pair small_nat small_nat) (fun (npush1, npush2) ->
+      Test.make ~name:"parallel_pop_push" (pair small_nat small_nat)
+        (fun (npush1, npush2) ->
           (* Initialization *)
           let stack = create () in
           let barrier = Barrier.create 2 in
@@ -99,7 +93,7 @@ let tests_two_domains =
               (fun elt ->
                 push stack elt;
                 Domain.cpu_relax ();
-                pop stack)
+                pop_opt stack)
               lpush
           in
 
@@ -132,8 +126,8 @@ let tests_two_domains =
            Two domains randomly pushs and pops in parallel. They stop as
            soon as they have finished pushing a list of element to
            push. *)
-      Test.make ~count:10_000 ~name:"parallel_pop_push_random"
-        (pair small_nat small_nat) (fun (npush1, npush2) ->
+      Test.make ~name:"parallel_pop_push_random" (pair small_nat small_nat)
+        (fun (npush1, npush2) ->
           (* Initialization *)
           let stack = create () in
 
@@ -156,7 +150,7 @@ let tests_two_domains =
                     loop xs popped)
               else (
                 incr consecutive_pop;
-                let p = pop stack in
+                let p = pop_opt stack in
                 loop lpush (p :: popped))
             in
             loop lpush []
@@ -186,7 +180,7 @@ let tests_two_domains =
           (* Pop everything that is still on the queue *)
           let popped3 =
             let rec loop popped =
-              match pop stack with
+              match pop_opt stack with
               | None -> popped
               | Some v -> loop (v :: popped)
             in

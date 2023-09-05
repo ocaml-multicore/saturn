@@ -7,6 +7,7 @@ module Mpsc_queue = Saturn.Single_consumer_queue
    - [close] *)
 (* Consumer can use the functions
    - [pop],
+   - [push],
    - [push_head],
    - [is_empty],
    - [close] *)
@@ -17,7 +18,7 @@ let extract_n q n close =
     | m ->
         if m = n - close then Mpsc_queue.close q;
         let res =
-          match Mpsc_queue.pop q with
+          match Mpsc_queue.pop_opt q with
           | Some elt -> `Some elt
           | None -> `None
           | exception Mpsc_queue.Closed -> `Closed
@@ -28,10 +29,34 @@ let extract_n q n close =
   if n < 0 then failwith "Number of pop should be positive.";
   loop [] n |> List.rev
 
+let extract_n_with_peek q n close =
+  let rec loop peeked popped = function
+    | 0 -> (peeked, popped)
+    | m ->
+        if m = n - close then Mpsc_queue.close q;
+        let peek =
+          match Mpsc_queue.peek_opt q with
+          | Some elt -> `Some elt
+          | None -> `None
+          | exception Mpsc_queue.Closed -> `Closed
+        in
+        let pop =
+          match Mpsc_queue.pop_opt q with
+          | Some elt -> `Some elt
+          | None -> `None
+          | exception Mpsc_queue.Closed -> `Closed
+        in
+        Domain.cpu_relax ();
+        loop (peek :: peeked) (pop :: popped) (m - 1)
+  in
+  if n < 0 then failwith "Number of pop should be positive.";
+  let peeked, popped = loop [] [] n in
+  (List.rev peeked, List.rev popped)
+
 let popped_until_empty_and_closed q =
   let rec loop acc =
     try
-      let popped = Mpsc_queue.pop q in
+      let popped = Mpsc_queue.pop_opt q in
       Domain.cpu_relax ();
       loop (popped :: acc)
     with Mpsc_queue.Closed -> acc
@@ -47,7 +72,19 @@ let tests_one_consumer =
   QCheck.
     [
       (* TEST 1 - single consumer no producer:
-         forall q and n, pop (push queue i; queue) = Some i*)
+         forall q and n, pop_opt (push_head q i; q) = Some i*)
+      Test.make ~name:"push_head_pop_opt"
+        (pair (list int) int)
+        (fun (lpush, i) ->
+          (* Building a random queue *)
+          let queue = Mpsc_queue.create () in
+          List.iter (fun elt -> Mpsc_queue.push_head queue elt) (List.rev lpush);
+
+          (* Testing property *)
+          Mpsc_queue.push_head queue i;
+          Mpsc_queue.pop_opt queue = Some i);
+      (* TEST 1b - single consumer no producer:
+          forall q and n, pop (push_head q i; q) = i*)
       Test.make ~name:"push_head_pop"
         (pair (list int) int)
         (fun (lpush, i) ->
@@ -57,9 +94,48 @@ let tests_one_consumer =
 
           (* Testing property *)
           Mpsc_queue.push_head queue i;
-          Mpsc_queue.pop queue = Some i);
+          try Mpsc_queue.pop queue = i with Mpsc_queue.Empty -> false);
+      (* TEST 1c - single consumer no producer:
+         forall q and n, peek_opt (push_head q i; q) = Some i*)
+      Test.make ~name:"push_head_peek_opt"
+        (pair (list int) int)
+        (fun (lpush, i) ->
+          (* Building a random queue *)
+          let queue = Mpsc_queue.create () in
+          List.iter (fun elt -> Mpsc_queue.push_head queue elt) (List.rev lpush);
+
+          (* Testing property *)
+          Mpsc_queue.push_head queue i;
+          Mpsc_queue.peek_opt queue = Some i);
+      (* TEST 1d - single consumer no producer:
+         forall q and n, peek (push_head q i; q) = Some i*)
+      Test.make ~name:"push_head_peek"
+        (pair (list int) int)
+        (fun (lpush, i) ->
+          (* Building a random queue *)
+          let queue = Mpsc_queue.create () in
+          List.iter (fun elt -> Mpsc_queue.push_head queue elt) (List.rev lpush);
+
+          (* Testing property *)
+          Mpsc_queue.push_head queue i;
+          try Mpsc_queue.peek queue = i with Mpsc_queue.Empty -> false);
       (* TEST 2 - single consumer no producer:
-         forall q, if is_empty q then pop queue = None *)
+         forall q, if is_empty q then pop_opt queue = None *)
+      Test.make ~name:"pop_opt_empty" (list int) (fun lpush ->
+          (* Building a random queue *)
+          let queue = Mpsc_queue.create () in
+          List.iter (fun elt -> Mpsc_queue.push_head queue elt) (List.rev lpush);
+          (* Popping until [is_empty q] is true*)
+          let count = ref 0 in
+          while not (Mpsc_queue.is_empty queue) do
+            incr count;
+            ignore (Mpsc_queue.pop_opt queue)
+          done;
+
+          (* Testing property *)
+          Mpsc_queue.pop_opt queue = None && !count = List.length lpush);
+      (* TEST 2b - single consumer no producer:
+         forall q, if is_empty q then pop queue raises Empty *)
       Test.make ~name:"pop_empty" (list int) (fun lpush ->
           (* Building a random queue *)
           let queue = Mpsc_queue.create () in
@@ -68,11 +144,49 @@ let tests_one_consumer =
           let count = ref 0 in
           while not (Mpsc_queue.is_empty queue) do
             incr count;
-            ignore (Mpsc_queue.pop queue)
+            ignore (Mpsc_queue.pop_opt queue)
           done;
 
           (* Testing property *)
-          Mpsc_queue.pop queue = None && !count = List.length lpush);
+          (try
+             ignore (Mpsc_queue.pop queue);
+             false
+           with Mpsc_queue.Empty -> true)
+          && !count = List.length lpush);
+      (* TEST 2 - single consumer no producer:
+         forall q, if is_empty q then peek_opt queue = None *)
+      Test.make ~name:"peek_opt_empty" (list int) (fun lpush ->
+          (* Building a random queue *)
+          let queue = Mpsc_queue.create () in
+          List.iter (fun elt -> Mpsc_queue.push_head queue elt) (List.rev lpush);
+          (* Popping until [is_empty q] is true*)
+          let count = ref 0 in
+          while not (Mpsc_queue.is_empty queue) do
+            incr count;
+            ignore (Mpsc_queue.pop_opt queue)
+          done;
+
+          (* Testing property *)
+          Mpsc_queue.peek_opt queue = None && !count = List.length lpush);
+      (* TEST 2b - single consumer no producer:
+         forall q, if is_empty q then peek queue raises Empty *)
+      Test.make ~name:"peek_empty" (list int) (fun lpush ->
+          (* Building a random queue *)
+          let queue = Mpsc_queue.create () in
+          List.iter (fun elt -> Mpsc_queue.push_head queue elt) (List.rev lpush);
+          (* Popping until [is_empty q] is true*)
+          let count = ref 0 in
+          while not (Mpsc_queue.is_empty queue) do
+            incr count;
+            ignore (Mpsc_queue.pop_opt queue)
+          done;
+
+          (* Testing property *)
+          (try
+             ignore (Mpsc_queue.peek queue);
+             false
+           with Mpsc_queue.Empty -> true)
+          && !count = List.length lpush);
       (* TEST 3 - single consumer no producer:
          forall q and i,  push_head q i; is_empty q = false*)
       Test.make ~name:"push_head_not_empty" (list int) (fun lpush ->
@@ -131,7 +245,7 @@ let tests_one_consumer =
             with Mpsc_queue.Closed -> false);
       (* TEST 6 - single consumer no producer:
          forall q and i, [close q; pop q] raises Closed <=> q is empty *)
-      Test.make ~name:"close_pop" (list int) (fun lpush ->
+      Test.make ~name:"close_pop_opt" (list int) (fun lpush ->
           (* Building a random queue *)
           let queue = Mpsc_queue.create () in
           List.iter (fun elt -> Mpsc_queue.push_head queue elt) (List.rev lpush);
@@ -142,21 +256,21 @@ let tests_one_consumer =
           (* Testing property *)
           if is_empty then
             try
-              ignore (Mpsc_queue.pop queue);
+              ignore (Mpsc_queue.pop_opt queue);
               false
             with Mpsc_queue.Closed -> true
           else
-            try Mpsc_queue.pop queue = Some (List.hd lpush)
+            try Mpsc_queue.pop_opt queue = Some (List.hd lpush)
             with Mpsc_queue.Closed -> false);
       (* TEST 7 - single consumer no producer:
          More complex test. Maybe redondant with tests 1 to 6.
-         Sequentially does n [push_head] then m [pops], [close] and may call [pop] again.
+         Sequentially does n [push_head] then m [pop_opt], [close] and may call [pop] again.
          Checks :
-         - that closing the queue does not prevent [pop]
-         - [pop] order (it's a LIFO)
-         - [pop] on a [close]d and empty queue raises [Closed]
+         - that closing the queue does not prevent [pop_opt]
+         - [pop_opt] order (it's a LIFO)
+         - [pop_opt] on a [close]d and empty queue raises [Closed]
       *)
-      Test.make ~name:"pop_order"
+      Test.make ~name:"pop_opt_order"
         (pair (list int) (pair small_nat small_nat))
         (fun (lpush, (npop, when_close)) ->
           (* Initialisation*)
@@ -166,7 +280,7 @@ let tests_one_consumer =
           (* Sequential [push_head] *)
           List.iter (fun elt -> Mpsc_queue.push_head queue elt) (List.rev lpush);
 
-          (* Call [pop] [npop] times and [close] after [when_close] pops. *)
+          (* Call [pop_opt] [npop] times and [close] after [when_close] pops. *)
           let popped = extract_n queue npop when_close in
 
           let expected =
@@ -187,11 +301,11 @@ let tests_one_consumer =
           expected = popped);
       (* TEST 8 - single consumer no producer:
          More complex test. Maybe redondant with tests 1 to 6.
-         Sequentially does n [push_head], followed by m [pop] and n' more [push_head].
+         Sequentially does n [push_head], followed by m [pop_opt] and n' more [push_head].
          Checks :
-         - order of [pop] and [push_head] -> LIFO
+         - order of [pop_opt] and [push_head] -> LIFO
       *)
-      Test.make ~name:"seq_push_pop"
+      Test.make ~name:"seq_push_pop_opt"
         (pair small_nat (pair (list int) (list int)))
         (fun (npop, (lpush1, lpush2)) ->
           (* Initialisation*)
@@ -199,7 +313,7 @@ let tests_one_consumer =
 
           (* Sequential [push_head] *)
           List.iter (fun elt -> Mpsc_queue.push_head queue elt) lpush1;
-          (* Call [pop] [npop] times without closing. *)
+          (* Call [pop_opt] [npop] times without closing. *)
           let popped = extract_n queue npop (npop + 1) in
           (* Sequential [push_head] *)
           List.iter (fun elt -> Mpsc_queue.push_head queue elt) lpush2;
@@ -264,9 +378,9 @@ let tests_one_consumer_one_producer =
   QCheck.
     [
       (* TEST 1 - one consumer one producer:
-         Sequential [push] then several [pop].
-         Checks [pop] order. *)
-      Test.make ~name:"seq_push_pop"
+         Sequential [push] then several [peek_opt] followed by [pop_opt].
+         Checks [peek_opt] and [pop_opt] are in FIFO order. *)
+      Test.make ~name:"seq_push_pop_opt_peek_opt"
         (pair (list int) small_nat)
         (fun (lpush, npop) ->
           (* Initialization *)
@@ -280,16 +394,16 @@ let tests_one_consumer_one_producer =
 
           (* Sequential test: we wait for the producer to be finished *)
           let () = Domain.join producer in
-          let popped = extract_n queue npop (npop + 1) in
+          let peeked, popped = extract_n_with_peek queue npop (npop + 1) in
 
           (* Testing property *)
           let expected =
             (keep_n_first npop lpush |> list_some)
             @ List.init (Int.max 0 (npop - List.length lpush)) (fun _ -> `None)
           in
-          popped = expected);
+          popped = expected && peeked = expected);
       (* TEST 2 - one consumer one producer:
-         Parallel [push] and [pop]. *)
+         Parallel [push], [pop_opt], [peek_opt]. *)
       Test.make ~name:"par_push_pop"
         (pair (list int) small_nat)
         (fun (lpush, npop) ->
@@ -315,10 +429,23 @@ let tests_one_consumer_one_producer =
           Barrier.await barrier;
 
           (* Consumer pops. *)
-          let popped = extract_n queue npop (npop + 1) in
+          let peeked, popped = extract_n_with_peek queue npop (npop + 1) in
           let closed = Domain.join producer in
           let popped_value =
             List.filter (function `Some _ -> true | _ -> false) popped
+          in
+
+          let rec check pushed peeked popped =
+            match (pushed, peeked, popped) with
+            | _, [], [] -> true
+            | _, `None :: peeked, `None :: popped -> check pushed peeked popped
+            | push :: pushed, `None :: peeked, `Some pop :: popped
+              when pop = push ->
+                check pushed peeked popped
+            | push :: pushed, `Some peek :: peeked, `Some pop :: popped
+              when pop = push && pop = peek ->
+                check pushed peeked popped
+            | _, _, _ -> false
           in
 
           (* Testing property *)
@@ -329,7 +456,8 @@ let tests_one_consumer_one_producer =
           && (List.for_all (function
                | `Some _ | `None -> true
                | `Closed -> false))
-               popped);
+               popped
+          && check lpush peeked popped);
       (* TEST 3 - one consumer one producer:
          Parallel [push] and [push_head]. *)
       Test.make ~name:"par_push_push_head"
@@ -370,9 +498,9 @@ let tests_one_consumer_one_producer =
              = list_some (lpush_head |> List.rev)
           && keep_n_last (List.length lpush) all_pushed = list_some lpush);
       (* TEST 4 - one consumer one producer
-         Consumer push then close while consumer pop until the queue
+         Consumer push then close while consumer pop_opt until the queue
          is empty and closed. *)
-      Test.make ~name:"par_pop_push2" (list int) (fun lpush ->
+      Test.make ~name:"par_pop_opt_push2" (list int) (fun lpush ->
           (* Initialisation*)
           let queue = Mpsc_queue.create () in
           let barrier = Barrier.create 2 in
@@ -480,7 +608,7 @@ let tests_one_consumer_two_producers =
          Checks that closing the queue prevent other producers to push
          and that popping at the same time works.
       *)
-      Test.make ~name:"par_push_close_pop"
+      Test.make ~name:"par_push_close_pop_opt"
         (pair (list int) (list int))
         (fun (lpush1, lpush2) ->
           (* Initialization *)
@@ -512,7 +640,7 @@ let tests_one_consumer_two_producers =
           let producer2 = Domain.spawn (fun () -> guard_push lpush2) in
 
           (* Waiting to make sure the producers have time to
-             start. However, as the consumer will [pop] until one of
+             start. However, as the consumer will [pop_opt] until one of
              the producer closes the queue, it is not a requirement to wait here. *)
           Barrier.await barrier;
 

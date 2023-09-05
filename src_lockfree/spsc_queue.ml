@@ -48,7 +48,31 @@ let push { array; head; tail; mask; _ } element =
     Array.set array (tail_val land mask) (Some element);
     Atomic.set tail (tail_val + 1))
 
+let try_push { array; head; tail; mask; _ } element =
+  let size = mask + 1 in
+  let head_val = Atomic.get head in
+  let tail_val = Atomic.get tail in
+  if head_val + size == tail_val then false
+  else (
+    Array.set array (tail_val land mask) (Some element);
+    Atomic.set tail (tail_val + 1);
+    true)
+
+exception Empty
+
 let pop { array; head; tail; mask; _ } =
+  let head_val = Atomic.get head in
+  let tail_val = Atomic.get tail in
+  if head_val == tail_val then raise Empty
+  else
+    let index = head_val land mask in
+    let v = Array.get array index in
+    (* allow gc to collect it *)
+    Array.set array index None;
+    Atomic.set head (head_val + 1);
+    match v with None -> assert false | Some v -> v
+
+let pop_opt { array; head; tail; mask; _ } =
   let head_val = Atomic.get head in
   let tail_val = Atomic.get tail in
   if head_val == tail_val then None
@@ -60,5 +84,22 @@ let pop { array; head; tail; mask; _ } =
     Atomic.set head (head_val + 1);
     assert (Option.is_some v);
     v
+
+let peek_opt { array; head; tail; mask; _ } =
+  let head_val = Atomic.get head in
+  let tail_val = Atomic.get tail in
+  if head_val == tail_val then None
+  else
+    let v = Array.get array @@ (head_val land mask) in
+    assert (Option.is_some v);
+    v
+
+let peek { array; head; tail; mask; _ } =
+  let head_val = Atomic.get head in
+  let tail_val = Atomic.get tail in
+  if head_val == tail_val then raise Empty
+  else
+    let v = Array.get array @@ (head_val land mask) in
+    match v with None -> assert false | Some v -> v
 
 let size { head; tail; _ } = Atomic.get tail - Atomic.get head
