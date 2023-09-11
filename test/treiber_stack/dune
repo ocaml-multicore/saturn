@@ -18,5 +18,6 @@
  (name stm_treiber_stack)
  (modules stm_treiber_stack)
  (libraries saturn qcheck-stm.sequential qcheck-stm.domain)
+ (enabled_if (= %{arch_sixtyfour} true))
  (action
   (run %{test} --verbose)))
