@@ -1,4 +1,4 @@
-open Lockfree.Michael_scott_queue
+open Saturn_lockfree.Queue
 
 let n_domains = 4
 
