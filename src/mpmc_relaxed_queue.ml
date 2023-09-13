@@ -1,4 +1,4 @@
-include Lockfree.Relaxed_queue
+include Saturn_lockfree.Relaxed_queue
 
 module Spin = struct
   let push = push

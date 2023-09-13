@@ -13,7 +13,7 @@
 
 (test
  (name qcheck_spsc_queue)
- (libraries saturn qcheck "qcheck-alcotest")
+ (libraries saturn barrier qcheck "qcheck-alcotest")
  (modules qcheck_spsc_queue))
 
 (test
