@@ -111,14 +111,14 @@ let tests_one_producer_one_stealer =
         (fun (l, n) ->
           (* Initialization *)
           let deque = Ws_deque.create () in
-          let sema = Semaphore.Binary.make false in
+          let barrier = Barrier.create 2 in
 
           (* The stealer domain steals n times. If a value [v] is stolen,
              it is registered as [Some v] in the returned list whereas any
              [Exit] raised is registered as a [None].*)
           let stealer =
             Domain.spawn (fun () ->
-                Semaphore.Binary.release sema;
+                Barrier.await barrier;
                 let steal' deque =
                   let res =
                     try Some (Ws_deque.steal deque) with Exit -> None
@@ -128,12 +128,9 @@ let tests_one_producer_one_stealer =
                 in
                 extract_n_of_deque deque steal' n)
           in
-          (* The semaphore is used to make sure the stealer domain has a
-             chance to begin its works before the main domain has finished
-             its. *)
-          while not (Semaphore.Binary.try_acquire sema) do
-            Domain.cpu_relax ()
-          done;
+
+          Barrier.await barrier;
+
           (* Main domain pushes.*)
           List.iter
             (fun elt ->
@@ -171,7 +168,7 @@ let tests_one_producer_one_stealer =
           assume (nsteal + npop > List.length l);
           (* Initialization - sequential pushes*)
           let deque = deque_of_list l in
-          let sema = Semaphore.Binary.make false in
+          let barrier = Barrier.create 2 in
           let _ = Random.self_init () in
           let pop' deque =
             let res = try Some (Ws_deque.pop deque) with Exit -> None in
@@ -184,7 +181,7 @@ let tests_one_producer_one_stealer =
              raised, it is registered as a [None].*)
           let stealer =
             Domain.spawn (fun () ->
-                Semaphore.Binary.release sema;
+                Barrier.await barrier;
                 let steal' deque =
                   let res =
                     try Some (Ws_deque.steal deque) with Exit -> None
@@ -194,11 +191,9 @@ let tests_one_producer_one_stealer =
                 in
                 extract_n_of_deque deque steal' nsteal)
           in
-          (* The semaphore is used to make sure the stealer domain has a
-             chance to begin its works before the main domain has finished its. *)
-          while not (Semaphore.Binary.try_acquire sema) do
-            Domain.cpu_relax ()
-          done;
+
+          Barrier.await barrier;
+
           (* Main domain pops and builds a list of popped values. *)
           let pop_list = extract_n_of_deque deque pop' npop in
 
@@ -231,16 +226,14 @@ let tests_one_producer_two_stealers =
         (fun (l, (ns1, ns2)) ->
           (* Initialization *)
           let deque = deque_of_list l in
-          let sema = Semaphore.Counting.make 2 in
+          let barrier = Barrier.create 2 in
 
           (* Steal calls *)
           let multiple_steal deque nsteal =
-            Semaphore.Counting.acquire sema;
+            Barrier.await barrier;
+
             let res = Array.make nsteal None in
-            while Semaphore.Counting.try_acquire sema do
-              Semaphore.Counting.release sema;
-              Domain.cpu_relax ()
-            done;
+
             for i = 0 to nsteal - 1 do
               res.(i) <- (try Some (Ws_deque.steal deque) with Exit -> None);
               Domain.cpu_relax ()

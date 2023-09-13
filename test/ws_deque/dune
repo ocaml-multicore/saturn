@@ -16,7 +16,7 @@
 
 (test
  (name qcheck_ws_deque)
- (libraries saturn qcheck "qcheck-alcotest")
+ (libraries barrier saturn qcheck "qcheck-alcotest")
  (enabled_if (not (and (= %{arch_sixtyfour} false) (= %{architecture} arm))))
  (modules qcheck_ws_deque))
 

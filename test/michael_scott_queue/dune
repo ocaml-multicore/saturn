@@ -12,7 +12,7 @@
 
 (test
  (name qcheck_michael_scott_queue)
- (libraries saturn qcheck qcheck-alcotest)
+ (libraries saturn barrier qcheck qcheck-alcotest)
  (modules qcheck_michael_scott_queue))
 
 (test

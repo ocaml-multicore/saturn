@@ -12,7 +12,7 @@
 
 (test
  (name qcheck_treiber_stack)
- (libraries saturn qcheck qcheck-alcotest)
+ (libraries saturn barrier qcheck qcheck-alcotest)
  (modules qcheck_treiber_stack))
 
 (test

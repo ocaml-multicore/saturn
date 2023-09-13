@@ -25,7 +25,8 @@ runs with parallelism:
 
 - make a domain repeat its operations. In particular, that usually works well
   when testing a single function.
-- use a semaphore to make all domains wait for each other before starting (see
+- use the provided [barrier](barrier/barrier.mli) module to make all domains
+  wait for each other before starting (see
   [these tests for example) ](ws_deque/qcheck_ws_deque.ml)).
 - if you are still not sure your tests have a good chance to run in parallel,
   try it in the top level, and use print or outputs to understand what is
