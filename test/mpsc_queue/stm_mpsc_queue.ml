@@ -50,7 +50,7 @@ module MPSCConf = struct
         (is_closed, if not is_closed then i :: List.rev s |> List.rev else s)
     | Push_head i -> (is_closed, if not (is_closed && s = []) then i :: s else s)
     | Is_empty -> (is_closed, s)
-    | Pop -> ( (is_closed, match s with [] -> s | _ :: s' -> s'))
+    | Pop -> (is_closed, match s with [] -> s | _ :: s' -> s')
     | Close -> (true, s)
 
   let precond _ _ = true

@@ -54,7 +54,7 @@ module CArray = struct
     (* Because [size t] is a power of two, [i mod (size t)] is the same as
        [i land (size t - 1)], that is, [i land (mask t)]. *)
     Int.logand i (mask t)
-    [@@inline]
+  [@@inline]
 
   let get t i = Array.unsafe_get t (index i t) [@@inline]
   let put t i v = Array.unsafe_set t (index i t) v [@@inline]
@@ -66,7 +66,7 @@ module CArray = struct
       dst
       (index top dst) (* number of elements: *)
       num
-    [@@inline]
+  [@@inline]
 
   let grow t top bottom =
     let sz = size t in
@@ -138,7 +138,7 @@ module M : S = struct
        deque array get garbage collected *)
     ptr := Obj.magic ();
     res
-    [@@inline]
+  [@@inline]
 
   let pop q =
     if size q = 0 then raise Exit

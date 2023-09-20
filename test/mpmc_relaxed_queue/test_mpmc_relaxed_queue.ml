@@ -134,8 +134,8 @@ let two_threads_spin_test () =
   Domain.join dequeuer |> ignore;
   ()
 
-let doms1 = if (Sys.word_size >= 64) then 4 else 1
-let doms2 = if (Sys.word_size >= 64) then 8 else 1
+let doms1 = if Sys.word_size >= 64 then 4 else 1
+let doms2 = if Sys.word_size >= 64 then 8 else 1
 
 let () =
   let open Alcotest in
@@ -151,7 +151,7 @@ let () =
          [
            test_case " 4 prod. 4 cons." `Slow (run_test doms1 doms1);
            test_case " 8 prod. 1 cons." `Slow (run_test doms2 1);
-           test_case " 1 prod. 8 cons." `Slow (run_test 1 doms2)
+           test_case " 1 prod. 8 cons." `Slow (run_test 1 doms2);
          ] );
      ]
      @
