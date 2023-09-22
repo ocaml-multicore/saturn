@@ -27,7 +27,7 @@ let () =
     |> String.concat ", "
   in
   let output =
-    Printf.sprintf {| {"name": "saturn", "results": [%s]}|} results
+    Printf.sprintf {|{"results": [%s]}|} results
     (* Cannot use Yojson rewriters as of today none works on OCaml 5.1.0.
        This at least verifies that the manually crafted JSON is well-formed.
 
