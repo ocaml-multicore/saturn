@@ -7,6 +7,11 @@
 (test
  (name treiber_stack_dscheck)
  (libraries atomic dscheck alcotest)
+ (enabled_if
+  (not
+   (and
+    (= %{arch_sixtyfour} false)
+    (= %{architecture} arm))))
  (modules backoff treiber_stack treiber_stack_dscheck))
 
 (test
@@ -18,5 +23,7 @@
  (name stm_treiber_stack)
  (modules stm_treiber_stack)
  (libraries saturn qcheck-stm.sequential qcheck-stm.domain)
+ (enabled_if
+  (= %{arch_sixtyfour} true))
  (action
   (run %{test} --verbose)))

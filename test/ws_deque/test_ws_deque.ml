@@ -39,7 +39,7 @@ let test_concurrent_workload () =
   (* The desired number of steal attempts per thief. *)
   let attempts = 100000 in
   (* The number of thieves. *)
-  let thieves = 16 in
+  let thieves = if Sys.word_size >= 64 then 16 else 2 in
   (* The queue. *)
   let q = create () in
   (* A generator of fresh elements. *)

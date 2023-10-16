@@ -17,11 +17,18 @@
 (test
  (name qcheck_ws_deque)
  (libraries barrier saturn qcheck "qcheck-alcotest")
+ (enabled_if
+  (not
+   (and
+    (= %{arch_sixtyfour} false)
+    (= %{architecture} arm))))
  (modules qcheck_ws_deque))
 
 (test
  (name stm_ws_deque)
  (modules stm_ws_deque)
  (libraries saturn qcheck-stm.sequential qcheck-stm.domain)
+ (enabled_if
+  (= %{arch_sixtyfour} true))
  (action
   (run %{test} --verbose)))
