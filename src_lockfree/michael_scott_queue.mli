@@ -46,7 +46,7 @@ val pop : 'a t -> 'a
     @raise Empty if [q] is empty. *)
 
 val pop_opt : 'a t -> 'a option
-(** [pop q] removes and returns the first element in queue [q], or
+(** [pop_opt q] removes and returns the first element in queue [q], or
     returns [None] if the queue is empty. *)
 
 val peek : 'a t -> 'a
@@ -55,7 +55,7 @@ val peek : 'a t -> 'a
     @raise Empty if [q] is empty. *)
 
 val peek_opt : 'a t -> 'a option
-(** [peek q] returns the first element in queue [q], or
+(** [peek_opt q] returns the first element in queue [q], or
     returns [None] if the queue is empty. *)
 
 type 'a cursor

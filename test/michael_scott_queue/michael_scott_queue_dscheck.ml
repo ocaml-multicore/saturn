@@ -113,7 +113,8 @@ let two_domains () =
                 (fun elt ->
                   (* even nums belong to thr 1, odd nums to thr 2 *)
                   Michael_scott_queue.push stack elt;
-                  lpop := Option.get (Michael_scott_queue.pop_opt stack) :: !lpop)
+                  lpop :=
+                    Option.get (Michael_scott_queue.pop_opt stack) :: !lpop)
                 lpush)
           |> ignore)
         lists;

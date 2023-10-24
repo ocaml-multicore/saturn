@@ -144,8 +144,8 @@ let tests_two_domains =
       (* TEST 1 - two domains doing multiple times one push then one pop_opt.
          Parallel [push] and [pop_opt].
       *)
-      Test.make ~name:"parallel_pop_opt_push"
-        (pair small_nat small_nat) (fun (npush1, npush2) ->
+      Test.make ~name:"parallel_pop_opt_push" (pair small_nat small_nat)
+        (fun (npush1, npush2) ->
           (* Initialization *)
           let queue = create () in
           let barrier = Barrier.create 2 in
@@ -202,8 +202,8 @@ let tests_two_domains =
          Two domains randomly pushs and pops in parallel. They stop as
          soon as they have finished pushing a list of element to
          push. *)
-      Test.make ~name:"parallel_pop_opt_push_random"
-        (pair small_nat small_nat) (fun (npush1, npush2) ->
+      Test.make ~name:"parallel_pop_opt_push_random" (pair small_nat small_nat)
+        (fun (npush1, npush2) ->
           (* Initialization *)
           let queue = create () in
           let barrier = Barrier.create 2 in
