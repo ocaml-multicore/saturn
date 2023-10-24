@@ -1,4 +1,4 @@
-open Lockfree
+open Saturn
 
 let workload num_elems num_threads add remove =
   let sl = Skiplist.create () in

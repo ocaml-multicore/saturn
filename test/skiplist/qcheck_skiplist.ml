@@ -1,4 +1,4 @@
-module Skiplist = Lockfree.Skiplist
+module Skiplist = Saturn.Skiplist
 
 let tests_sequential =
   QCheck.

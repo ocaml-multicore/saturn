@@ -2,7 +2,7 @@
 
 open QCheck
 open STM
-module Skiplist = Lockfree.Skiplist
+module Skiplist = Saturn.Skiplist
 
 module WSDConf = struct
   type cmd = Mem of int | Add of int | Remove of int
