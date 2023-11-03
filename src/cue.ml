@@ -210,10 +210,9 @@ let rec push t new_node old_tail =
         fix_tail t.tail new_node;
       release_all t.tail_waiters))
 
-let push t value =
+let[@inline] push t value =
   let new_node = Node { _next = Null; value; capacity = 0; counter = 0 } in
   push t new_node (Atomic.get t.tail)
-  [@@inline]
 
 (* *)
 
@@ -238,7 +237,6 @@ let rec try_push t new_node old_tail =
       release_all t.tail_waiters;
       true))
 
-let try_push t value =
+let[@inline] try_push t value =
   let new_node = Node { _next = Null; value; capacity = 0; counter = 0 } in
   try_push t new_node (Atomic.get t.tail)
-  [@@inline]
