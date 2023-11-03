@@ -107,9 +107,12 @@ let rec peek t =
             release_all t.tail_waiters;
             raise exn);
       peek t
-  | Node r as node ->
+  | Node r ->
       let value = r.value in
-      if Atomic.get t.head != node then peek t else value
+      (* The [Sys.opaque_identity] below prevents OCaml 5 from optimizing the
+         repeated load away. *)
+      if Atomic.get (Sys.opaque_identity t.head) != old_head then peek t
+      else value
 
 let[@inline] peek t = peek t
 
@@ -119,9 +122,12 @@ let rec peek_opt t =
   let head = Atomic.get t.head in
   match fenceless_get_next head with
   | Null -> None
-  | Node r as node ->
+  | Node r ->
       let value = r.value in
-      if Atomic.get t.head != node then peek_opt t else Some value
+      (* The [Sys.opaque_identity] below prevents OCaml 5 from optimizing the
+         repeated load away. *)
+      if Atomic.get (Sys.opaque_identity t.head) != head then peek_opt t
+      else Some value
 
 let[@inline] peek_opt t = peek_opt t
 
