@@ -75,7 +75,11 @@ let rec snapshot t =
   | Node _ as node ->
       Atomic.compare_and_set t.tail tail node |> ignore;
       snapshot t
-  | Null -> if Atomic.get t.head != head then snapshot t else (head, tail)
+  | Null ->
+      (* The [Sys.opaque_identity] below prevents OCaml 5 from optimizing the
+         repeated load away. *)
+      if Atomic.get (Sys.opaque_identity t.head) != head then snapshot t
+      else (head, tail)
 
 let length t =
   let head, tail = snapshot t in
