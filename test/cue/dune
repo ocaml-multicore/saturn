@@ -1,6 +1,12 @@
 (test
  (name stm_cue)
  (modules stm_cue)
- (libraries saturn qcheck-stm.sequential qcheck-stm.domain)
+ (libraries
+  saturn
+  qcheck-core
+  qcheck-core.runner
+  qcheck-stm.stm
+  qcheck-stm.sequential
+  qcheck-stm.domain)
  (action
   (run %{test} --verbose)))
