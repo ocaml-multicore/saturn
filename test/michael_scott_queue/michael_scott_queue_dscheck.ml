@@ -2,7 +2,7 @@ let drain queue =
   let remaining = ref 0 in
   while not (Michael_scott_queue.is_empty queue) do
     remaining := !remaining + 1;
-    assert (Option.is_some (Michael_scott_queue.pop queue))
+    assert (Option.is_some (Michael_scott_queue.pop_opt queue))
   done;
   !remaining
 
@@ -21,7 +21,7 @@ let producer_consumer () =
       let popped = ref 0 in
       Atomic.spawn (fun () ->
           for _ = 1 to items_total do
-            match Michael_scott_queue.pop queue with
+            match Michael_scott_queue.pop_opt queue with
             | None -> ()
             | Some v ->
                 assert (v == !popped + 1);
@@ -33,6 +33,47 @@ let producer_consumer () =
           Atomic.check (fun () ->
               let remaining = drain queue in
               !popped + remaining = items_total)))
+
+let producer_consumer_peek () =
+  Atomic.trace (fun () ->
+      let queue = Michael_scott_queue.create () in
+      let items_total = 1 in
+      let pushed = List.init items_total (fun i -> i) in
+
+      (* producer *)
+      Atomic.spawn (fun () ->
+          List.iter (fun elt -> Michael_scott_queue.push queue elt) pushed);
+
+      (* consumer *)
+      let popped = ref [] in
+      let peeked = ref [] in
+      Atomic.spawn (fun () ->
+          for _ = 1 to items_total do
+            peeked := Michael_scott_queue.peek_opt queue :: !peeked;
+            popped := Michael_scott_queue.pop_opt queue :: !popped
+          done);
+
+      (* checks*)
+      Atomic.final (fun () ->
+          Atomic.check (fun () ->
+              let rec check pushed peeked popped =
+                match (pushed, peeked, popped) with
+                | _, [], [] -> true
+                | _, None :: peeked, None :: popped ->
+                    check pushed peeked popped
+                | push :: pushed, None :: peeked, Some pop :: popped
+                  when push = pop ->
+                    check pushed peeked popped
+                | push :: pushed, Some peek :: peeked, Some pop :: popped
+                  when push = peek && push = pop ->
+                    check pushed peeked popped
+                | _, _, _ -> false
+              in
+              check pushed (List.rev !peeked) (List.rev !popped));
+          Atomic.check (fun () ->
+              let remaining = drain queue in
+              let popped = List.filter Option.is_some !popped in
+              List.length popped + remaining = items_total)))
 
 let two_producers () =
   Atomic.trace (fun () ->
@@ -72,7 +113,8 @@ let two_domains () =
                 (fun elt ->
                   (* even nums belong to thr 1, odd nums to thr 2 *)
                   Michael_scott_queue.push stack elt;
-                  lpop := Option.get (Michael_scott_queue.pop stack) :: !lpop)
+                  lpop :=
+                    Option.get (Michael_scott_queue.pop_opt stack) :: !lpop)
                 lpush)
           |> ignore)
         lists;
@@ -102,6 +144,7 @@ let () =
       ( "basic",
         [
           test_case "1-producer-1-consumer" `Slow producer_consumer;
+          test_case "1-producer-1-consumer-peek" `Slow producer_consumer_peek;
           test_case "2-producers" `Slow two_producers;
           test_case "2-domains" `Slow two_domains;
         ] );

@@ -28,7 +28,31 @@ let push q v =
     in
     loop b
 
+exception Empty
+
 let pop q =
+  let rec loop b =
+    let s = Atomic.get q.head in
+    match s with
+    | Nil -> raise Empty
+    | Next (v, next) ->
+        if Atomic.compare_and_set q.head s next then v
+        else (
+          Backoff.once b;
+          loop b)
+  in
+
+  let s = Atomic.get q.head in
+  match s with
+  | Nil -> raise Empty
+  | Next (v, next) ->
+      if Atomic.compare_and_set q.head s next then v
+      else
+        let b = Backoff.create () in
+        Backoff.once b;
+        loop b
+
+let pop_opt q =
   let rec loop b =
     let s = Atomic.get q.head in
     match s with

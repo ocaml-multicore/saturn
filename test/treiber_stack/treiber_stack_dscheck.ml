@@ -2,7 +2,7 @@ let drain stack =
   let remaining = ref 0 in
   while not (Treiber_stack.is_empty stack) do
     remaining := !remaining + 1;
-    assert (Option.is_some (Treiber_stack.pop stack))
+    assert (Option.is_some (Treiber_stack.pop_opt stack))
   done;
   !remaining
 
@@ -21,7 +21,7 @@ let producer_consumer () =
       let popped = ref 0 in
       Atomic.spawn (fun () ->
           for _ = 1 to items_total do
-            match Treiber_stack.pop stack with
+            match Treiber_stack.pop_opt stack with
             | None -> ()
             | Some _ -> popped := !popped + 1
           done);
@@ -51,7 +51,7 @@ let two_producers () =
           let rec get_items s =
             if Treiber_stack.is_empty s then []
             else
-              let item = Option.get (Treiber_stack.pop s) in
+              let item = Option.get (Treiber_stack.pop_opt s) in
               item :: get_items s
           in
           let items = get_items stack in
@@ -81,7 +81,7 @@ let two_consumers () =
           Atomic.spawn (fun () ->
               for _ = 1 to items_total / 2 do
                 (* even nums belong to thr 1, odd nums to thr 2 *)
-                list := Option.get (Treiber_stack.pop stack) :: !list
+                list := Option.get (Treiber_stack.pop_opt stack) :: !list
               done)
           |> ignore)
         lists;
@@ -117,7 +117,7 @@ let two_domains () =
                 (fun elt ->
                   (* even nums belong to thr 1, odd nums to thr 2 *)
                   Treiber_stack.push stack elt;
-                  lpop := Option.get (Treiber_stack.pop stack) :: !lpop)
+                  lpop := Option.get (Treiber_stack.pop_opt stack) :: !lpop)
                 lpush)
           |> ignore)
         lists;
@@ -154,8 +154,8 @@ let two_domains_more_pop () =
               List.iter
                 (fun elt ->
                   Treiber_stack.push stack elt;
-                  lpop := Treiber_stack.pop stack :: !lpop;
-                  lpop := Treiber_stack.pop stack :: !lpop)
+                  lpop := Treiber_stack.pop_opt stack :: !lpop;
+                  lpop := Treiber_stack.pop_opt stack :: !lpop)
                 lpush)
           |> ignore)
         lists;

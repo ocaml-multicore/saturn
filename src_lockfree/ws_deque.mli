@@ -34,6 +34,10 @@ module type S = sig
       @raise [Exit] if the queue is empty.
       *)
 
+  val pop_opt : 'a t -> 'a option
+  (** [pop_opt q] removes and returns the first element in queue [q], or
+    returns [None] if the queue is empty.  *)
+
   (** {1 Stealers function} *)
 
   val steal : 'a t -> 'a
@@ -42,7 +46,12 @@ module type S = sig
       queue [q].
 
       @raise [Exit] if the queue is empty.
-      *)
+  *)
+
+  val steal_opt : 'a t -> 'a option
+  (** [steal_opt q] removes and returns the last element from queue
+      [q], or returns [None] if the queue is empty. It should only be
+      invoked by domain which doesn't own the queue [q]. *)
 end
 
 module M : S

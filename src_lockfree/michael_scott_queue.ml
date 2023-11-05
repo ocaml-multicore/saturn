@@ -31,7 +31,9 @@ let create () =
 
 let is_empty { head; _ } = Atomic.get (Atomic.get head) == Nil
 
-let pop { head; _ } =
+exception Empty
+
+let pop_opt { head; _ } =
   let b = Backoff.create () in
   let rec loop () =
     let old_head = Atomic.get head in
@@ -44,6 +46,27 @@ let pop { head; _ } =
         loop ()
   in
   loop ()
+
+let pop { head; _ } =
+  let b = Backoff.create () in
+  let rec loop () =
+    let old_head = Atomic.get head in
+    match Atomic.get old_head with
+    | Nil -> raise Empty
+    | Next (value, next) when Atomic.compare_and_set head old_head next -> value
+    | _ ->
+        Backoff.once b;
+        loop ()
+  in
+  loop ()
+
+let peek_opt { head; _ } =
+  let old_head = Atomic.get head in
+  match Atomic.get old_head with Nil -> None | Next (value, _) -> Some value
+
+let peek { head; _ } =
+  let old_head = Atomic.get head in
+  match Atomic.get old_head with Nil -> raise Empty | Next (value, _) -> value
 
 let rec fix_tail tail new_tail =
   let old_tail = Atomic.get tail in
@@ -65,24 +88,6 @@ let push { tail; _ } value =
   find_tail_and_enq old_tail newnode;
   if not (Atomic.compare_and_set tail old_tail new_tail) then
     fix_tail tail new_tail
-
-let clean_until { head; _ } f =
-  let b = Backoff.create () in
-  let rec loop () =
-    let old_head = Atomic.get head in
-    match Atomic.get old_head with
-    | Nil -> ()
-    | Next (value, next) ->
-        if not (f value) then
-          if Atomic.compare_and_set head old_head next then (
-            Backoff.reset b;
-            loop ())
-          else (
-            Backoff.once b;
-            loop ())
-        else ()
-  in
-  loop ()
 
 type 'a cursor = 'a node
 

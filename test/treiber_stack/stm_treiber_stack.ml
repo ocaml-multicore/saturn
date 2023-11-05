@@ -41,14 +41,16 @@ module TSConf = struct
   let run c d =
     match c with
     | Push i -> Res (unit, Treiber_stack.push d i)
-    | Pop -> Res (option int, Treiber_stack.pop d)
+    | Pop -> Res (result int exn, protect Treiber_stack.pop d)
     | Is_empty -> Res (bool, Treiber_stack.is_empty d)
 
   let postcond c (s : state) res =
     match (c, res) with
     | Push _, Res ((Unit, _), _) -> true
-    | Pop, Res ((Option Int, _), res) -> (
-        match s with [] -> res = None | j :: _ -> res = Some j)
+    | Pop, Res ((Result (Int, Exn), _), res) -> (
+        match s with
+        | [] -> res = Error Treiber_stack.Empty
+        | j :: _ -> res = Ok j)
     | Is_empty, Res ((Bool, _), res) -> res = (s = [])
     | _, _ -> false
 end

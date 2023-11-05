@@ -6,12 +6,13 @@ open Util
 module Mpsc_queue = Saturn.Single_consumer_queue
 
 module MPSCConf = struct
-  type cmd = Push of int | Pop | Push_head of int | Is_empty | Close
+  type cmd = Push of int | Pop | Peek | Push_head of int | Is_empty | Close
 
   let show_cmd c =
     match c with
     | Push i -> "Push " ^ string_of_int i
     | Pop -> "Pop"
+    | Peek -> "Peek"
     | Push_head i -> "Push_head" ^ string_of_int i
     | Is_empty -> "Is_empty"
     | Close -> "Close"
@@ -35,6 +36,8 @@ module MPSCConf = struct
       (Gen.oneof
          [
            Gen.return Pop;
+           Gen.return Peek;
+           Gen.map (fun i -> Push i) int_gen;
            Gen.map (fun i -> Push_head i) int_gen;
            Gen.return Is_empty;
            Gen.return Close;
@@ -51,6 +54,7 @@ module MPSCConf = struct
     | Push_head i -> (is_closed, if not (is_closed && s = []) then i :: s else s)
     | Is_empty -> (is_closed, s)
     | Pop -> (is_closed, match s with [] -> s | _ :: s' -> s')
+    | Peek -> (is_closed, s)
     | Close -> (true, s)
 
   let precond _ _ = true
@@ -58,7 +62,8 @@ module MPSCConf = struct
   let run c d =
     match c with
     | Push i -> Res (result unit exn, protect (fun d -> Mpsc_queue.push d i) d)
-    | Pop -> Res (result (option int) exn, protect Mpsc_queue.pop d)
+    | Pop -> Res (result int exn, protect Mpsc_queue.pop d)
+    | Peek -> Res (result int exn, protect Mpsc_queue.peek d)
     | Push_head i ->
         Res (result unit exn, protect (fun d -> Mpsc_queue.push_head d i) d)
     | Is_empty -> Res (result bool exn, protect Mpsc_queue.is_empty d)
@@ -71,11 +76,12 @@ module MPSCConf = struct
     | Push_head _, Res ((Result (Unit, Exn), _), res) ->
         if is_closed && s = [] then res = Error Mpsc_queue.Closed
         else res = Ok ()
-    | Pop, Res ((Result (Option Int, Exn), _), res) -> (
+    | (Pop | Peek), Res ((Result (Int, Exn), _), res) -> (
         match s with
         | [] ->
-            if is_closed then res = Error Mpsc_queue.Closed else res = Ok None
-        | x :: _ -> res = Ok (Some x))
+            if is_closed then res = Error Mpsc_queue.Closed
+            else res = Error Mpsc_queue.Empty
+        | x :: _ -> res = Ok x)
     | Is_empty, Res ((Result (Bool, Exn), _), res) ->
         if is_closed && s = [] then res = Error Mpsc_queue.Closed
         else res = Ok (s = [])

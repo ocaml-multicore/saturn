@@ -33,7 +33,9 @@ module type S = sig
   val create : unit -> 'a t
   val push : 'a t -> 'a -> unit
   val pop : 'a t -> 'a
+  val pop_opt : 'a t -> 'a option
   val steal : 'a t -> 'a
+  val steal_opt : 'a t -> 'a option
 end
 
 module CArray = struct
@@ -169,6 +171,8 @@ module M : S = struct
             set_next_shrink q);
           release out)
 
+  let pop_opt q = try Some (pop q) with Exit -> None
+
   let rec steal q =
     let t = Atomic.get q.top in
     let b = Atomic.get q.bottom in
@@ -181,4 +185,6 @@ module M : S = struct
       else (
         Domain.cpu_relax ();
         steal q)
+
+  let steal_opt q = try Some (steal q) with Exit -> None
 end

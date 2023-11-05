@@ -13,7 +13,7 @@ let tests_sequential =
           (* Testing property *)
           not (is_empty queue));
       (* TEST 2 - push, pop until empty *)
-      Test.make ~name:"push_pop_until_empty" (list int) (fun lpush ->
+      Test.make ~name:"push_pop_opt_until_empty" (list int) (fun lpush ->
           (* Building a random queue *)
           let queue = create () in
           List.iter (push queue) lpush;
@@ -22,12 +22,12 @@ let tests_sequential =
           let count = ref 0 in
           while not (is_empty queue) do
             incr count;
-            ignore (pop queue)
+            ignore (pop_opt queue)
           done;
 
           (* Testing property *)
-          pop queue = None && !count = List.length lpush);
-      (* TEST 3 - push, pop, check FIFO  *)
+          pop_opt queue = None && !count = List.length lpush);
+      (* TEST 3 - push, pop_opt, check FIFO  *)
       Test.make ~name:"fifo" (list int) (fun lpush ->
           (* Building a random queue *)
           let queue = create () in
@@ -37,33 +37,59 @@ let tests_sequential =
           let insert v = out := v :: !out in
 
           for _ = 1 to List.length lpush do
-            match pop queue with None -> assert false | Some v -> insert v
+            match pop_opt queue with None -> assert false | Some v -> insert v
           done;
 
           (* Testing property *)
           lpush = List.rev !out);
+      (* TEST 3 - push, pop_opt, peek_opt check FIFO  *)
+      Test.make ~name:"fifo_peek_opt" (list int) (fun lpush ->
+          (* Building a random queue *)
+          let queue = create () in
+          List.iter (push queue) lpush;
+
+          let pop = ref [] in
+          let peek = ref [] in
+          let insert out v = out := v :: !out in
+
+          for _ = 1 to List.length lpush do
+            match peek_opt queue with
+            | None -> assert false
+            | Some v -> (
+                insert peek v;
+                match pop_opt queue with
+                | None -> assert false
+                | Some v -> insert pop v)
+          done;
+
+          (* Testing property *)
+          lpush = List.rev !pop && lpush = List.rev !peek);
     ]
 
 let tests_one_consumer_one_producer =
   QCheck.
     [
       (* TEST 1 - one consumer one producer:
-         Parallel [push] and [pop]. *)
-      Test.make ~count:10_000 ~name:"parallel_fifo" (list int) (fun lpush ->
+         Parallel [push] and [pop_opt]. *)
+      Test.make ~name:"parallel_fifo" (list int) (fun lpush ->
           (* Initialization *)
           let queue = create () in
+          let barrier = Barrier.create 2 in
 
           (* Producer pushes. *)
           let producer =
-            Domain.spawn (fun () -> List.iter (push queue) lpush)
+            Domain.spawn (fun () ->
+                Barrier.await barrier;
+                List.iter (push queue) lpush)
           in
 
+          Barrier.await barrier;
           let fifo =
             List.fold_left
               (fun acc item ->
                 let popped = ref None in
                 while Option.is_none !popped do
-                  popped := pop queue
+                  popped := pop_opt queue
                 done;
                 acc && item = Option.get !popped)
               true lpush
@@ -73,16 +99,53 @@ let tests_one_consumer_one_producer =
           (* Ensure nothing is left behind. *)
           Domain.join producer;
           fifo && empty);
+      (* TEST 2 - one consumer one producer:
+         Parallel [push] and [peek_opt] and [pop_opt]. *)
+      Test.make ~name:"parallel_peek" (list int) (fun pushed ->
+          (* Initialization *)
+          let npush = List.length pushed in
+          let queue = create () in
+          let barrier = Barrier.create 2 in
+
+          (* Producer pushes. *)
+          let producer =
+            Domain.spawn (fun () ->
+                Barrier.await barrier;
+                List.iter (push queue) pushed)
+          in
+
+          let peeked = ref [] in
+          let popped = ref [] in
+          Barrier.await barrier;
+          for _ = 1 to npush do
+            peeked := peek_opt queue :: !peeked;
+            popped := pop_opt queue :: !popped
+          done;
+
+          Domain.join producer;
+          let rec check = function
+            | _, [], [] -> true
+            | pushed, None :: peeked, None :: popped ->
+                check (pushed, peeked, popped)
+            | push :: pushed, None :: peeked, Some pop :: popped when push = pop
+              ->
+                check (pushed, peeked, popped)
+            | push :: pushed, Some peek :: peeked, Some pop :: popped
+              when push = peek && push = pop ->
+                check (pushed, peeked, popped)
+            | _, _, _ -> false
+          in
+          check (pushed, List.rev @@ !peeked, List.rev @@ !popped));
     ]
 
 let tests_two_domains =
   QCheck.
     [
-      (* TEST 1 - two domains doing multiple times one push then one pop.
-         Parallel [push] and [pop].
+      (* TEST 1 - two domains doing multiple times one push then one pop_opt.
+         Parallel [push] and [pop_opt].
       *)
-      Test.make ~count:10_000 ~name:"parallel_pop_push"
-        (pair small_nat small_nat) (fun (npush1, npush2) ->
+      Test.make ~name:"parallel_pop_opt_push" (pair small_nat small_nat)
+        (fun (npush1, npush2) ->
           (* Initialization *)
           let queue = create () in
           let barrier = Barrier.create 2 in
@@ -97,7 +160,7 @@ let tests_two_domains =
               (fun elt ->
                 push queue elt;
                 Domain.cpu_relax ();
-                pop queue)
+                pop_opt queue)
               lpush
           in
 
@@ -134,13 +197,13 @@ let tests_two_domains =
           all_elt_in && is_sorted push1_pop1 && is_sorted push1_pop2
           && is_sorted push2_pop1 && is_sorted push2_pop2);
       (* TEST 2 -
-         Parallel [push] and [pop] with two domains
+         Parallel [push] and [pop_opt] with two domains
 
          Two domains randomly pushs and pops in parallel. They stop as
          soon as they have finished pushing a list of element to
          push. *)
-      Test.make ~count:10_000 ~name:"parallel_pop_push_random"
-        (pair small_nat small_nat) (fun (npush1, npush2) ->
+      Test.make ~name:"parallel_pop_opt_push_random" (pair small_nat small_nat)
+        (fun (npush1, npush2) ->
           (* Initialization *)
           let queue = create () in
           let barrier = Barrier.create 2 in
@@ -163,7 +226,7 @@ let tests_two_domains =
                     loop xs popped)
               else (
                 incr consecutive_pop;
-                let p = pop queue in
+                let p = pop_opt queue in
                 loop lpush (p :: popped))
             in
             loop lpush []
@@ -193,7 +256,7 @@ let tests_two_domains =
           (* Pop everything that is still on the queue *)
           let popped3 =
             let rec loop popped =
-              match pop queue with
+              match pop_opt queue with
               | None -> popped
               | Some v -> loop (v :: popped)
             in

@@ -102,7 +102,7 @@ let rec close (t : 'a t) =
         (* Retry *)
         close t)
 
-let pop t =
+let pop_opt t =
   let p = t.head in
   (* [p] is the previously-popped item. *)
   let node = Atomic.get p.next in
@@ -114,6 +114,33 @@ let pop t =
       node.value <- Obj.magic ();
       (* So it can be GC'd *)
       Some v)
+
+exception Empty
+
+let pop t =
+  let p = t.head in
+  (* [p] is the previously-popped item. *)
+  let node = Atomic.get p.next in
+  Node.fold node
+    ~none:(fun () -> raise Empty)
+    ~some:(fun node ->
+      t.head <- node;
+      let v = node.value in
+      node.value <- Obj.magic ();
+      (* So it can be GC'd *)
+      v)
+
+let peek_opt t =
+  let p = t.head in
+  (* [p] is the previously-popped item. *)
+  let node = Atomic.get p.next in
+  Node.fold node ~none:(fun () -> None) ~some:(fun node -> Some node.value)
+
+let peek t =
+  let p = t.head in
+  (* [p] is the previously-popped item. *)
+  let node = Atomic.get p.next in
+  Node.fold node ~none:(fun () -> raise Empty) ~some:(fun node -> node.value)
 
 let is_empty t =
   Node.fold (Atomic.get t.head.next)
