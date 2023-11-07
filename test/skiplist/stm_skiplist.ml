@@ -20,7 +20,7 @@ module WSDConf = struct
   end)
 
   type state = Sint.t
-  type sut = Skiplist.t
+  type sut = int Skiplist.t
 
   let arb_cmd _s =
     let int_gen = Gen.nat in

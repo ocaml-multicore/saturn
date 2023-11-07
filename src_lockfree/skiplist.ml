@@ -1,29 +1,34 @@
-type markable_reference = { node : node; marked : bool }
+type 'a markable_reference = { node : 'a node; marked : bool }
 (** markable reference: stores a reference to a node and has a field to specify if it is marked *)
 
-and node = { key : int; height : int; next : markable_reference Atomic.t array }
+and 'a node = {
+  key : 'a;
+  height : int;
+  next : 'a markable_reference Atomic.t array;
+}
 
 exception Failed_snip
 
-type t = { head : node; max_height : int }
+type 'a t = { head : 'a node; max_height : int }
 
-let null_node = { key = Int.max_int; height = 0; next = [||] }
+let min = Obj.new_block 5 5 |> Obj.obj
+let max = Obj.new_block 5 5 |> Obj.obj
+let null_node = { key = max; height = 0; next = [||] }
+
+(** create_dummy_node_array: Creates a new array with the different node for each index *)
+let[@inline] create_dummy_node_array sl =
+  Array.make (sl.max_height + 1) null_node
 
 (** create_new_node: creates a new node with some value and height *)
-let create_new_node value height =
+let[@inline] create_new_node value height =
   let next =
     Array.init (height + 1) (fun _ ->
         Atomic.make { node = null_node; marked = false })
   in
   { key = value; height; next }
 
-(** create_dummy_node_array: Creates a new array with the different node for each index *)
-let create_dummy_node_array sl =
-  let arr = Array.make (sl.max_height + 1) null_node in
-  arr
-
 (** Get a random level from 1 till max_height (both included) *)
-let get_random_level sl =
+let[@inline] get_random_level sl =
   let rec count_level cur_level =
     if cur_level == sl.max_height || Random.bool () then cur_level
     else count_level (cur_level + 1)
@@ -32,12 +37,12 @@ let get_random_level sl =
 
 (** Create a new skiplist *)
 let create ?(max_height = 10) () =
-  let tail = create_new_node Int.max_int max_height in
+  let tail = create_new_node max max_height in
   let next =
     Array.init (max_height + 1) (fun _ ->
         Atomic.make { node = tail; marked = false })
   in
-  let head = { key = Int.min_int; height = max_height; next } in
+  let head = { key = min; height = max_height; next } in
   { head; max_height }
 
 (** Compares old_node and old_mark with the atomic reference and if they are the same then
@@ -68,7 +73,7 @@ let find_in (key, preds, succs, sl) =
         let { node = curr; marked = _ } = Atomic.get prev.next.(level) in
         let { node = succ; marked = mark } = Atomic.get curr.next.(level) in
         iterate (prev, curr, succ, mark, level)
-    else if curr.key < key then
+    else if curr.key != max && curr.key < key then
       let { node = new_succ; marked = mark } = Atomic.get succ.next.(level) in
       iterate (curr, succ, new_succ, mark, level)
     else (prev, curr)
@@ -80,7 +85,9 @@ let find_in (key, preds, succs, sl) =
       let prev, curr = iterate (prev, curr, succ, mark, level) in
       preds.(level) <- prev;
       succs.(level) <- curr;
-      if level > 0 then update_arrays prev (level - 1) else curr.key == key
+      if level > 0 then update_arrays prev (level - 1)
+      else if curr.key == max then false
+      else curr.key = key
     with Failed_snip -> update_arrays head sl.max_height
   in
   update_arrays head sl.max_height
@@ -137,7 +144,7 @@ let mem sl key =
       let curr = succ in
       let { node = succ; marked = mark } = Atomic.get curr.next.(level) in
       search (pred, curr, succ, mark, level)
-    else if curr.key < key then
+    else if curr.key != max && curr.key < key then
       let pred = curr in
       let curr = succ in
       let { node = succ; marked = mark } = Atomic.get curr.next.(level) in
@@ -147,7 +154,8 @@ let mem sl key =
       let { node = curr; marked = _ } = Atomic.get pred.next.(level) in
       let { node = succ; marked = mark } = Atomic.get curr.next.(level) in
       search (pred, curr, succ, mark, level)
-    else curr.key == key
+    else if curr.key == max then false
+    else curr.key = key
   in
   let pred = sl.head in
   let { node = curr; marked = _ } = Atomic.get pred.next.(sl.max_height) in
