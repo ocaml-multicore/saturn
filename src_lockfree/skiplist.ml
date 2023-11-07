@@ -27,23 +27,24 @@ let[@inline] create_new_node value height =
   in
   { key = value; height; next }
 
-(** Get a random level from 1 till max_height (both included) *)
+(** Get a random level from 0 till max_height - 1 *)
 let[@inline] get_random_level sl =
   let rec count_level cur_level =
-    if cur_level == sl.max_height || Random.bool () then cur_level
+    if  Random.bool () then cur_level
+    else if cur_level == sl.max_height then count_level 0
     else count_level (cur_level + 1)
   in
-  count_level 1
+  if sl.max_height = 0 then 0 else count_level 0
 
 (** Create a new skiplist *)
 let create ?(max_height = 10) () =
-  let tail = create_new_node max max_height in
+  let max_height = Int.max max_height 1 in
+  let tail = create_new_node max (max_height - 1) in
   let next =
-    Array.init (max_height + 1) (fun _ ->
-        Atomic.make { node = tail; marked = false })
+    Array.init max_height (fun _ -> Atomic.make { node = tail; marked = false })
   in
-  let head = { key = min; height = max_height; next } in
-  { head; max_height }
+  let head = { key = min; height = max_height - 1; next } in
+  { head; max_height = max_height - 1 }
 
 (** Compares old_node and old_mark with the atomic reference and if they are the same then
     Replaces the value in the atomic with node and mark *)
@@ -132,7 +133,7 @@ let add sl key =
           set_next ();
           if level < top_level then update_levels (level + 1)
         in
-        update_levels 1;
+        if top_level > 0 then update_levels 1;
         true
   in
   repeat ()
@@ -199,6 +200,6 @@ let remove sl key =
       else if mark then false
       else update_bottom_level succ
     in
-    update_upper_levels nodeHeight;
+    if nodeHeight > 0 then update_upper_levels nodeHeight;
     let { node = succ; marked = _ } = Atomic.get nodeToRemove.next.(0) in
     update_bottom_level succ

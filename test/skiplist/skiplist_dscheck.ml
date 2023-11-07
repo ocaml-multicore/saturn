@@ -20,7 +20,7 @@ let _two_mem () =
 let _two_add () =
   Atomic.trace (fun () ->
       Random.init 0;
-      let sl = create ~max_height:2 () in
+      let sl = create ~max_height:3 () in
       let added1 = ref false in
       let added2 = ref false in
 
@@ -33,7 +33,7 @@ let _two_add () =
 let _two_add_same () =
   Atomic.trace (fun () ->
       Random.init 0;
-      let sl = create ~max_height:2 () in
+      let sl = create ~max_height:3 () in
       let added1 = ref false in
       let added2 = ref false in
 
@@ -48,7 +48,7 @@ let _two_add_same () =
 let _two_remove_same () =
   Atomic.trace (fun () ->
       Random.init 0;
-      let sl = create ~max_height:1 () in
+      let sl = create ~max_height:2 () in
       let added1 = ref false in
       let removed1 = ref false in
       let removed2 = ref false in
@@ -67,7 +67,7 @@ let _two_remove_same () =
 let _two_remove () =
   Atomic.trace (fun () ->
       Random.init 0;
-      let sl = create ~max_height:1 () in
+      let sl = create ~max_height:2 () in
       let added1 = ref false in
       let removed1 = ref false in
       let removed2 = ref false in
