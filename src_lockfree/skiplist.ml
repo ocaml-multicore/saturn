@@ -1,5 +1,4 @@
 type 'a markable_reference = { node : 'a node; marked : bool }
-(** markable reference: stores a reference to a node and has a field to specify if it is marked *)
 
 and 'a node = {
   key : 'a;
@@ -15,11 +14,9 @@ let min = Obj.new_block 5 5 |> Obj.obj
 let max = Obj.new_block 5 5 |> Obj.obj
 let null_node = { key = max; height = 0; next = [||] }
 
-(** create_dummy_node_array: Creates a new array with the different node for each index *)
 let[@inline] create_dummy_node_array sl =
   Array.make (sl.max_height + 1) null_node
 
-(** create_new_node: creates a new node with some value and height *)
 let[@inline] create_new_node value height =
   let next =
     Array.init (height + 1) (fun _ ->
@@ -27,16 +24,14 @@ let[@inline] create_new_node value height =
   in
   { key = value; height; next }
 
-(** Get a random level from 0 till max_height - 1 *)
 let[@inline] get_random_level sl =
   let rec count_level cur_level =
-    if  Random.bool () then cur_level
+    if Random.bool () then cur_level
     else if cur_level == sl.max_height then count_level 0
     else count_level (cur_level + 1)
   in
   if sl.max_height = 0 then 0 else count_level 0
 
-(** Create a new skiplist *)
 let create ?(max_height = 10) () =
   let max_height = Int.max max_height 1 in
   let tail = create_new_node max (max_height - 1) in
@@ -49,13 +44,12 @@ let create ?(max_height = 10) () =
 (** Compares old_node and old_mark with the atomic reference and if they are the same then
     Replaces the value in the atomic with node and mark *)
 let compare_and_set_mark_ref (atomic, old_node, old_mark, node, mark) =
-  let current = Atomic.get atomic in
-  let set_mark_ref () =
-    Atomic.compare_and_set atomic current { node; marked = mark }
+  let ({ node = current_node; marked = current_marked } as current) =
+    Atomic.get atomic
   in
-  let current_node = current.node in
-  current_node == old_node && current.marked = old_mark
-  && ((current_node == node && current.marked = mark) || set_mark_ref ())
+  current_node == old_node && current_marked = old_mark
+  && ((current_node == node && current_marked = mark)
+     || Atomic.compare_and_set atomic current { node; marked = mark })
 
 (** Returns true if key is found within the skiplist else false;
     Irrespective of return value, fills the preds and succs array with
@@ -138,7 +132,6 @@ let add sl key =
   in
   repeat ()
 
-(** Returns true if the key is within the skiplist, else returns false *)
 let mem sl key =
   let rec search (pred, curr, succ, mark, level) =
     if mark then
@@ -163,7 +156,6 @@ let mem sl key =
   let { node = succ; marked = mark } = Atomic.get curr.next.(sl.max_height) in
   search (pred, curr, succ, mark, sl.max_height)
 
-(** Returns true if the removal was successful and returns false if the key is not present within the skiplist *)
 let remove sl key =
   let preds = create_dummy_node_array sl in
   let succs = create_dummy_node_array sl in
