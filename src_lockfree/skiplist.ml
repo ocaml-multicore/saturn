@@ -65,9 +65,8 @@ let find_in (key, preds, succs, sl) =
       in
       if not snip then raise Failed_snip
       else
-        let { node = curr; marked = _ } = Atomic.get prev.next.(level) in
-        let { node = succ; marked = mark } = Atomic.get curr.next.(level) in
-        iterate (prev, curr, succ, mark, level)
+        let { node = new_succ; marked = mark } = Atomic.get succ.next.(level) in
+        iterate (prev, succ, new_succ, mark, level)
     else if curr.key != max && curr.key < key then
       let { node = new_succ; marked = mark } = Atomic.get succ.next.(level) in
       iterate (curr, succ, new_succ, mark, level)
@@ -135,14 +134,11 @@ let add sl key =
 let mem sl key =
   let rec search (pred, curr, succ, mark, level) =
     if mark then
-      let curr = succ in
-      let { node = succ; marked = mark } = Atomic.get curr.next.(level) in
-      search (pred, curr, succ, mark, level)
+      let { node = new_succ; marked = mark } = Atomic.get succ.next.(level) in
+      search (pred, succ, new_succ, mark, level)
     else if curr.key != max && curr.key < key then
-      let pred = curr in
-      let curr = succ in
-      let { node = succ; marked = mark } = Atomic.get curr.next.(level) in
-      search (pred, curr, succ, mark, level)
+      let { node = new_succ; marked = mark } = Atomic.get succ.next.(level) in
+      search (curr, succ, new_succ, mark, level)
     else if level > 0 then
       let level = level - 1 in
       let { node = curr; marked = _ } = Atomic.get pred.next.(level) in
