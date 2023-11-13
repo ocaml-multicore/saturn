@@ -1,3 +1,14 @@
+### 0.4.1
+
+- pop_opt, peek, peek_opt functions for queue (@lyrm)
+- Remove 'name' field from benchmark results (@Sudha247)
+- Better README (@lyrm, @Sudha247, @polytypic, @art-w, @christinerose, @ILeandersson, @kayceesrk)
+- Add .nojekyll (@lyrm)
+- Add a barrier module in tests to replace the use of Semaphore (@lyrm, @polytypic)
+- Remove .merlin and .ocp-indent files. (@lyrm)
+- Correct issue caused by saturn_lockfree module beeing named Lockfree (@lyrm)
+- Generate opam files automatically (@sudha247)
+
 ## 0.4.0
 
 - Add docs and rename/refactor to add a lockfree package (@lyrm)
