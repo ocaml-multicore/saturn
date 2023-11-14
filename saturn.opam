@@ -2,7 +2,9 @@
 opam-version: "2.0"
 synopsis:
   "Collection of parallelism-safe data structures for Multicore OCaml"
-maintainer: ["Carine Morel" "KC Sivaramakrishnan" "Sudha Parimala"]
+maintainer: [
+  "Carine Morel" "KC Sivaramakrishnan" "Sudha Parimala" "Vesa Karvonen"
+]
 authors: ["KC Sivaramakrishnan"]
 license: "ISC"
 homepage: "https://github.com/ocaml-multicore/saturn"
