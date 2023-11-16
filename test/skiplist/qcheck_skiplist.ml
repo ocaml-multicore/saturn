@@ -1,4 +1,8 @@
-module Skiplist = Saturn.Skiplist
+module Skiplist = struct
+  include Saturn.Skiplist
+
+  let try_add s k = try_add s k ()
+end
 
 module IntSet = Set.Make (Int)
 
@@ -13,11 +17,11 @@ let tests_sequential =
     [
       (* TEST 1: add*)
       Test.make ~name:"add" (list int) (fun lpush ->
-          let sl = Skiplist.create () in
+          let sl = Skiplist.create ~compare:Int.compare () in
           let rec add_all_elems seen l =
             match l with
             | h :: t ->
-                if Skiplist.add sl h <> IntSet.mem h seen then
+                if Skiplist.try_add sl h <> IntSet.mem h seen then
                   add_all_elems (IntSet.add h seen) t
                 else false
             | [] -> true
@@ -26,12 +30,12 @@ let tests_sequential =
       (*TEST 2: add_remove*)
       Test.make ~name:"add_remove" (list int) (fun lpush ->
           let lpush = uniq lpush in
-          let sl = Skiplist.create () in
-          List.iter (fun key -> ignore (Skiplist.add sl key)) lpush;
+          let sl = Skiplist.create ~compare:Int.compare () in
+          List.iter (fun key -> ignore (Skiplist.try_add sl key)) lpush;
           let rec remove_all_elems l =
             match l with
             | h :: t ->
-                if Skiplist.remove sl h then remove_all_elems t else false
+                if Skiplist.try_remove sl h then remove_all_elems t else false
             | [] -> true
           in
           remove_all_elems lpush);
@@ -39,11 +43,11 @@ let tests_sequential =
       Test.make ~name:"add_find" (list int) (fun lpush ->
           let lpush = uniq lpush in
           let lpush = Array.of_list lpush in
-          let sl = Skiplist.create () in
+          let sl = Skiplist.create ~compare:Int.compare () in
           let len = Array.length lpush in
           let pos = Array.sub lpush 0 (len / 2) in
           let neg = Array.sub lpush (len / 2) (len / 2) in
-          Array.iter (fun key -> ignore @@ Skiplist.add sl key) pos;
+          Array.iter (fun key -> ignore @@ Skiplist.try_add sl key) pos;
           let rec check_pos index =
             if index < len / 2 then
               if Skiplist.mem sl pos.(index) then check_pos (index + 1)
@@ -60,9 +64,9 @@ let tests_sequential =
       (* TEST 4: add_remove_find *)
       Test.make ~name:"add_remove_find" (list int) (fun lpush ->
           let lpush = uniq lpush in
-          let sl = Skiplist.create () in
-          List.iter (fun key -> ignore @@ Skiplist.add sl key) lpush;
-          List.iter (fun key -> ignore @@ Skiplist.remove sl key) lpush;
+          let sl = Skiplist.create ~compare:Int.compare () in
+          List.iter (fun key -> ignore @@ Skiplist.try_add sl key) lpush;
+          List.iter (fun key -> ignore @@ Skiplist.try_remove sl key) lpush;
           let rec not_find_all_elems l =
             match l with
             | h :: t ->
@@ -79,14 +83,14 @@ let tests_two_domains =
       (* TEST 1: Two domains doing multiple adds *)
       Test.make ~name:"parallel_add" (pair small_nat small_nat)
         (fun (npush1, npush2) ->
-          let sl = Skiplist.create () in
+          let sl = Skiplist.create ~compare:Int.compare () in
           let sema = Semaphore.Binary.make false in
           let lpush1 = List.init npush1 (fun i -> i) in
           let lpush2 = List.init npush2 (fun i -> i + npush1) in
           let work lpush =
             List.map
               (fun elt ->
-                let completed = Skiplist.add sl elt in
+                let completed = Skiplist.try_add sl elt in
                 Domain.cpu_relax ();
                 completed)
               lpush
@@ -114,7 +118,7 @@ let tests_two_domains =
       (* TEST 2: Two domains doing multiple one push and one pop in parallel *)
       Test.make ~count:10000 ~name:"parallel_add_remove"
         (pair small_nat small_nat) (fun (npush1, npush2) ->
-          let sl = Skiplist.create () in
+          let sl = Skiplist.create ~compare:Int.compare () in
           let sema = Semaphore.Binary.make false in
 
           let lpush1 = List.init npush1 (fun i -> i) in
@@ -123,9 +127,9 @@ let tests_two_domains =
           let work lpush =
             List.map
               (fun elt ->
-                ignore @@ Skiplist.add sl elt;
+                ignore @@ Skiplist.try_add sl elt;
                 Domain.cpu_relax ();
-                Skiplist.remove sl elt)
+                Skiplist.try_remove sl elt)
               lpush
           in
 
@@ -152,10 +156,10 @@ let tests_two_domains =
       (* TEST 3: Parallel push and pop using the same elements in two domains
  *)
       Test.make ~name:"parallel_add_remove_same_list" (list int) (fun lpush ->
-          let sl = Skiplist.create () in
+          let sl = Skiplist.create ~compare:Int.compare () in
           let sema = Semaphore.Binary.make false in
-          let add_all_elems l = List.map (Skiplist.add sl) l in
-          let remove_all_elems l = List.map (Skiplist.remove sl) l in
+          let add_all_elems l = List.map (Skiplist.try_add sl) l in
+          let remove_all_elems l = List.map (Skiplist.try_remove sl) l in
 
           let domain1 =
             Domain.spawn (fun () ->
@@ -185,7 +189,7 @@ let tests_two_domains =
 
 let () =
   let to_alcotest = List.map QCheck_alcotest.to_alcotest in
-  Alcotest.run "Skip List"
+  Alcotest.run "QCheck Skiplist"
     [
       ("test_sequential", to_alcotest tests_sequential);
       ("tests_two_domains", to_alcotest tests_two_domains);

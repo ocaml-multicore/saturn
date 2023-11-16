@@ -1,7 +1,7 @@
 open Saturn
 
 let workload num_elems num_threads add remove =
-  let sl = Skiplist.create () in
+  let sl = Skiplist.create ~compare:Int.compare () in
   let elems = Array.init num_elems (fun _ -> Random.int 10000) in
   let push () =
     Domain.spawn (fun () ->
@@ -9,9 +9,9 @@ let workload num_elems num_threads add remove =
         for i = 0 to (num_elems - 1) / num_threads do
           Domain.cpu_relax ();
           let prob = Random.float 1.0 in
-          if prob < add then Skiplist.add sl (Random.int 10000) |> ignore
+          if prob < add then Skiplist.try_add sl (Random.int 10000) () |> ignore
           else if prob >= add && prob < add +. remove then
-            Skiplist.remove sl (Random.int 10000) |> ignore
+            Skiplist.try_remove sl (Random.int 10000) |> ignore
           else Skiplist.mem sl elems.(i) |> ignore
         done;
         start_time)
