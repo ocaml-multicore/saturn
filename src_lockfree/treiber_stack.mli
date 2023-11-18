@@ -16,7 +16,7 @@ val push : 'a t -> 'a -> unit
 (** [push s v] adds the element [v] at the top of stack [s]. *)
 
 exception Empty
-(** Raised when {!pop} or {!peek} is applied to an empty queue. *)
+(** Raised when {!pop} is applied to an empty queue. *)
 
 val pop : 'a t -> 'a
 (** [pop s] removes and returns the topmost element in the
