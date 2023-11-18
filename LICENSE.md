@@ -1,5 +1,6 @@
 Copyright (c) 2016 KC Sivaramakrishnan
 Copyright (C) 2022 Thomas Leonard
+Copyright (C) 2023 Vesa Karvonen
 
 Permission to use, copy, modify, and/or distribute this software for any
 purpose with or without fee is hereby granted, provided that the above
