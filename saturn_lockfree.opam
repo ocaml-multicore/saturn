@@ -16,7 +16,7 @@ depends: [
   "qcheck-stm" {>= "0.2" & with-test}
   "qcheck-alcotest" {>= "0.18.1" & with-test}
   "yojson" {>= "2.0.2" & with-test}
-  "dscheck" {>= "0.1.0" & with-test}
+  "dscheck" {>= "0.2.0" & with-test}
   "odoc" {with-doc}
 ]
 build: [

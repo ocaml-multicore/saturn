@@ -18,7 +18,7 @@
   (qcheck-stm (and (>= 0.2) :with-test))
   (qcheck-alcotest (and (>= 0.18.1) :with-test))
   (yojson (and (>= 2.0.2) :with-test))
-  (dscheck (and (>= 0.1.0) :with-test))))
+  (dscheck (and (>= 0.2.0) :with-test))))
 (package
  (name saturn_lockfree)
  (synopsis "Collection of lock-free data structures for Multicore OCaml")
@@ -30,4 +30,4 @@
   (qcheck-stm (and (>= 0.2) :with-test))
   (qcheck-alcotest (and (>= 0.18.1) :with-test))
   (yojson (and (>= 2.0.2) :with-test))
-  (dscheck (and (>= 0.1.0) :with-test))))
+  (dscheck (and (>= 0.2.0) :with-test))))
