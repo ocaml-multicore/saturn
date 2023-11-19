@@ -31,7 +31,7 @@ module type S = sig
       [q].It should only be invoked by the domain which owns the queue
       [q].
 
-      @raise [Exit] if the queue is empty.
+      @raise Exit if the queue is empty.
       *)
 
   val pop_opt : 'a t -> 'a option
@@ -45,7 +45,7 @@ module type S = sig
       [q]. It should only be invoked by domain which doesn't own the
       queue [q].
 
-      @raise [Exit] if the queue is empty.
+      @raise Exit if the queue is empty.
   *)
 
   val steal_opt : 'a t -> 'a option
