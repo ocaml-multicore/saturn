@@ -13,6 +13,7 @@
   (ocaml (>= 4.12))
   (domain_shims (>= 0.1.0))
   (saturn_lockfree (= :version))
+  (backoff (>= 0.1.0))
   (alcotest (and (>= 1.7.0) :with-test))
   (qcheck (and (>= 0.18.1) :with-test))
   (qcheck-stm (and (>= 0.2) :with-test))
@@ -25,6 +26,7 @@
  (depends
   (ocaml (>= 4.12))
   (domain_shims (>= 0.1.0))
+  (backoff (>= 0.1.0))
   (alcotest (and (>= 1.7.0) :with-test))
   (qcheck (and (>= 0.18.1) :with-test))
   (qcheck-stm (and (>= 0.2) :with-test))

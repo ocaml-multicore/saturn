@@ -1,18 +1,15 @@
 (rule
- (copy ../../src_lockfree/backoff.ml backoff.ml))
-
-(rule
  (copy ../../src_lockfree/michael_scott_queue.ml michael_scott_queue.ml))
 
 (test
  (name michael_scott_queue_dscheck)
- (libraries atomic dscheck alcotest)
+ (libraries atomic dscheck alcotest backoff)
  (enabled_if
   (not
    (and
     (= %{arch_sixtyfour} false)
     (= %{architecture} arm))))
- (modules backoff michael_scott_queue michael_scott_queue_dscheck))
+ (modules michael_scott_queue michael_scott_queue_dscheck))
 
 (test
  (name qcheck_michael_scott_queue)

@@ -1,18 +1,15 @@
 (rule
- (copy ../../src_lockfree/backoff.ml backoff.ml))
-
-(rule
  (copy ../../src_lockfree/treiber_stack.ml treiber_stack.ml))
 
 (test
  (name treiber_stack_dscheck)
- (libraries atomic dscheck alcotest)
+ (libraries atomic dscheck alcotest backoff)
  (enabled_if
   (not
    (and
     (= %{arch_sixtyfour} false)
     (= %{architecture} arm))))
- (modules backoff treiber_stack treiber_stack_dscheck))
+ (modules treiber_stack treiber_stack_dscheck))
 
 (test
  (name qcheck_treiber_stack)
