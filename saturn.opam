@@ -13,6 +13,7 @@ depends: [
   "ocaml" {>= "4.12"}
   "domain_shims" {>= "0.1.0"}
   "saturn_lockfree" {= version}
+  "backoff" {>= "0.1.0"}
   "alcotest" {>= "1.7.0" & with-test}
   "qcheck" {>= "0.18.1" & with-test}
   "qcheck-stm" {>= "0.2" & with-test}

@@ -35,30 +35,30 @@ exception Empty
 
 let pop_opt { head; _ } =
   let b = Backoff.create () in
-  let rec loop () =
+  let rec loop b =
     let old_head = Atomic.get head in
     match Atomic.get old_head with
     | Nil -> None
     | Next (value, next) when Atomic.compare_and_set head old_head next ->
         Some value
     | _ ->
-        Backoff.once b;
-        loop ()
+        let b = Backoff.once b in
+        loop b
   in
-  loop ()
+  loop b
 
 let pop { head; _ } =
   let b = Backoff.create () in
-  let rec loop () =
+  let rec loop b =
     let old_head = Atomic.get head in
     match Atomic.get old_head with
     | Nil -> raise Empty
     | Next (value, next) when Atomic.compare_and_set head old_head next -> value
     | _ ->
-        Backoff.once b;
-        loop ()
+        let b = Backoff.once b in
+        loop b
   in
-  loop ()
+  loop b
 
 let peek_opt { head; _ } =
   let old_head = Atomic.get head in

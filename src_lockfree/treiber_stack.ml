@@ -14,17 +14,16 @@ let push q v =
   let new_node = Next (v, head) in
   if Atomic.compare_and_set q.head head new_node then ()
   else
-    let b = Backoff.create () in
-    Backoff.once b;
+    let b = Backoff.create () |> Backoff.once in
 
     (* retry *)
     let rec loop b =
       let head = Atomic.get q.head in
       let new_node = Next (v, head) in
       if Atomic.compare_and_set q.head head new_node then ()
-      else (
-        Backoff.once b;
-        loop b)
+      else
+        let b = Backoff.once b in
+        loop b
     in
     loop b
 
@@ -37,9 +36,9 @@ let pop q =
     | Nil -> raise Empty
     | Next (v, next) ->
         if Atomic.compare_and_set q.head s next then v
-        else (
-          Backoff.once b;
-          loop b)
+        else
+          let b = Backoff.once b in
+          loop b
   in
 
   let s = Atomic.get q.head in
@@ -48,8 +47,7 @@ let pop q =
   | Next (v, next) ->
       if Atomic.compare_and_set q.head s next then v
       else
-        let b = Backoff.create () in
-        Backoff.once b;
+        let b = Backoff.create () |> Backoff.once in
         loop b
 
 let pop_opt q =
@@ -59,9 +57,9 @@ let pop_opt q =
     | Nil -> None
     | Next (v, next) ->
         if Atomic.compare_and_set q.head s next then Some v
-        else (
-          Backoff.once b;
-          loop b)
+        else
+          let b = Backoff.once b in
+          loop b
   in
 
   let s = Atomic.get q.head in
@@ -70,6 +68,5 @@ let pop_opt q =
   | Next (v, next) ->
       if Atomic.compare_and_set q.head s next then Some v
       else
-        let b = Backoff.create () in
-        Backoff.once b;
+        let b = Backoff.create () |> Backoff.once in
         loop b
