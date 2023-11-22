@@ -1,21 +1,31 @@
 module Skiplist = Saturn.Skiplist
 
+module IntSet = Set.Make (Int)
+
+let[@tail_mod_cons] rec uniq ?(seen = IntSet.empty) = function
+  | [] -> []
+  | x :: xs ->
+      if IntSet.mem x seen then uniq ~seen xs
+      else x :: uniq ~seen:(IntSet.add x seen) xs
+
 let tests_sequential =
   QCheck.
     [
       (* TEST 1: add*)
       Test.make ~name:"add" (list int) (fun lpush ->
-          assume (lpush <> []);
           let sl = Skiplist.create () in
-          let rec add_all_elems l =
+          let rec add_all_elems seen l =
             match l with
-            | h :: t -> if Skiplist.add sl h then add_all_elems t else false
+            | h :: t ->
+                if Skiplist.add sl h <> IntSet.mem h seen then
+                  add_all_elems (IntSet.add h seen) t
+                else false
             | [] -> true
           in
-          add_all_elems lpush);
+          add_all_elems IntSet.empty lpush);
       (*TEST 2: add_remove*)
       Test.make ~name:"add_remove" (list int) (fun lpush ->
-          let lpush = List.sort_uniq Int.compare lpush in
+          let lpush = uniq lpush in
           let sl = Skiplist.create () in
           List.iter (fun key -> ignore (Skiplist.add sl key)) lpush;
           let rec remove_all_elems l =
@@ -27,7 +37,7 @@ let tests_sequential =
           remove_all_elems lpush);
       (*TEST 3: add_find*)
       Test.make ~name:"add_find" (list int) (fun lpush ->
-          let lpush = List.sort_uniq Int.compare lpush in
+          let lpush = uniq lpush in
           let lpush = Array.of_list lpush in
           let sl = Skiplist.create () in
           let len = Array.length lpush in
@@ -49,7 +59,7 @@ let tests_sequential =
           check_pos 0 && check_neg 0);
       (* TEST 4: add_remove_find *)
       Test.make ~name:"add_remove_find" (list int) (fun lpush ->
-          let lpush = List.sort_uniq Int.compare lpush in
+          let lpush = uniq lpush in
           let sl = Skiplist.create () in
           List.iter (fun key -> ignore @@ Skiplist.add sl key) lpush;
           List.iter (fun key -> ignore @@ Skiplist.remove sl key) lpush;
