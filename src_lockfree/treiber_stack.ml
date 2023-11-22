@@ -9,64 +9,38 @@ let create () =
 
 let is_empty q = match Atomic.get q.head with Nil -> true | Next _ -> false
 
-let push q v =
+let rec push backoff q v =
   let head = Atomic.get q.head in
   let new_node = Next (v, head) in
   if Atomic.compare_and_set q.head head new_node then ()
   else
-    let b = Backoff.create () |> Backoff.once in
+    let backoff = Backoff.once backoff in
+    push backoff q v
 
-    (* retry *)
-    let rec loop b =
-      let head = Atomic.get q.head in
-      let new_node = Next (v, head) in
-      if Atomic.compare_and_set q.head head new_node then ()
-      else
-        let b = Backoff.once b in
-        loop b
-    in
-    loop b
+let push q v = push Backoff.default q v
 
 exception Empty
 
-let pop q =
-  let rec loop b =
-    let s = Atomic.get q.head in
-    match s with
-    | Nil -> raise Empty
-    | Next (v, next) ->
-        if Atomic.compare_and_set q.head s next then v
-        else
-          let b = Backoff.once b in
-          loop b
-  in
-
+let rec pop backoff q =
   let s = Atomic.get q.head in
   match s with
   | Nil -> raise Empty
   | Next (v, next) ->
       if Atomic.compare_and_set q.head s next then v
       else
-        let b = Backoff.create () |> Backoff.once in
-        loop b
+        let backoff = Backoff.once backoff in
+        pop backoff q
 
-let pop_opt q =
-  let rec loop b =
-    let s = Atomic.get q.head in
-    match s with
-    | Nil -> None
-    | Next (v, next) ->
-        if Atomic.compare_and_set q.head s next then Some v
-        else
-          let b = Backoff.once b in
-          loop b
-  in
+let pop q = pop Backoff.default q
 
+let rec pop_opt backoff q =
   let s = Atomic.get q.head in
   match s with
   | Nil -> None
   | Next (v, next) ->
       if Atomic.compare_and_set q.head s next then Some v
       else
-        let b = Backoff.create () |> Backoff.once in
-        loop b
+        let backoff = Backoff.once backoff in
+        pop_opt backoff q
+
+let pop_opt q = pop_opt Backoff.default q
