@@ -34,7 +34,7 @@ let is_empty { head; _ } = Atomic.get (Atomic.get head) == Nil
 exception Empty
 
 let pop_opt { head; _ } =
-  let b = Backoff.create () in
+  let b = Backoff.default in
   let rec loop b =
     let old_head = Atomic.get head in
     match Atomic.get old_head with
@@ -48,7 +48,7 @@ let pop_opt { head; _ } =
   loop b
 
 let pop { head; _ } =
-  let b = Backoff.create () in
+  let b = Backoff.default in
   let rec loop b =
     let old_head = Atomic.get head in
     match Atomic.get old_head with
