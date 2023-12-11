@@ -1,0 +1,6 @@
+(test
+ (name stm_once)
+ (modules stm_once)
+ (libraries qcheck-stm.sequential qcheck-stm.domain)
+ (action
+  (run %{test} --verbose)))
