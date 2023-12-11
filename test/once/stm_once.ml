@@ -30,6 +30,39 @@ end = struct
         end
 end
 
+module Chainable : sig
+  type !'a t
+
+  val make : 'a -> 'a t
+  val modify_as_once : 'a t -> ('a -> 'a * Once.t) -> Once.t
+  val get : 'a t -> 'a
+end = struct
+  type 'a state = { value : 'a; self : Once.t; next : Once.t }
+  type 'a t = 'a state Atomic.t
+
+  let make value = Atomic.make { value; self = Once.used; next = Once.used }
+
+  let modify_as_once t fn =
+    let rec retry self =
+      let before = atomic_get t in
+      Once.perform before.next;
+      Once.use before.self;
+      if Once.is_alive self then begin
+        let value, next = fn before.value in
+        let after = { value; self; next } in
+        if Atomic.compare_and_set t before after then Once.perform after.next
+        else retry self
+      end
+    in
+    Once.create retry
+
+  let get t =
+    let r = atomic_get t in
+    Once.perform r.next;
+    Once.use r.self;
+    r.value
+end
+
 module Size : sig
   type t
 
@@ -38,32 +71,17 @@ module Size : sig
   val decr_as_once : t -> Once.t -> Once.t
   val get : t -> int
 end = struct
-  type state = { self : Once.t; next : Once.t; value : int }
-  type t = state Atomic.t
+  type t = int Chainable.t
 
-  let create () = Atomic.make { self = Once.used; next = Once.used; value = 0 }
+  let create () = Chainable.make 0
 
-  let add_as_once t delta next =
-    let rec retry self =
-      let before = atomic_get t in
-      Once.perform before.next;
-      Once.use before.self;
-      if Once.is_alive self then begin
-        let after = { self; next; value = before.value + delta } in
-        if Atomic.compare_and_set t before after then Once.perform after.next
-        else retry self
-      end
-    in
-    Once.create retry
+  let incr_as_once t next =
+    Chainable.modify_as_once t @@ fun value -> (value + 1, next)
 
-  let incr_as_once t next = add_as_once t 1 next
-  let decr_as_once t next = add_as_once t (-1) next
+  let decr_as_once t next =
+    Chainable.modify_as_once t @@ fun value -> (value - 1, next)
 
-  let get t =
-    let r = atomic_get t in
-    Once.perform r.next;
-    Once.use r.self;
-    r.value
+  let get = Chainable.get
 end
 
 module Stack : sig
@@ -76,63 +94,17 @@ module Stack : sig
   val pop : 'a t -> 'a option
   val pop_and_push : 'a t -> 'a t -> unit
 end = struct
-  type ('a, _) state =
-    | Nil : ('a, [> `Nil ]) state
-    | Cons : 'a * ('a, [ `Nil | `Cons ]) state -> ('a, [> `Cons ]) state
-    | Mark : {
-        self : Once.t;
-        next : Once.t;
-        state : ('a, [> `Nil | `Cons ]) state;
-      }
-        -> ('a, [ `Mark ]) state
+  type 'a t = 'a list Chainable.t
 
-  type 'a root = Root : ('a, _) state -> 'a root [@@unboxed]
-  type 'a t = 'a root Atomic.t
-
-  let create () = Atomic.make (Root Nil)
+  let create () = Chainable.make []
 
   let push_as_once t x next =
-    let rec retry self =
-      match atomic_get t with
-      | Root (Mark before_r) as before ->
-          Once.perform before_r.next;
-          Once.use before_r.self;
-          Atomic.compare_and_set t before (Root before_r.state) |> ignore;
-          if Once.is_alive self then retry self
-      | Root ((Nil | Cons _) as xs) as before ->
-          if Once.is_alive self then
-            let state = Cons (x, xs) in
-            let (Mark r as after) = Mark { self; next; state } in
-            if Atomic.compare_and_set t before (Root after) then
-              Once.perform r.next
-            else retry self
-    in
-    Once.create retry
+    Chainable.modify_as_once t (fun xs -> (x :: xs, next))
 
-  let pop_as_once t on =
-    let rec retry self =
-      match atomic_get t with
-      | Root (Mark before_r) as before ->
-          Once.perform before_r.next;
-          Once.use before_r.self;
-          Atomic.compare_and_set t before (Root before_r.state) |> ignore;
-          if Once.is_alive self then retry self
-      | Root Nil as before ->
-          if Once.is_alive self then
-            let next = on None in
-            let (Mark r as after) = Mark { self; next; state = Nil } in
-            if Atomic.compare_and_set t before (Root after) then
-              Once.perform r.next
-            else retry self
-      | Root (Cons (x, state)) as before ->
-          if Once.is_alive self then
-            let next = on (Some x) in
-            let (Mark r as after) = Mark { self; next; state } in
-            if Atomic.compare_and_set t before (Root after) then
-              Once.perform r.next
-            else retry self
-    in
-    Once.create retry
+  let pop_as_once t fn =
+    Chainable.modify_as_once t (function
+      | [] -> ([], fn None)
+      | x :: xs -> (xs, fn (Some x)))
 
   let pop s =
     let result = ref None in
