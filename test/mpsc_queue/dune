@@ -3,18 +3,18 @@
 
 (test
  (name mpsc_queue_dscheck)
- (libraries atomic dscheck alcotest)
+ (libraries atomic dscheck alcotest multicore-magic backoff)
  (modules mpsc_queue mpsc_queue_dscheck))
 
 (test
  (name qcheck_mpsc_queue)
- (libraries saturn barrier qcheck qcheck-alcotest)
+ (libraries saturn barrier qcheck qcheck-alcotest multicore-magic backoff)
  (modules qcheck_mpsc_queue))
 
 (test
  (name stm_mpsc_queue)
  (modules stm_mpsc_queue)
- (libraries saturn qcheck-stm.sequential qcheck-stm.domain)
+ (libraries saturn qcheck-stm.sequential qcheck-stm.domain multicore-magic backoff)
  (enabled_if
   (= %{arch_sixtyfour} true))
  (action

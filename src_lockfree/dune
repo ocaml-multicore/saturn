@@ -1,4 +1,4 @@
 (library
  (name saturn_lockfree)
  (public_name saturn_lockfree)
- (libraries domain_shims))
+ (libraries domain_shims multicore-magic))

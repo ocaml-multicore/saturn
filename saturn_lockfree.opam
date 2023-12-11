@@ -17,6 +17,7 @@ depends: [
   "qcheck-alcotest" {>= "0.18.1" & with-test}
   "yojson" {>= "2.0.2" & with-test}
   "dscheck" {>= "0.2.0" & with-test}
+  "multicore-magic" {>= "2.0.0"}
   "odoc" {with-doc}
 ]
 build: [
