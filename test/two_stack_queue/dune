@@ -1,0 +1,7 @@
+(test
+ (package saturn_lockfree)
+ (name stm_two_stack_queue)
+ (modules stm_two_stack_queue)
+ (libraries saturn_lockfree qcheck-core qcheck-stm.stm stm_run)
+ (action
+  (run %{test} --verbose)))
