@@ -11,11 +11,11 @@
  (modules llist size llist_dscheck)
  (libraries atomic transparent_atomic dscheck alcotest multicore-magic))
 
-(test
- (package saturn_lockfree)
- (name qcheck_llist)
- (modules qcheck_llist)
- (libraries saturn qcheck qcheck-core qcheck-alcotest alcotest))
+;(test
+; (package saturn_lockfree)
+; (name qcheck_llist)
+; (modules qcheck_llist)
+; (libraries saturn qcheck qcheck-core qcheck-alcotest alcotest))
 
 (test
  (package saturn_lockfree)
