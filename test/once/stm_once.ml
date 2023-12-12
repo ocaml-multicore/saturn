@@ -52,17 +52,17 @@ end = struct
     Once.use state.self
 
   let modify_as_once t fn =
-    let rec retry self =
+    let rec retry backoff self =
       let before = atomic_get t in
       perform before;
       if Once.is_alive self then begin
         let value, next = fn before.value in
         let after = { value; self; next } in
         if Atomic.compare_and_set t before after then perform after
-        else retry self
+        else retry (Backoff.once backoff) self
       end
     in
-    Once.create retry
+    Once.create @@ retry Backoff.default
 
   let get t =
     let state = atomic_get t in
