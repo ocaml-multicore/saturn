@@ -44,10 +44,10 @@ let rec pop t =
   | x :: xs -> t.head <- xs; x
   | Closed -> raise Closed
   | Open ->
-    (* We know the tail is open because we just saw the head was open
-       and we don't run concurrently with [close]. *)
+    (* We know the tail is open because we just saw the head was open *)
+    (* we can run concurrently with close *)
     match Atomic.exchange t.tail Open with
-    | Closed -> assert false
+    | Closed -> pop t
     | Open -> raise Empty
     | tail ->
       t.head <- rev_append tail Open;
@@ -61,7 +61,7 @@ let rec pop_opt t =
     (* We know the tail is open because we just saw the head was open
        and we don't run concurrently with [close]. *)
     match Atomic.exchange t.tail Open with
-    | Closed -> assert false
+    | Closed -> pop_opt t
     | Open -> None
     | tail ->
       t.head <- rev_append tail Open;
@@ -81,7 +81,7 @@ let peek t =
       | Open -> assert false
       | Closed -> assert false
     end
-    
+
 let peek_opt t =
   match t.head with
   | x :: _ -> Some x
@@ -99,17 +99,18 @@ let peek_opt t =
 
 let close t =
   match Atomic.exchange t.tail Closed with
-  | Closed -> invalid_arg "Lf_queue already closed!"
+  | Closed -> raise Closed
   | xs -> t.head <- t.head @ rev_append xs Closed
 
-let is_empty t =
+let rec is_empty t =
   match t.head with
   | _ :: _ -> false
   | Closed -> raise Closed
   | Open ->
     match Atomic.get t.tail with
     | _ :: _ -> false
-    | _ -> true
+    | Closed -> is_empty t
+    | Open -> true
 
 (* let create () = {
   head = Open;
