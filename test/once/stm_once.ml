@@ -9,25 +9,27 @@ module Once : sig
   val is_alive : t -> bool
   val perform : t -> unit
 end = struct
-  type t = Used | Alive of { mutable alive : bool; action : t -> unit }
+  type t = Used | Alive of { mutable action : t -> unit }
 
   let used = Used
-  let create action = Alive { alive = true; action }
+  let create action = Alive { action }
 
   let is_alive t =
-    match Sys.opaque_identity t with Used -> false | Alive r -> r.alive
+    match Sys.opaque_identity t with
+    | Used -> false
+    | Alive r -> r.action != Obj.magic ()
 
   let use t =
-    match Sys.opaque_identity t with Used -> () | Alive r -> r.alive <- false
+    match Sys.opaque_identity t with
+    | Used -> ()
+    | Alive r -> if r.action != Obj.magic () then r.action <- Obj.magic ()
 
   let perform t =
     match Sys.opaque_identity t with
     | Used -> ()
     | Alive r as t ->
-        if r.alive then begin
-          r.action t;
-          r.alive <- false
-        end
+        let action = r.action in
+        if action != Obj.magic () then action t
 end
 
 module Chainable : sig
@@ -37,30 +39,35 @@ module Chainable : sig
   val modify_as_once : 'a t -> ('a -> 'a * Once.t) -> Once.t
   val get : 'a t -> 'a
 end = struct
-  type 'a state = { value : 'a; self : Once.t; next : Once.t }
+  type 'a state = { mutable next : Once.t; self : Once.t; value : 'a }
   type 'a t = 'a state Atomic.t
 
-  let make value = Atomic.make { value; self = Once.used; next = Once.used }
+  let make value = Atomic.make { next = Once.used; self = Once.used; value }
+
+  let perform state =
+    if state.next != Once.used then begin
+      Once.perform state.next;
+      if state.next != Once.used then state.next <- Once.used
+    end;
+    Once.use state.self
 
   let modify_as_once t fn =
     let rec retry self =
       let before = atomic_get t in
-      Once.perform before.next;
-      Once.use before.self;
+      perform before;
       if Once.is_alive self then begin
         let value, next = fn before.value in
         let after = { value; self; next } in
-        if Atomic.compare_and_set t before after then Once.perform after.next
+        if Atomic.compare_and_set t before after then perform after
         else retry self
       end
     in
     Once.create retry
 
   let get t =
-    let r = atomic_get t in
-    Once.perform r.next;
-    Once.use r.self;
-    r.value
+    let state = atomic_get t in
+    perform state;
+    state.value
 end
 
 module Size : sig
