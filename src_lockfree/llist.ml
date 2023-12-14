@@ -80,17 +80,6 @@ let rec try_add_rec t key value prev curr =
       true
     end
     else
-      (* What can make the CAS fail :
-
-         A- prev value has been marked
-
-         B- some nodes have been added after prev
-
-         Case A, [find_node_rec] is going to restart from the beginning of the
-         linked list, so no problem.
-
-         Case B, [prev] is still before the node with want to add, so it's
-         shorter to retry from it then from [t.head]. *)
       try_add_rec t key value prev (Atomic.get prev)
 
 and try_add t key value = try_add_rec t key value t.head (Atomic.get t.head)

@@ -3,10 +3,7 @@ open STM
 module Llist = Saturn.Linked_list
 
 module WSDConf = struct
-  type cmd = Try_add of int * int | Try_remove of int | Mem of int
-
-  (* | Replace of int * int
-       | Find_opt of int*)
+  type cmd = Try_add of int * int | Try_remove of int | Mem of int | Length
 
   let show_cmd c =
     match c with
@@ -14,17 +11,15 @@ module WSDConf = struct
         "Try_add (" ^ string_of_int k ^ "," ^ string_of_int v ^ ")"
     | Try_remove k -> "Try_remove " ^ string_of_int k
     | Mem k -> "Mem " ^ string_of_int k
-  (* | Find_opt k -> "Find_opt " ^ string_of_int k
-     | Replace (k, v) ->
-         "Replace (" ^ string_of_int k ^ "," ^ string_of_int v ^ ")"*)
+    | Length -> "Length"
 
-  module S = Map.Make (struct
+  module Sint = Map.Make (struct
     type t = int
 
     let compare = compare
   end)
 
-  type state = int S.t
+  type state = int Sint.t
   type sut = (int, int) Llist.t
 
   let arb_cmd _s =
@@ -35,21 +30,19 @@ module WSDConf = struct
            Gen.map2 (fun k v -> Try_add (k, v)) int_gen int_gen;
            Gen.map (fun i -> Try_remove i) int_gen;
            Gen.map (fun i -> Mem i) int_gen;
-           (* Gen.map2 (fun k v -> Replace (k, v)) int_gen int_gen;
-                Gen.map (fun i -> Find_opt i) int_gen;*)
+           Gen.return Length;
          ])
 
-  let init_state = S.empty
+  let init_state = Sint.empty
   let init_sut () = Llist.create ~compare ()
   let cleanup _ = ()
 
   let next_state c s =
     match c with
-    | Try_add (k, v) -> if S.mem k s then s else S.add k v s
-    | Try_remove k -> if S.mem k s then S.remove k s else s
+    | Try_add (k, v) -> if Sint.mem k s then s else Sint.add k v s
+    | Try_remove k -> if Sint.mem k s then Sint.remove k s else s
     | Mem _ -> s
-  (*| Replace (k, v) -> S.add k v s
-      | Find_opt _ -> s*)
+    | Length -> s
 
   let precond _ _ = true
 
@@ -58,16 +51,14 @@ module WSDConf = struct
     | Try_add (k, v) -> Res (bool, Llist.try_add t k v)
     | Try_remove k -> Res (bool, Llist.try_remove t k)
     | Mem k -> Res (bool, Llist.mem t k)
-  (*| Replace (k, v) -> Res (unit, Llist.replace k v t |> ignore)
-      | Find_opt k -> Res (option int, Llist.find_opt k t)*)
+    | Length -> Res (int, Llist.length t)
 
   let postcond c (s : state) res =
     match (c, res) with
-    | Try_add (k, _v), Res ((Bool, _), res) -> S.mem k s = not res
-    | Try_remove k, Res ((Bool, _), res) -> S.mem k s = res
-    | Mem k, Res ((Bool, _), res) -> S.mem k s = res
-    (*| Replace (_k, _v), Res ((Unit, _), _) -> true
-        | Find_opt k, Res ((Option Int, _), res) -> S.find_opt k s = res*)
+    | Try_add (k, _v), Res ((Bool, _), res) -> Sint.mem k s = not res
+    | Try_remove k, Res ((Bool, _), res) -> Sint.mem k s = res
+    | Mem k, Res ((Bool, _), res) -> Sint.mem k s = res
+    | Length, Res ((Int, _), res) -> res = Sint.cardinal s
     | _, _ -> false
 end
 
