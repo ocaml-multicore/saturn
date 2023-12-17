@@ -18,14 +18,27 @@
 (test
  (package saturn_lockfree)
  (name qcheck_spsc_queue)
- (libraries saturn_lockfree barrier qcheck "qcheck-alcotest")
+ (libraries
+  saturn_lockfree
+  barrier
+  qcheck
+  qcheck-core
+  qcheck-alcotest
+  alcotest)
  (modules qcheck_spsc_queue))
 
 (test
  (package saturn_lockfree)
  (name stm_spsc_queue)
  (modules stm_spsc_queue)
- (libraries saturn_lockfree qcheck-stm.sequential qcheck-stm.domain)
+ (libraries
+  saturn_lockfree
+  qcheck-core
+  qcheck-core.runner
+  qcheck-multicoretests-util
+  qcheck-stm.stm
+  qcheck-stm.sequential
+  qcheck-stm.domain)
  (enabled_if
   (= %{arch_sixtyfour} true))
  (action

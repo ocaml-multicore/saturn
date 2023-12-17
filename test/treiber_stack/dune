@@ -17,14 +17,26 @@
 (test
  (package saturn_lockfree)
  (name qcheck_treiber_stack)
- (libraries saturn_lockfree barrier qcheck qcheck-alcotest)
+ (libraries
+  saturn_lockfree
+  barrier
+  qcheck
+  qcheck-core
+  qcheck-alcotest
+  alcotest)
  (modules qcheck_treiber_stack))
 
 (test
  (package saturn_lockfree)
  (name stm_treiber_stack)
  (modules stm_treiber_stack)
- (libraries saturn_lockfree qcheck-stm.sequential qcheck-stm.domain)
+ (libraries
+  saturn_lockfree
+  qcheck-core
+  qcheck-core.runner
+  qcheck-stm.stm
+  qcheck-stm.sequential
+  qcheck-stm.domain)
  (enabled_if
   (= %{arch_sixtyfour} true))
  (action
