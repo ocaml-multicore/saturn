@@ -23,7 +23,13 @@
 (test
  (package saturn_lockfree)
  (name qcheck_ws_deque)
- (libraries barrier saturn_lockfree qcheck "qcheck-alcotest")
+ (libraries
+  barrier
+  saturn_lockfree
+  qcheck
+  qcheck-core
+  qcheck-alcotest
+  alcotest)
  (enabled_if
   (not
    (and
@@ -35,7 +41,14 @@
  (package saturn_lockfree)
  (name stm_ws_deque)
  (modules stm_ws_deque)
- (libraries saturn_lockfree qcheck-stm.sequential qcheck-stm.domain)
+ (libraries
+  saturn_lockfree
+  qcheck-core
+  qcheck-core.runner
+  qcheck-multicoretests-util
+  qcheck-stm.stm
+  qcheck-stm.sequential
+  qcheck-stm.domain)
  (enabled_if
   (= %{arch_sixtyfour} true))
  (action

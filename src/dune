@@ -1,4 +1,5 @@
 (library
  (name saturn)
  (public_name saturn)
- (libraries saturn_lockfree))
+ (libraries
+  (re_export saturn_lockfree)))

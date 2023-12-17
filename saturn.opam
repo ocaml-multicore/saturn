@@ -14,9 +14,9 @@ depends: [
   "domain_shims" {>= "0.1.0"}
   "saturn_lockfree" {= version}
   "alcotest" {>= "1.7.0" & with-test}
-  "qcheck" {>= "0.18.1" & with-test}
-  "qcheck-stm" {>= "0.2" & with-test}
-  "qcheck-alcotest" {>= "0.18.1" & with-test}
+  "qcheck" {>= "0.21.3" & with-test}
+  "qcheck-stm" {>= "0.3" & with-test}
+  "qcheck-alcotest" {>= "0.21.3" & with-test}
   "yojson" {>= "2.0.2" & with-test}
   "dscheck" {>= "0.2.0" & with-test}
   "odoc" {with-doc}
