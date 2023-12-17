@@ -1,7 +1,10 @@
 (rule
- (copy ../../src_lockfree/michael_scott_queue.ml michael_scott_queue.ml))
+ (action
+  (copy ../../src_lockfree/michael_scott_queue.ml michael_scott_queue.ml))
+ (package saturn_lockfree))
 
 (test
+ (package saturn_lockfree)
  (name michael_scott_queue_dscheck)
  (libraries atomic dscheck alcotest backoff)
  (enabled_if
@@ -12,14 +15,16 @@
  (modules michael_scott_queue michael_scott_queue_dscheck))
 
 (test
+ (package saturn_lockfree)
  (name qcheck_michael_scott_queue)
- (libraries saturn barrier qcheck qcheck-alcotest)
+ (libraries saturn_lockfree barrier qcheck qcheck-alcotest)
  (modules qcheck_michael_scott_queue))
 
 (test
+ (package saturn_lockfree)
  (name stm_michael_scott_queue)
  (modules stm_michael_scott_queue)
- (libraries saturn qcheck-stm.sequential qcheck-stm.domain)
+ (libraries saturn_lockfree qcheck-stm.sequential qcheck-stm.domain)
  (enabled_if
   (= %{arch_sixtyfour} true))
  (action

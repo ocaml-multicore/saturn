@@ -1,4 +1,4 @@
-open Saturn
+module Relaxed_queue = Saturn.Relaxed_queue
 
 let smoke_test (push, pop) () =
   let queue = Relaxed_queue.create ~size_exponent:2 () in

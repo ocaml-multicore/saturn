@@ -1,5 +1,5 @@
 open Monolith
-open Saturn.Work_stealing_deque
+open Saturn_lockfree.Work_stealing_deque
 
 (* This sequential implementation of stacks serves as a reference. *)
 

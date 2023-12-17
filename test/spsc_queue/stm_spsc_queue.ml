@@ -3,7 +3,7 @@
 open QCheck
 open STM
 open Util
-module Spsc_queue = Saturn.Single_prod_single_cons_queue
+module Spsc_queue = Saturn_lockfree.Single_prod_single_cons_queue
 
 module SPSCConf = struct
   type cmd = Push of int | Pop | Peek
@@ -86,9 +86,11 @@ let () =
   let count = 1000 in
   QCheck_base_runner.run_tests_main
     [
-      SPSC_seq.agree_test ~count ~name:"STM Saturn.Spsc_queue test sequential";
-      agree_test_par_asym ~count ~name:"STM Saturn.Spsc_queue test parallel";
+      SPSC_seq.agree_test ~count
+        ~name:"STM Saturn_lockfree.Spsc_queue test sequential";
+      agree_test_par_asym ~count
+        ~name:"STM Saturn_lockfree.Spsc_queue test parallel";
       (* Note: this can generate, e.g., pop commands/actions in different threads, thus violating the spec. *)
       SPSC_dom.neg_agree_test_par ~count
-        ~name:"STM Saturn.Spsc_queue test parallel, negative";
+        ~name:"STM Saturn_lockfree.Spsc_queue test parallel, negative";
     ]

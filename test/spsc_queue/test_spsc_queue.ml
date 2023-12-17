@@ -1,4 +1,4 @@
-module Spsc_queue = Saturn.Single_prod_single_cons_queue
+module Spsc_queue = Saturn_lockfree.Single_prod_single_cons_queue
 (** Tests *)
 
 let test_empty () =

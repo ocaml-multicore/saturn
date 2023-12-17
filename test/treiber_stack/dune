@@ -1,7 +1,10 @@
 (rule
- (copy ../../src_lockfree/treiber_stack.ml treiber_stack.ml))
+ (action
+  (copy ../../src_lockfree/treiber_stack.ml treiber_stack.ml))
+ (package saturn_lockfree))
 
 (test
+ (package saturn_lockfree)
  (name treiber_stack_dscheck)
  (libraries atomic dscheck alcotest backoff)
  (enabled_if
@@ -12,14 +15,16 @@
  (modules treiber_stack treiber_stack_dscheck))
 
 (test
+ (package saturn_lockfree)
  (name qcheck_treiber_stack)
- (libraries saturn barrier qcheck qcheck-alcotest)
+ (libraries saturn_lockfree barrier qcheck qcheck-alcotest)
  (modules qcheck_treiber_stack))
 
 (test
+ (package saturn_lockfree)
  (name stm_treiber_stack)
  (modules stm_treiber_stack)
- (libraries saturn qcheck-stm.sequential qcheck-stm.domain)
+ (libraries saturn_lockfree qcheck-stm.sequential qcheck-stm.domain)
  (enabled_if
   (= %{arch_sixtyfour} true))
  (action

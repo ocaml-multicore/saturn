@@ -1,4 +1,4 @@
-module Ws_deque = Saturn.Work_stealing_deque.M
+module Ws_deque = Saturn_lockfree.Work_stealing_deque.M
 
 (* Sequential building of a deque *)
 let deque_of_list l =
