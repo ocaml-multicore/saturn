@@ -1,22 +1,29 @@
 (rule
- (copy ../../src_lockfree/ArrayExtra.ml ArrayExtra.ml))
+ (action
+  (copy ../../src_lockfree/ArrayExtra.ml ArrayExtra.ml))
+ (package saturn_lockfree))
 
 (rule
- (copy ../../src_lockfree/ws_deque.ml ws_deque.ml))
+ (action
+  (copy ../../src_lockfree/ws_deque.ml ws_deque.ml))
+ (package saturn_lockfree))
 
 (test
+ (package saturn_lockfree)
  (name ws_deque_dscheck)
  (libraries atomic dscheck alcotest)
  (modules ArrayExtra ws_deque ws_deque_dscheck))
 
 (test
+ (package saturn_lockfree)
  (name test_ws_deque)
- (libraries saturn)
+ (libraries saturn_lockfree)
  (modules test_ws_deque))
 
 (test
+ (package saturn_lockfree)
  (name qcheck_ws_deque)
- (libraries barrier saturn qcheck "qcheck-alcotest")
+ (libraries barrier saturn_lockfree qcheck "qcheck-alcotest")
  (enabled_if
   (not
    (and
@@ -25,9 +32,10 @@
  (modules qcheck_ws_deque))
 
 (test
+ (package saturn_lockfree)
  (name stm_ws_deque)
  (modules stm_ws_deque)
- (libraries saturn qcheck-stm.sequential qcheck-stm.domain)
+ (libraries saturn_lockfree qcheck-stm.sequential qcheck-stm.domain)
  (enabled_if
   (= %{arch_sixtyfour} true))
  (action

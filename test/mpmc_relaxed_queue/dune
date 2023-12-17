@@ -1,4 +1,5 @@
 (test
+ (package saturn)
  (name test_mpmc_relaxed_queue)
  (libraries saturn unix alcotest)
  (modules test_mpmc_relaxed_queue))

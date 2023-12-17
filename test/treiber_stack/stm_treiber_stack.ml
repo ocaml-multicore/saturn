@@ -2,7 +2,7 @@
 
 open QCheck
 open STM
-module Treiber_stack = Saturn.Stack
+module Treiber_stack = Saturn_lockfree.Stack
 
 module TSConf = struct
   type cmd = Push of int | Pop | Is_empty
@@ -62,7 +62,8 @@ let () =
   let count = 500 in
   QCheck_base_runner.run_tests_main
     [
-      TS_seq.agree_test ~count ~name:"STM Saturn.Treiber_stack test sequential";
+      TS_seq.agree_test ~count
+        ~name:"STM Saturn_lockfree.Treiber_stack test sequential";
       TS_dom.agree_test_par ~count
-        ~name:"STM Saturn.Treiber_stack test parallel";
+        ~name:"STM Saturn_lockfree.Treiber_stack test parallel";
     ]

@@ -1,25 +1,31 @@
 (rule
- (copy ../../src_lockfree/spsc_queue.ml spsc_queue.ml))
+ (action
+  (copy ../../src_lockfree/spsc_queue.ml spsc_queue.ml))
+ (package saturn_lockfree))
 
 (test
+ (package saturn_lockfree)
  (name spsc_queue_dscheck)
  (libraries atomic dscheck alcotest)
  (modules spsc_queue spsc_queue_dscheck))
 
 (test
+ (package saturn_lockfree)
  (name test_spsc_queue)
- (libraries saturn)
+ (libraries saturn_lockfree)
  (modules test_spsc_queue))
 
 (test
+ (package saturn_lockfree)
  (name qcheck_spsc_queue)
- (libraries saturn barrier qcheck "qcheck-alcotest")
+ (libraries saturn_lockfree barrier qcheck "qcheck-alcotest")
  (modules qcheck_spsc_queue))
 
 (test
+ (package saturn_lockfree)
  (name stm_spsc_queue)
  (modules stm_spsc_queue)
- (libraries saturn qcheck-stm.sequential qcheck-stm.domain)
+ (libraries saturn_lockfree qcheck-stm.sequential qcheck-stm.domain)
  (enabled_if
   (= %{arch_sixtyfour} true))
  (action
