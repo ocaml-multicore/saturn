@@ -173,7 +173,7 @@ module M : S = struct
 
   let pop_opt q = try Some (pop q) with Exit -> None
 
-  let rec steal q =
+  let rec steal backoff q =
     let t = Atomic.get q.top in
     let b = Atomic.get q.bottom in
     let size = b - t in
@@ -182,9 +182,8 @@ module M : S = struct
       let a = Atomic.get q.tab in
       let out = CArray.get a t in
       if Atomic.compare_and_set q.top t (t + 1) then release out
-      else (
-        Domain.cpu_relax ();
-        steal q)
+      else steal (Backoff.once backoff) q
 
+  let steal q = steal Backoff.default q
   let steal_opt q = try Some (steal q) with Exit -> None
 end

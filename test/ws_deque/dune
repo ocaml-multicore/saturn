@@ -11,7 +11,7 @@
 (test
  (package saturn_lockfree)
  (name ws_deque_dscheck)
- (libraries atomic dscheck alcotest)
+ (libraries atomic dscheck alcotest backoff)
  (modules ArrayExtra ws_deque ws_deque_dscheck))
 
 (test
