@@ -1,4 +1,22 @@
+(* -*- tuareg -*- *)
+
+let maybe_threads =
+  if Jbuild_plugin.V1.ocaml_version < "5" then "threads.posix" else ""
+
+let () =
+  Jbuild_plugin.V1.send
+  @@ {|
+
 (library
  (name saturn_lockfree)
  (public_name saturn_lockfree)
- (libraries domain_shims backoff))
+ (libraries backoff |}
+  ^ maybe_threads
+  ^ {| ))
+
+(rule
+ (enabled_if
+  (< %{ocaml_version} 5.0.0))
+ (action
+  (copy domain.ocaml4.ml domain.ml)))
+|}

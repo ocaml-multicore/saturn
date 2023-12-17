@@ -12,7 +12,7 @@
  (synopsis "Collection of parallelism-safe data structures for Multicore OCaml")
  (depends
   (ocaml (>= 4.12))
-  (domain_shims (>= 0.1.0))
+  (domain_shims (and (>= 0.1.0) :with-test))
   (saturn_lockfree (= :version))
   (alcotest (and (>= 1.7.0) :with-test))
   (qcheck (and (>= 0.21.3) :with-test))
@@ -25,7 +25,7 @@
  (synopsis "Collection of lock-free data structures for Multicore OCaml")
  (depends
   (ocaml (>= 4.12))
-  (domain_shims (>= 0.1.0))
+  (domain_shims (and (>= 0.1.0) :with-test))
   (backoff (>= 0.1.0))
   (alcotest (and (>= 1.7.0) :with-test))
   (qcheck (and (>= 0.21.3) :with-test))
