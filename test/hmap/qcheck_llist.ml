@@ -19,37 +19,25 @@ let tests_one_domain =
     [
       (* Add a list of unique elements in a linked list. All
          insertion should success. *)
-      Test.make ~name:"seq_try_add" int_list (fun l ->
+      Test.make ~name:"seq_add" int_list (fun l ->
           let open Llist in
           let t = create ~compare () in
 
           let l = List.sort_uniq (fun a b -> -compare a b) l in
-          List.for_all (fun elt -> try_add t elt elt) l);
+          List.for_all (fun elt -> add t elt elt) l);
       (* Add a list of elements in a linked list and checks :
 
-         - the elements that have already been added, the [try_add]
+         - the elements that have already been added, the [add]
          function returns [false] and [true] otherwise.
 
          - [mem] on all added elements returns [true].
       *)
-      Test.make ~name:"seq_try_add2" int_list (fun l ->
+      Test.make ~name:"seq_add2" int_list (fun l ->
           let open Llist in
           let t = create ~compare () in
 
-          let has_been_added = List.map (fun elt -> try_add t elt elt) l in
+          List.iter (fun elt -> add t elt elt) l;
 
-          let rec loop prev l has_been_added =
-            match (l, has_been_added) with
-            | [], [] -> true
-            | [], _ | _, [] -> false
-            | x :: xs, added :: has_been_added ->
-                if added = not (List.mem x prev) then
-                  loop (x :: prev) xs has_been_added
-                else false
-          in
-
-          loop [] l has_been_added
-          &&
           let uniq = List.sort compare l in
           List.for_all (fun elt -> mem t elt) uniq);
     ]
@@ -57,7 +45,7 @@ let tests_one_domain =
 let tests_two_domains =
   QCheck.
     [
-      Test.make ~name:"try_add_add1" ~count:10000 (pair int_list int_list)
+      Test.make ~name:"add_add1" ~count:10000 (pair int_list int_list)
         (fun (l, l') ->
           let open Llist in
           let t = create ~compare () in
@@ -72,18 +60,18 @@ let tests_two_domains =
                 while not (Semaphore.Binary.try_acquire sema) do
                   Domain.cpu_relax ()
                 done;
-                List.map (fun i -> try_add t i i) l)
+                List.map (fun i -> add t i i) l)
           in
           let d2 =
             Domain.spawn (fun () ->
                 Semaphore.Binary.release sema;
-                List.map (fun i -> try_add t i i) l')
+                List.map (fun i -> add t i i) l')
           in
           let res1 = Domain.join d1 in
           let res2 = Domain.join d2 in
 
           List.for_all (fun i -> i) res1 && List.for_all (fun i -> i) res2);
-      Test.make ~name:"try_add_try_add" ~count:10000 (pair int_list int_list)
+      Test.make ~name:"add_add" ~count:10000 (pair int_list int_list)
         (fun (l, l') ->
           let open Llist in
           let t = create ~compare () in
@@ -94,12 +82,12 @@ let tests_two_domains =
                 while not (Semaphore.Binary.try_acquire sema) do
                   Domain.cpu_relax ()
                 done;
-                List.iter (fun i -> ignore @@ try_add t i i) l)
+                List.iter (fun i -> ignore @@ add t i i) l)
           in
           let d2 =
             Domain.spawn (fun () ->
                 Semaphore.Binary.release sema;
-                List.iter (fun i -> ignore @@ try_add t i i) l')
+                List.iter (fun i -> ignore @@ add t i i) l')
           in
           let () = Domain.join d1 in
           let () = Domain.join d2 in
@@ -111,7 +99,7 @@ let tests_two_domains =
           let open Llist in
           let t = create ~compare () in
           let sema = Semaphore.Binary.make false in
-          List.iter (fun i -> ignore @@ try_add t i i) (l @ l' @ l'');
+          List.iter (fun i -> ignore @@ add t i i) (l @ l' @ l'');
 
           let d1 =
             Domain.spawn (fun () ->
@@ -130,7 +118,7 @@ let tests_two_domains =
 
           List.for_all (fun elt -> not (mem t elt)) (l @ l')
           && List.for_all (fun elt -> mem t elt) (exclusion l'' (l @ l')));
-      Test.make ~name:"try_add_remove" ~count:1000 small_nat (fun n ->
+      Test.make ~name:"add_remove" ~count:1000 small_nat (fun n ->
           let open Llist in
           let t = create ~compare () in
           let sema = Semaphore.Binary.make false in
@@ -147,7 +135,7 @@ let tests_two_domains =
           let d2 =
             Domain.spawn (fun () ->
                 Semaphore.Binary.release sema;
-                List.map (fun i -> try_add t i i) l)
+                List.map (fun i -> add t i i) l)
           in
           let removed = Domain.join d1 in
           let _add = Domain.join d2 in
