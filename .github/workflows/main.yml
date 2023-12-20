@@ -23,10 +23,10 @@ jobs:
       QCHECK_MSG_INTERVAL: '60'
 
     steps:
-      - name: Checkout code
+      - name: Check out code
         uses: actions/checkout@v2
 
-      - name: Use OCaml ${{ matrix.ocaml-compiler }}
+      - name: Set up OCaml
         uses: ocaml/setup-ocaml@v2
         with:
           opam-pin: false
@@ -37,8 +37,11 @@ jobs:
             default: https://github.com/ocaml-opam/opam-repository-mingw.git#sunset
             upstream: https://github.com/ocaml/opam-repository.git
 
-      - run: opam install . --deps-only --with-test
+      - name: Install dependencies
+        run: opam install . --deps-only --with-test
 
-      - run: opam exec -- dune build
+      - name: Build
+        run: opam exec -- dune build
 
-      - run: opam exec -- dune runtest
+      - name: Test
+        run: opam exec -- dune runtest
