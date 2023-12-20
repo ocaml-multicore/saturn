@@ -26,14 +26,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Get latest OCaml commit hash
-        id: multicore_hash
-        shell: bash
-        run: |
-          curl -sH "Accept: application/vnd.github.v3+json" \
-          https://api.github.com/repos/ocaml/ocaml/commits/trunk \
-          | jq .commit.tree.sha | xargs printf '::set-output name=commit::%s'
-
       - name: Use OCaml ${{ matrix.ocaml-compiler }}
         uses: ocaml/setup-ocaml@v2
         with:
@@ -44,7 +36,6 @@ jobs:
             dra27: https://github.com/dra27/opam-repository.git#windows-5.0
             default: https://github.com/ocaml-opam/opam-repository-mingw.git#sunset
             upstream: https://github.com/ocaml/opam-repository.git
-          cache-prefix: ${{ steps.multicore_hash.outputs.commit }}
 
       - run: opam install . --deps-only --with-test
 
