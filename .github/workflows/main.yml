@@ -11,6 +11,12 @@ on:
 
 jobs:
   windows:
+    strategy:
+      matrix:
+        ocaml-compiler:
+          - ocaml.5.0.0,ocaml-option-mingw
+          - ocaml.5.1.1,ocaml-option-mingw
+
     runs-on: windows-latest
 
     env:
@@ -33,7 +39,7 @@ jobs:
         with:
           opam-pin: false
           opam-depext: false
-          ocaml-compiler: ocaml.5.0.0,ocaml-option-mingw
+          ocaml-compiler: ${{ matrix.ocaml-compiler }}
           opam-repositories: |
             dra27: https://github.com/dra27/opam-repository.git#windows-5.0
             default: https://github.com/ocaml-opam/opam-repository-mingw.git#sunset
