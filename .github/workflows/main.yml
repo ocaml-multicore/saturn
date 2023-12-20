@@ -12,6 +12,7 @@ on:
 jobs:
   windows:
     strategy:
+      fail-fast: false
       matrix:
         ocaml-compiler:
           - ocaml.5.0.0,ocaml-option-mingw
@@ -48,6 +49,7 @@ jobs:
 
   build-4_x:
     strategy:
+      fail-fast: false
       matrix:
         os:
           - ubuntu-latest
