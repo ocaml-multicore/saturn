@@ -118,7 +118,7 @@ let rec peek_opt t =
           | Open -> assert false
           | Closed -> assert false))
 
-let rec is_empty t =
+let is_empty t =
   match !(t.head) with
   | _ :: _ -> false
   | Closed -> raise Closed (*closed and empty*)
