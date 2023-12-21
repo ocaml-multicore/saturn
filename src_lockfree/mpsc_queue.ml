@@ -126,13 +126,16 @@ let rec is_empty t =
       match Atomic.get t.tail with
       | _ :: _ -> false
       | Open -> (
-        match !(t.head) with
-        | Open -> true
-        | _::_ -> false
-        | Closed -> is_empty t)
-      | Closed -> is_empty t)
-(* Since is_empty might be called concurrently with closed*)
+          match !(t.head) with
+          | Open -> true
+          | _ :: _ -> false
+          | Closed ->
+              failwith
+                "This cannot happen, maybe you are running close concurrently \
+                 with [close]")
+      | Closed ->
+          failwith
+            "This cannot happen, maybe you are running close concurrently with \
+             [close]")
 (* Incorrect reading of t.head if a pop function is called concurrently - false negative*)
 (* Incorrect reading of t.tail if push is called concurrently - false positive*)
-
-  
