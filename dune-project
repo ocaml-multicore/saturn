@@ -28,7 +28,6 @@
   (domain_shims (>= 0.1.0))
   (alcotest (and (>= 1.7.0) :with-test))
   (qcheck (and (>= 0.18.1) :with-test))
-  (backoff (>= 0.1.0))
   (qcheck-stm (and (>= 0.2) :with-test))
   (qcheck-alcotest (and (>= 0.18.1) :with-test))
   (yojson (and (>= 2.0.2) :with-test))

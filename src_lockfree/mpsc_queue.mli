@@ -1,6 +1,6 @@
 (** Lock-free multi-producer, single-consumer, domain-safe queue
     without support for cancellation.*)
-
+    type 'a clist
     type 'a t
     (** A queue of items of type ['a]. *)
     

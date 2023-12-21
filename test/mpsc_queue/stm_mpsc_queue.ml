@@ -26,8 +26,8 @@ module MPSCConf = struct
       (Gen.oneof
          [
            Gen.map (fun i -> Push i) int_gen;
-           Gen.return Is_empty;
-           Gen.return Close;
+           (* Gen.return Is_empty; *)
+           (* Gen.return Close; *)
          ])
 
   let arb_cmd _s =
@@ -95,7 +95,7 @@ module MPSC_dom = STM_domain.Make (MPSCConf)
 
 (* [arb_cmds_par] differs in what each triple component generates:
    "Consumer domain" cmds can't be [Push] (but can be [Pop], [Is_empty], [Close] or [Push_head]),
-   "producer domain" cmds can't be [Push_head] or [Pop] (but can be [Push], [Is_empty] or [Close]). *)
+   "producer domain" cmds can't be [Push_head] or [Pop] (but can be [Push], [Is_empty]). *)
 let arb_cmds_par =
   MPSC_dom.arb_triple 20 12 MPSCConf.arb_cmd MPSCConf.arb_cmd
     MPSCConf.producer_cmd

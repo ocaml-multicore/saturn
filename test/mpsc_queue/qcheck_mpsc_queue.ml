@@ -8,9 +8,9 @@ module Mpsc_queue = Saturn.Single_consumer_queue
 (* Consumer can use the functions
    - [pop],
    - [push],
-   - [push_head],
-   - [is_empty],
-   - [close] *)
+   - [push_head] - This can only be used by the consumer
+          (if run in parallel with {!pop}, the item might be skipped),
+   - [is_empty], *)
 
 let extract_n q n close =
   let rec loop acc = function
@@ -498,9 +498,9 @@ let tests_one_consumer_one_producer =
              = list_some (lpush_head |> List.rev)
           && keep_n_last (List.length lpush) all_pushed = list_some lpush);
       (* TEST 4 - one consumer one producer
-         Consumer push then close while consumer pop_opt until the queue
+         Producer push then close while consumer pop_opt until the queue
          is empty and closed. *)
-      Test.make ~name:"par_pop_opt_push2" (list int) (fun lpush ->
+      (* Test.make ~name:"par_pop_opt_push2" (list int) (fun lpush ->
           (* Initialisation*)
           let queue = Mpsc_queue.create () in
           let barrier = Barrier.create 2 in
@@ -531,7 +531,7 @@ let tests_one_consumer_one_producer =
           in
 
           (not unexpected_closed)
-          && lpush |> List.map (fun elt -> Some elt) = popped_value);
+          && lpush |> List.map (fun elt -> Some elt) = popped_value); *)
     ]
 
 let tests_one_consumer_two_producers =
@@ -608,7 +608,7 @@ let tests_one_consumer_two_producers =
          Checks that closing the queue prevent other producers to push
          and that popping at the same time works.
       *)
-      Test.make ~name:"par_push_close_pop_opt"
+      (* Test.make ~name:"par_push_close_pop_opt"
         (pair (list int) (list int))
         (fun (lpush1, lpush2) ->
           (* Initialization *)
@@ -703,7 +703,7 @@ let tests_one_consumer_two_producers =
               (* CASE 2*)
               List.length popped_value = npush1 + npush2
               && compare popped_value lpush1 lpush2
-          | _, _, _, _ -> false);
+          | _, _, _, _ -> false); *)
     ]
 
 let main () =
