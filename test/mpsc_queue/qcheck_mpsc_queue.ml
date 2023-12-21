@@ -609,101 +609,101 @@ let tests_one_consumer_two_producers =
          and that popping at the same time works.
       *)
       (* Test.make ~name:"par_push_close_pop_opt"
-        (pair (list int) (list int))
-        (fun (lpush1, lpush2) ->
-          (* Initialization *)
-          let npush1, npush2 = (List.length lpush1, List.length lpush2) in
-          let queue = Mpsc_queue.create () in
-          let barrier = Barrier.create 3 in
+         (pair (list int) (list int))
+         (fun (lpush1, lpush2) ->
+           (* Initialization *)
+           let npush1, npush2 = (List.length lpush1, List.length lpush2) in
+           let queue = Mpsc_queue.create () in
+           let barrier = Barrier.create 3 in
 
-          let guard_push lpush =
-            Barrier.await barrier;
-            let closed_when_pushing =
-              try
-                List.iter
-                  (fun elt ->
-                    Mpsc_queue.push queue elt;
-                    Domain.cpu_relax ())
-                  lpush;
-                false
-              with Mpsc_queue.Closed -> true
-            in
-            ( closed_when_pushing,
-              try
-                Mpsc_queue.close queue;
-                true
-              with Mpsc_queue.Closed -> false )
-          in
+           let guard_push lpush =
+             Barrier.await barrier;
+             let closed_when_pushing =
+               try
+                 List.iter
+                   (fun elt ->
+                     Mpsc_queue.push queue elt;
+                     Domain.cpu_relax ())
+                   lpush;
+                 false
+               with Mpsc_queue.Closed -> true
+             in
+             ( closed_when_pushing,
+               try
+                 Mpsc_queue.close queue;
+                 true
+               with Mpsc_queue.Closed -> false )
+           in
 
-          (* Producers pushes. *)
-          let producer1 = Domain.spawn (fun () -> guard_push lpush1) in
-          let producer2 = Domain.spawn (fun () -> guard_push lpush2) in
+           (* Producers pushes. *)
+           let producer1 = Domain.spawn (fun () -> guard_push lpush1) in
+           let producer2 = Domain.spawn (fun () -> guard_push lpush2) in
 
-          (* Waiting to make sure the producers have time to
-             start. However, as the consumer will [pop_opt] until one of
-             the producer closes the queue, it is not a requirement to wait here. *)
-          Barrier.await barrier;
+           (* Waiting to make sure the producers have time to
+              start. However, as the consumer will [pop_opt] until one of
+              the producer closes the queue, it is not a requirement to wait here. *)
+           Barrier.await barrier;
 
-          let popped = popped_until_empty_and_closed queue in
+           let popped = popped_until_empty_and_closed queue in
 
-          let closed_when_pushing1, has_closed1 = Domain.join producer1 in
-          let closed_when_pushing2, has_closed2 = Domain.join producer2 in
+           let closed_when_pushing1, has_closed1 = Domain.join producer1 in
+           let closed_when_pushing2, has_closed2 = Domain.join producer2 in
 
-          let popped_value =
-            List.fold_left
-              (fun acc elt ->
-                match elt with Some elt -> elt :: acc | _ -> acc)
-              [] popped
-            |> List.rev
-          in
+           let popped_value =
+             List.fold_left
+               (fun acc elt ->
+                 match elt with Some elt -> elt :: acc | _ -> acc)
+               [] popped
+             |> List.rev
+           in
 
-          let rec compare l l1 l2 =
-            match (l, l1, l2) with
-            | [], [], [] -> true
-            | [], _, _ -> false
-            | _, [], _ -> l = l2
-            | _, _, [] -> l = l1
-            | x :: l', y :: l1', z :: l2' ->
-                if x = y && x = z then compare l' l1 l2' || compare l' l1' l2
-                else if x = y then compare l' l1' l2
-                else if x = z then compare l' l1 l2'
-                else false
-          in
+           let rec compare l l1 l2 =
+             match (l, l1, l2) with
+             | [], [], [] -> true
+             | [], _, _ -> false
+             | _, [], _ -> l = l2
+             | _, _, [] -> l = l1
+             | x :: l', y :: l1', z :: l2' ->
+                 if x = y && x = z then compare l' l1 l2' || compare l' l1' l2
+                 else if x = y then compare l' l1' l2
+                 else if x = z then compare l' l1 l2'
+                 else false
+           in
 
-          (* Testing property :
-             - there should be only 4 workings combinaisons for the boolean values
-             [closed_when_pushing] and [has_closed] :
-               + CASE 1 : if producer 1 closed the queue before producer 2 have finised
-             pushing. In this case returned values will be:
-             1 -> false, true / 2 -> true, false
-               + CASE 2 : if producer 1 closed the queue and producer 2 have finised
-             pushing but have not closed the queue.
-             1 -> false, true / 2 -> false, false
-               + two symetrical cases.
-             - in case 1, the closing producer should have pushed everything but not
-             the other.
-             - in case 2, both queues should have finished pushing. *)
-          match
-            ( closed_when_pushing1,
-              has_closed1,
-              closed_when_pushing2,
-              has_closed2 )
-          with
-          | false, true, true, false ->
-              (* CASE 1 *)
-              let real_npush2 = List.length popped_value - npush1 in
-              real_npush2 < npush2
-              && compare popped_value lpush1 (keep_n_first real_npush2 lpush2)
-          | true, false, false, true ->
-              (* CASE 1, sym *)
-              let real_npush1 = List.length popped_value - npush2 in
-              real_npush1 < npush1
-              && compare popped_value (keep_n_first real_npush1 lpush1) lpush2
-          | false, true, false, false | false, false, false, true ->
-              (* CASE 2*)
-              List.length popped_value = npush1 + npush2
-              && compare popped_value lpush1 lpush2
-          | _, _, _, _ -> false); *)
+           (* Testing property :
+              - there should be only 4 workings combinaisons for the boolean values
+              [closed_when_pushing] and [has_closed] :
+                + CASE 1 : if producer 1 closed the queue before producer 2 have finised
+              pushing. In this case returned values will be:
+              1 -> false, true / 2 -> true, false
+                + CASE 2 : if producer 1 closed the queue and producer 2 have finised
+              pushing but have not closed the queue.
+              1 -> false, true / 2 -> false, false
+                + two symetrical cases.
+              - in case 1, the closing producer should have pushed everything but not
+              the other.
+              - in case 2, both queues should have finished pushing. *)
+           match
+             ( closed_when_pushing1,
+               has_closed1,
+               closed_when_pushing2,
+               has_closed2 )
+           with
+           | false, true, true, false ->
+               (* CASE 1 *)
+               let real_npush2 = List.length popped_value - npush1 in
+               real_npush2 < npush2
+               && compare popped_value lpush1 (keep_n_first real_npush2 lpush2)
+           | true, false, false, true ->
+               (* CASE 1, sym *)
+               let real_npush1 = List.length popped_value - npush2 in
+               real_npush1 < npush1
+               && compare popped_value (keep_n_first real_npush1 lpush1) lpush2
+           | false, true, false, false | false, false, false, true ->
+               (* CASE 2*)
+               List.length popped_value = npush1 + npush2
+               && compare popped_value lpush1 lpush2
+           | _, _, _, _ -> false); *)
     ]
 
 let main () =
