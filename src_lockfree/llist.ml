@@ -5,16 +5,16 @@ type ('k, 'v, _) node =
   | Node : {
       key : 'k;
       content : ('k, 'v) link Atomic.t;
-      mutable incr : Size.once;
     }
       -> ('k, 'v, [> `Node ]) node
-  | Mark : {
-      node : ('k, 'v, [< `Null | `Node ]) node;
-      decr : Size.once;
-    }
-      -> ('k, 'v, [> `Mark ]) node
+  | Mark : ('k, 'v, [< `Null | `Node ]) node -> ('k, 'v, [> `Mark ]) node
 
-and ('k, 'v, 'n) content = { bindings : 'v list; next : ('k, 'v, 'n) node }
+and ('k, 'v, 'n) content = {
+  mutable incr : Size.once;
+  decr : Size.once;
+  bindings : 'v list;
+  next : ('k, 'v, 'n) node;
+}
 
 and ('k, 'v) link =
   | Link : ('k, 'v, [< `Null | `Node | `Mark ]) content -> ('k, 'v) link
@@ -28,16 +28,18 @@ type ('k, 'v) t = {
   size : Size.t;
 }
 
+(* can we make it a value instead of a function *)
+let dummy_content () =
+  { incr = Size.used_once; decr = Size.used_once; bindings = []; next = Null }
+
 let create ~compare () : ('k, 'v) t =
   let head =
-    Multicore_magic.copy_as_padded
-    @@ Atomic.make (Link { bindings = []; next = Null })
+    Multicore_magic.copy_as_padded @@ Atomic.make (Link (dummy_content ()))
   in
   let size = Size.create () in
   { size; compare; head }
 
 let length t = Size.get t.size
-let dummy_next = { bindings = []; next = Null }
 
 let rec find_node t key =
   let head = t.head in
@@ -50,26 +52,22 @@ and find_node_rec t key prev curr :
     * (_, _, [< `Null | `Node ]) content =
   match curr with
   | Link { next = Mark _; _ } -> find_node t key
-  | Link ({ next = Null; _ } as r) -> (-1, prev, r, dummy_next)
+  | Link ({ next = Null; _ } as r) -> (-1, prev, r, dummy_content ())
   | Link ({ next = Node node; _ } as curr_node) -> begin
       match Atomic.get node.content with
-      | Link { next = Mark next; _ } ->
-          Size.update_once t.size next.decr;
-          let after = Link { curr_node with next = next.node } in
+      | Link { next = Mark next_node; decr; _ } ->
+          Size.update_once t.size decr;
+          let after = Link { curr_node with next = next_node } in
           find_node_rec t key prev
             (if Atomic.compare_and_set prev curr after then after
              else Atomic.get prev)
-      | Link ({ next = Null | Node _; _ } as next_val) ->
+      | Link ({ next = Null | Node _; incr; _ } as next_val) ->
           let comp = t.compare key node.key in
           if comp == 0 then begin
-            (match next_val.bindings with
-            | [] ->
-                () (* We don't want to update the size if it's a dummy node *)
-            | _ :: _ -> begin
-                if node.incr != Size.used_once then
-                  Size.update_once t.size node.incr;
-                node.incr <- Size.used_once
-              end);
+            if incr != Size.used_once then begin
+              Size.update_once t.size incr;
+              next_val.incr <- Size.used_once
+            end;
             (comp, prev, curr_node, next_val)
           end
           else begin
@@ -82,20 +80,34 @@ let rec add_replace_rec t key value fbinding prev curr =
   let found, prev, curr, next = find_node_rec t key prev curr in
   match curr.next with
   | Node node when found == 0 -> begin
-      let after = Link { next with bindings = fbinding value next.bindings } in
-      if Atomic.compare_and_set node.content (Link next) after then begin
-        if List.is_empty next.bindings && node.incr != Size.used_once then begin
-          Size.update_once t.size node.incr;
-          node.incr <- Size.used_once
-        end
-      end
-      else add_replace_rec t key value fbinding prev (Atomic.get prev)
+      match next.bindings with
+      | [] ->
+          let incr = Size.new_once t.size Size.incr in
+          let (Link r as after) =
+            Link { next with bindings = fbinding value next.bindings; incr }
+          in
+          if Atomic.compare_and_set node.content (Link next) after then begin
+            if r.incr != Size.used_once then begin
+              Size.update_once t.size r.incr;
+              r.incr <- Size.used_once
+            end
+          end
+          else add_replace_rec t key value fbinding prev (Atomic.get prev)
+      | _ ->
+          let after =
+            Link { next with bindings = fbinding value next.bindings }
+          in
+          if not @@ Atomic.compare_and_set node.content (Link next) after then
+            add_replace_rec t key value fbinding prev (Atomic.get prev)
     end
   | _ -> begin
+      let decr = Size.new_once t.size Size.decr in
       let incr = Size.new_once t.size Size.incr in
-      let new_content = Link { curr with bindings = [ value ] } in
-      let (Node r as after) =
-        (Node { key; content = Atomic.make new_content; incr }
+      let (Link r as new_content) =
+        Link { bindings = [ value ]; incr; decr; next = curr.next }
+      in
+      let after =
+        (Node { key; content = Atomic.make new_content }
           : (_, _, [ `Node ]) node)
       in
       if
@@ -105,8 +117,7 @@ let rec add_replace_rec t key value fbinding prev curr =
         if r.incr != Size.used_once then begin
           Size.update_once t.size r.incr;
           r.incr <- Size.used_once
-        end;
-        find_node_rec t key prev (Atomic.get prev) |> ignore
+        end
       end
       else add_replace_rec t key value fbinding prev (Atomic.get prev)
     end
@@ -127,17 +138,18 @@ and add_empty_rec t key prev curr =
   let found, prev, curr, _ = find_node_rec t key prev curr in
   if found == 0 then ()
   else begin
-    let incr = Size.new_once t.size Size.incr in
-    let new_content = Link { curr with bindings = [] } in
+    let incr = Size.used_once in
+    let new_content = Link { curr with bindings = []; incr } in
     let after =
-      (Node { key; content = Atomic.make new_content; incr }
-        : (_, _, [ `Node ]) node)
+      (Node { key; content = Atomic.make new_content } : (_, _, [ `Node ]) node)
     in
     if Atomic.compare_and_set prev (Link curr) (Link { curr with next = after })
     then ()
     else add_empty_rec t key prev (Atomic.get prev)
   end
 
+(* [try_remove ~empty=true t key] can removed empty nodes. Probably not the best
+   API for using it in the hashtable, but it enables it to test it !  *)
 let rec try_remove ?(empty = false) t key =
   try_remove_rec empty t key t.head (Atomic.get t.head)
 
@@ -155,7 +167,7 @@ and try_remove_rec empty t key prev curr =
               let decr = Size.used_once in
               (* we don't want to decrease the size *)
               let after =
-                { bindings = []; next = Mark { node = next.next; decr } }
+                { next with bindings = []; decr; next = Mark next.next }
               in
               if
                 Atomic.compare_and_set curr_node.content (Link next)
@@ -167,15 +179,31 @@ and try_remove_rec empty t key prev curr =
             end
             else false
         | _ :: [] ->
-            let decr = Size.new_once t.size Size.decr in
-            let after =
-              { bindings = []; next = Mark { node = next.next; decr } }
-            in
-            if Atomic.compare_and_set curr_node.content (Link next) (Link after)
-            then (
-              find_node_rec t key prev (Atomic.get prev) |> ignore;
-              true)
-            else try_remove_rec empty t key prev (Atomic.get prev)
+            if empty then
+              let decr = Size.new_once t.size Size.decr in
+              let after =
+                { next with bindings = []; decr; next = Mark next.next }
+              in
+              if
+                Atomic.compare_and_set curr_node.content (Link next)
+                  (Link after)
+              then (
+                find_node_rec t key prev (Atomic.get prev) |> ignore;
+                true)
+              else try_remove_rec empty t key prev (Atomic.get prev)
+            else
+              let incr = Size.used_once in
+              let decr = Size.new_once t.size Size.decr in
+              let after =
+                { bindings = []; decr; incr; next = Mark next.next }
+              in
+              if
+                Atomic.compare_and_set curr_node.content (Link next)
+                  (Link after)
+              then (
+                find_node_rec t key prev (Atomic.get prev) |> ignore;
+                true)
+              else try_remove_rec empty t key prev (Atomic.get prev)
         | _ :: xs ->
             let after = { next with bindings = xs } in
             if Atomic.compare_and_set curr_node.content (Link next) (Link after)

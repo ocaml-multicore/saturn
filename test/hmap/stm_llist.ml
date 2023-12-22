@@ -121,7 +121,10 @@ module WSDConf = struct
         | None | Some [] -> res = false
         | Some _ -> res = true
       end
-    | Mem k, Res ((Bool, _), res) -> Sint.mem k s = res
+    | Mem k, Res ((Bool, _), res) -> (
+        match Sint.find_opt k s with
+        | None | Some [] -> res = false
+        | Some _ -> res = true)
     | Length, Res ((Int, _), res) ->
         let bindings = Sint.bindings s in
         let len =
