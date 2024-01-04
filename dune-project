@@ -13,8 +13,6 @@
  (depends
   (ocaml (>= 4.13))
   (domain_shims (and (>= 0.1.0) :with-test))
-  (domain-local-await (>= 1.0.0))
-  (backoff (>= 0.1.0))
   (saturn_lockfree (= :version))
   (multicore-magic (and (>= 2.1.0) :with-test))
   (multicore-bench (and (>= 0.1.2) :with-test))
@@ -30,6 +28,7 @@
  (synopsis "Collection of lock-free data structures for Multicore OCaml")
  (depends
   (ocaml (>= 4.13))
+  (domain-local-await (>= 1.0.0))
   (domain_shims (and (>= 0.1.0) :with-test))
   (backoff (>= 0.1.0))
   (multicore-magic (>= 2.1.0))
