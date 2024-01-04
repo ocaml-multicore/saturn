@@ -11,8 +11,6 @@ let () =
  (name saturn)
  (public_name saturn)
  (libraries
-  domain-local-await
-  backoff
   (re_export saturn_lockfree) |}
   ^ maybe_threads
   ^ {| ))
