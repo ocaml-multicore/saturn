@@ -1,0 +1,32 @@
+(rule
+ (action
+  (progn
+   (copy ../../src_lockfree/skiplist.ml skiplist.ml)
+   (copy ../../src_lockfree/size.ml size.ml)))
+ (package saturn_lockfree))
+
+(test
+ (package saturn_lockfree)
+ (name dscheck_skiplist)
+ (modules skiplist size dscheck_skiplist)
+ (libraries atomic transparent_atomic dscheck alcotest multicore-magic))
+
+(test
+ (package saturn_lockfree)
+ (name qcheck_skiplist)
+ (modules qcheck_skiplist)
+ (libraries saturn qcheck qcheck-core qcheck-alcotest alcotest))
+
+(test
+ (package saturn_lockfree)
+ (name stm_skiplist)
+ (modules stm_skiplist)
+ (libraries
+  saturn
+  qcheck-core
+  qcheck-core.runner
+  qcheck-stm.stm
+  qcheck-stm.sequential
+  qcheck-stm.domain)
+ (action
+  (run %{test} --verbose)))
