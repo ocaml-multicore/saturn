@@ -153,8 +153,7 @@ let tests_two_domains =
             | [] -> true
           in
           check_none_present lpush1 && check_none_present lpush2);
-      (* TEST 3: Parallel push and pop using the same elements in two domains
- *)
+      (* TEST 3: Parallel push and pop using the same elements in two domains *)
       Test.make ~name:"parallel_add_remove_same_list" (list int) (fun lpush ->
           let sl = Skiplist.create ~compare:Int.compare () in
           let sema = Semaphore.Binary.make false in
