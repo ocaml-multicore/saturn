@@ -1,4 +1,5 @@
-[API Reference](https://ocaml-multicore.github.io/saturn/)
+[API Reference](https://ocaml-multicore.github.io/saturn/) &middot;
+[Benchmarks](https://bench.ci.dev/ocaml-multicore/saturn/branch/main)
 
 <!--
 ```ocaml

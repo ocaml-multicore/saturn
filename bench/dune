@@ -1,3 +1,4 @@
-(executables
- (names main mpmc_queue_cmd)
- (libraries saturn unix yojson))
+(test
+ (package saturn)
+ (name main)
+ (libraries saturn multicore-bench multicore-magic))

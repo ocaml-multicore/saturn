@@ -10,4 +10,4 @@ clean:
 	dune clean
 
 bench:
-	@dune exec --release -- ./bench/main.exe
+	@dune exec --release -- ./bench/main.exe -budget 1

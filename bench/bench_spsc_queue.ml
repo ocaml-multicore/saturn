@@ -1,37 +1,37 @@
-module Spsc_queue = Saturn.Single_prod_single_cons_queue
+open Multicore_bench
+module Queue = Saturn.Single_prod_single_cons_queue
 
-let item_count = 2_000_000
+let run_one ~budgetf ?(size_exponent = 3) ?(n_msgs = 80 * Util.iter_factor) () =
+  let t = Queue.create ~size_exponent in
 
-let rec try_until_success f =
-  try f () with Spsc_queue.Full -> try_until_success f
-
-let run () =
-  let queue = Spsc_queue.create ~size_exponent:3 in
-  let pusher =
-    Domain.spawn (fun () ->
-        let start_time = Unix.gettimeofday () in
-        for i = 1 to item_count do
-          try_until_success (fun () -> Spsc_queue.push queue i)
-        done;
-        start_time)
-  in
-  for _ = 1 to item_count do
-    while Option.is_none (Spsc_queue.pop_opt queue) do
-      ()
+  let before () =
+    while Queue.size t <> 0 do
+      Queue.pop t |> ignore
+    done;
+    let n = Random.int ((1 lsl size_exponent) + 1) in
+    for i = 1 to n do
+      Queue.push t i
     done
-  done;
-  let end_time = Unix.gettimeofday () in
-  let start_time = Domain.join pusher in
-  let time_diff = end_time -. start_time in
-  time_diff
+  in
+  let init _ = () in
+  let work i () =
+    if i = 0 then
+      let rec loop n =
+        if 0 < n then loop (n - Bool.to_int (Queue.try_push t n))
+      in
+      loop n_msgs
+    else
+      let rec loop n =
+        if 0 < n then
+          match Queue.pop_opt t with Some _ -> loop (n - 1) | None -> loop n
+      in
+      loop n_msgs
+  in
 
-let bench () =
-  let results = ref [] in
-  for i = 1 to 10 do
-    let time = run () in
-    if i > 1 then results := time :: !results
-  done;
-  let results = List.sort Float.compare !results in
-  let median_time = List.nth results 4 in
-  let median_throughput = Float.of_int item_count /. median_time in
-  Benchmark_result.create_generic ~median_time ~median_throughput "spsc-queue"
+  let config = Printf.sprintf "2 workers, capacity %d" (1 lsl size_exponent) in
+  Times.record ~budgetf ~n_domains:2 ~before ~init ~work ()
+  |> Times.to_thruput_metrics ~n:n_msgs ~singular:"message" ~config
+
+let run_suite ~budgetf =
+  [ 0; 3; 6; 9; 12; 15 ]
+  |> List.concat_map @@ fun size_exponent -> run_one ~budgetf ~size_exponent ()
