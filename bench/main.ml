@@ -1,32 +1,14 @@
-let benchmark_list =
+let benchmarks =
   [
-    Bench_spsc_queue.bench;
-    Mpmc_queue.bench ~takers:4 ~pushers:4;
-    Mpmc_queue.bench ~takers:1 ~pushers:8;
-    Mpmc_queue.bench ~takers:8 ~pushers:1;
-    Mpmc_queue.bench ~use_cas:true ~takers:4 ~pushers:4;
-    Mpmc_queue.bench ~use_cas:true ~takers:1 ~pushers:8;
-    Mpmc_queue.bench ~use_cas:true ~takers:8 ~pushers:1;
-    Bench_skiplist.bench ~workload_type:"read_heavy" ~num_elems:2000000
-      ~num_threads:2;
-    Bench_skiplist.bench ~workload_type:"moderate_heavy" ~num_elems:2000000
-      ~num_threads:2;
+    ("Saturn Relaxed_queue", Bench_relaxed_queue.run_suite);
+    ("Saturn_lockfree Queue", Bench_queue.run_suite);
+    ("Saturn_lockfree Single_prod_single_cons_queue", Bench_spsc_queue.run_suite);
+    ("Saturn_lockfree Size", Bench_size.run_suite);
+    ("Saturn_lockfree Skiplist", Bench_skiplist.run_suite);
+    ("Saturn_lockfree Stack", Bench_stack.run_suite);
+    ("Saturn_lockfree Work_stealing_deque", Bench_ws_deque.run_suite);
+    ("Stdlib Queue", Bench_stdlib_queue.run_suite);
+    ("Stdlib Stack", Bench_stdlib_stack.run_suite);
   ]
 
-let () =
-  let results =
-    (* todo: should assert no stranded domains between tests. *)
-    List.map (fun f -> f ()) benchmark_list
-    |> List.map Benchmark_result.to_json
-    |> String.concat ", "
-  in
-  let output =
-    Printf.sprintf {|{"results": [%s]}|} results
-    (* Cannot use Yojson rewriters as of today none works on OCaml 5.1.0.
-       This at least verifies that the manually crafted JSON is well-formed.
-
-       If the type grow, we could switch to running ppx manually on 5.0.0 and
-       pasting in its output. *)
-    |> Yojson.Basic.prettify
-  in
-  Printf.printf "%s" output
+let () = Multicore_bench.Cmd.run ~benchmarks ()

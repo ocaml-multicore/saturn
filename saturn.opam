@@ -14,6 +14,7 @@ depends: [
   "domain_shims" {>= "0.1.0" & with-test}
   "saturn_lockfree" {= version}
   "multicore-magic" {>= "2.1.0" & with-test}
+  "multicore-bench" {>= "0.1.0" & with-test}
   "alcotest" {>= "1.7.0" & with-test}
   "qcheck" {>= "0.21.3" & with-test}
   "qcheck-stm" {>= "0.3" & with-test}

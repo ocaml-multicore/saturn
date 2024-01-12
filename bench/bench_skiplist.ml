@@ -1,57 +1,70 @@
-open Saturn
+open Multicore_bench
+module Skiplist = Saturn.Skiplist
 
-let workload num_elems num_threads add remove =
-  let sl = Skiplist.create ~compare:Int.compare () in
-  let elems = Array.init num_elems (fun _ -> Random.int 10000) in
-  let push () =
-    Domain.spawn (fun () ->
-        let start_time = Unix.gettimeofday () in
-        for i = 0 to (num_elems - 1) / num_threads do
-          Domain.cpu_relax ();
-          let prob = Random.float 1.0 in
-          if prob < add then Skiplist.try_add sl (Random.int 10000) () |> ignore
-          else if prob >= add && prob < add +. remove then
-            Skiplist.try_remove sl (Random.int 10000) |> ignore
-          else Skiplist.mem sl elems.(i) |> ignore
-        done;
-        start_time)
+let run_one ~budgetf ~n_domains ?(n_ops = 20 * Util.iter_factor)
+    ?(n_keys = 10000) ~percent_mem ?(percent_add = (100 - percent_mem + 1) / 2)
+    ?(prepopulate = true) () =
+  let percent_rem = 100 - (percent_mem + percent_add) in
+
+  let limit_mem = percent_mem in
+  let limit_add = percent_mem + percent_add in
+
+  assert (0 <= limit_mem && limit_mem <= 100);
+  assert (limit_mem <= limit_add && limit_add <= 100);
+
+  let t = Skiplist.create ~compare:Int.compare () in
+  if prepopulate then
+    for _ = 1 to n_keys do
+      let value = Random.bits () in
+      let key = value mod n_keys in
+      Skiplist.try_add t key value |> ignore
+    done;
+
+  let n_ops = (100 + percent_mem) * n_ops / 100 in
+  let n_ops = n_ops * n_domains in
+
+  let n_ops_todo = Atomic.make 0 |> Multicore_magic.copy_as_padded in
+
+  let init _ =
+    Atomic.set n_ops_todo n_ops;
+    Random.State.make_self_init ()
   in
-  let threads = List.init num_threads (fun _ -> push ()) in
-  let start_time_threads =
-    List.map (fun domain -> Domain.join domain) threads
+  let work _ state =
+    let rec work () =
+      let n = Util.alloc n_ops_todo in
+      if n <> 0 then
+        let rec loop n =
+          if 0 < n then
+            let value = Random.State.bits state in
+            let op = (value asr 20) mod 100 in
+            let key = value mod n_keys in
+            if op < limit_mem then begin
+              Skiplist.mem t key |> ignore;
+              loop (n - 1)
+            end
+            else if op < limit_add then begin
+              Skiplist.try_add t key value |> ignore;
+              loop (n - 1)
+            end
+            else begin
+              Skiplist.try_remove t key |> ignore;
+              loop (n - 1)
+            end
+          else work ()
+        in
+        loop n
+    in
+    work ()
   in
-  let end_time = Unix.gettimeofday () in
-  let time_diff = end_time -. List.nth start_time_threads 0 in
-  time_diff
 
-(* A write heavy workload with threads with 50% adds and 50% removes. *)
-let write_heavy_workload num_elems num_threads =
-  workload num_elems num_threads 0.5 0.5
-
-(* A regular workload with 90% reads, 9% adds and 1% removes. *)
-let read_heavy_workload num_elems num_threads =
-  workload num_elems num_threads 0.09 0.01
-
-let moderate_heavy_workload num_elems num_threads =
-  workload num_elems num_threads 0.2 0.1
-
-let balanced_heavy_workload num_elems num_threads =
-  workload num_elems num_threads 0.3 0.2
-
-let bench ~workload_type ~num_elems ~num_threads () =
-  let workload =
-    if workload_type = "read_heavy" then read_heavy_workload
-    else if workload_type = "moderate_heavy" then moderate_heavy_workload
-    else if workload_type = "balanced_heavy" then balanced_heavy_workload
-    else write_heavy_workload
+  let config =
+    Printf.sprintf "%d workers, %d%% mem %d%% add %d%% rem" n_domains
+      percent_mem percent_add percent_rem
   in
-  let results = ref [] in
-  for i = 1 to 10 do
-    let time = workload num_elems num_threads in
-    if i > 1 then results := time :: !results
-  done;
-  let results = List.sort Float.compare !results in
-  let median_time = List.nth results 4 in
-  let median_throughput = Float.of_int num_elems /. median_time in
-  Benchmark_result.create_generic ~median_time ~median_throughput
-    ("atomic_skiplist_" ^ workload_type)
+  Times.record ~budgetf ~n_domains ~init ~work ()
+  |> Times.to_thruput_metrics ~n:n_ops ~singular:"operation" ~config
+
+let run_suite ~budgetf =
+  Util.cross [ 10; 50; 90 ] [ 1; 2; 4 ]
+  |> List.concat_map @@ fun (percent_mem, n_domains) ->
+     run_one ~budgetf ~n_domains ~percent_mem ()
