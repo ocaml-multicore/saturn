@@ -30,3 +30,17 @@
   qcheck-stm.domain)
  (action
   (run %{test} --verbose)))
+
+(test
+ (package saturn_lockfree)
+ (name stm_hshtbl)
+ (modules stm_hshtbl)
+ (libraries
+  saturn
+  qcheck-core
+  qcheck-core.runner
+  qcheck-stm.stm
+  qcheck-stm.sequential
+  qcheck-stm.domain)
+ (action
+  (run %{test} --verbose)))

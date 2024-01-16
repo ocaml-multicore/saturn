@@ -34,4 +34,5 @@ module Single_consumer_queue = Mpsc_queue
 module Relaxed_queue = Mpmc_relaxed_queue
 module Size = Size
 module Skiplist = Skiplist
-module Linked_list = Llist
+module Linked_list = Linked_list
+module Hshtbl = Lf_htbl

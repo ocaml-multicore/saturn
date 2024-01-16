@@ -1,6 +1,6 @@
 open QCheck
 open STM
-module Llist = Saturn.Linked_list
+module Hshtbl = Saturn_lockfree.Hshtbl
 
 module WSDConf = struct
   type cmd =
@@ -8,11 +8,11 @@ module WSDConf = struct
     | Try_remove of int
     | Mem of int
     | Find_all of int
-    | Replace of int * int
-    | Find_opt of int
     | Length
-    | Add_empty of int
-    | Try_remove_empty of int
+    | Replace of int * int
+  (* | Find_opt of int *)
+  (* | Add_empty of int *)
+  (* | Try_remove_empty of int *)
 
   let show_cmd c =
     match c with
@@ -21,11 +21,11 @@ module WSDConf = struct
     | Mem k -> "Mem " ^ string_of_int k
     | Length -> "Length"
     | Find_all k -> "Find_all " ^ string_of_int k
-    | Find_opt k -> "Find_opt " ^ string_of_int k
+    (* | Find_opt k -> "Find_opt " ^ string_of_int k *)
     | Replace (k, v) ->
         "Replace (" ^ string_of_int k ^ "," ^ string_of_int v ^ ")"
-    | Add_empty k -> "Add_empty " ^ string_of_int k
-    | Try_remove_empty k -> "Try_remove_empty " ^ string_of_int k
+  (* | Add_empty k -> "Add_empty " ^ string_of_int k *)
+  (* | Try_remove_empty k -> "Try_remove_empty " ^ string_of_int k *)
 
   module Sint = Map.Make (struct
     type t = int
@@ -34,7 +34,7 @@ module WSDConf = struct
   end)
 
   type state = int list Sint.t
-  type sut = (int, int) Llist.t
+  type sut = (int, int) Hshtbl.t
 
   let arb_cmd _s =
     let int_gen = Gen.nat in
@@ -47,13 +47,13 @@ module WSDConf = struct
            Gen.return Length;
            Gen.map (fun i -> Find_all i) int_gen;
            Gen.map2 (fun k v -> Replace (k, v)) int_gen int_gen;
-           Gen.map (fun i -> Find_opt i) int_gen;
-           Gen.map (fun k -> Add_empty k) int_gen;
-           Gen.map (fun i -> Try_remove_empty i) int_gen;
+           (* Gen.map (fun i -> Find_opt i) int_gen; *)
+           (* Gen.map (fun k -> Add_empty k) int_gen; *)
+           (* Gen.map (fun i -> Try_remove_empty i) int_gen; *)
          ])
 
   let init_state = Sint.empty
-  let init_sut () = Llist.create ~compare ()
+  let init_sut () = Hshtbl.create ~size_exponent:12
   let cleanup _ = ()
 
   let next_state c s =
@@ -67,6 +67,7 @@ module WSDConf = struct
       end
     | Try_remove k -> begin
         match Sint.find_opt k s with
+        | Some (_ :: []) -> Sint.remove k s
         | Some (_ :: vs) ->
             let s = Sint.remove k s in
             Sint.add k vs s
@@ -75,7 +76,7 @@ module WSDConf = struct
     | Mem _ -> s
     | Length -> s
     | Find_all _ -> s
-    | Find_opt _ -> s
+    (* | Find_opt _ -> s *)
     | Replace (k, v) -> begin
         match Sint.find_opt k s with
         | None -> Sint.add k [ v ] s
@@ -86,31 +87,31 @@ module WSDConf = struct
             let s = Sint.remove k s in
             Sint.add k (v :: xs) s
       end
-    | Add_empty k -> begin
-        match Sint.find_opt k s with None -> Sint.add k [] s | Some _ -> s
-      end
-    | Try_remove_empty k -> begin
-        match Sint.find_opt k s with
-        | Some (_ :: [] | []) -> Sint.remove k s
-        | Some (_ :: vs) ->
-            let s = Sint.remove k s in
-            Sint.add k vs s
-        | _ -> s
-      end
+  (* | Add_empty k -> begin *)
+  (*     match Sint.find_opt k s with None -> Sint.add k [] s | Some _ -> s *)
+  (*   end *)
+  (* | Try_remove_empty k -> begin *)
+  (*     match Sint.find_opt k s with *)
+  (*     | Some (_ :: [] | []) -> Sint.remove k s *)
+  (*     | Some (_ :: vs) -> *)
+  (*         let s = Sint.remove k s in *)
+  (*         Sint.add k vs s *)
+  (*     | _ -> s *)
+  (* end *)
 
   let precond _ _ = true
 
   let run c t =
     match c with
-    | Add (k, v) -> Res (unit, Llist.add t k v)
-    | Try_remove k -> Res (bool, Llist.try_remove t k)
-    | Mem k -> Res (bool, Llist.mem t k)
-    | Length -> Res (int, Llist.length t)
-    | Find_all k -> Res (list int, Llist.find_all t k)
-    | Replace (k, v) -> Res (unit, Llist.replace t k v)
-    | Find_opt k -> Res (option int, Llist.find_opt t k)
-    | Add_empty k -> Res (unit, Llist.add_empty t k)
-    | Try_remove_empty k -> Res (bool, Llist.try_remove ~empty:true t k)
+    | Add (k, v) -> Res (unit, Hshtbl.add t k v)
+    | Try_remove k -> Res (bool, Hshtbl.try_remove t k)
+    | Mem k -> Res (bool, Hshtbl.mem t k)
+    | Length -> Res (int, Hshtbl.length t)
+    | Find_all k -> Res (list int, Hshtbl.find_all t k)
+    | Replace (k, v) -> Res (unit, Hshtbl.replace t k v)
+  (* | Find_opt k -> Res (option int, Hshtbl.find_opt t k) *)
+  (* | Add_empty k -> Res (unit, Hshtbl.add_empty t k) *)
+  (* | Try_remove_empty k -> Res (bool, Hshtbl.try_remove ~empty:true t k) *)
 
   let postcond c (s : state) res =
     match (c, res) with
@@ -135,15 +136,15 @@ module WSDConf = struct
         len = res
     | Find_all k, Res ((List Int, _), res) -> (
         match Sint.find_opt k s with None -> res = [] | Some r -> r = res)
-    | Find_opt k, Res ((Option Int, _), res) -> begin
-        match Sint.find_opt k s with
-        | None -> res = None
-        | Some [] -> res = None
-        | Some (x :: _) -> Some x = res
-      end
+    (* | Find_opt k, Res ((Option Int, _), res) -> begin *)
+    (*     match Sint.find_opt k s with *)
+    (*     | None -> res = None *)
+    (*     | Some [] -> res = None *)
+    (*     | Some (x :: _) -> Some x = res *)
+    (*   end *)
     | Replace (_k, _v), Res ((Unit, _), _) -> true
-    | Add_empty _k, Res ((Unit, _), _res) -> true
-    | Try_remove_empty k, Res ((Bool, _), res) -> Sint.mem k s = res
+    (* | Add_empty _k, Res ((Unit, _), _res) -> true *)
+    (* | Try_remove_empty k, Res ((Bool, _), res) -> Sint.mem k s = res *)
     | _, _ -> false
 end
 
