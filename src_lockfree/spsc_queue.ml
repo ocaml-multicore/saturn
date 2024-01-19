@@ -43,72 +43,72 @@ let create ~size_exponent =
   }
   |> Multicore_magic.copy_as_padded
 
-let push { array; head; tail; mask; _ } element =
-  let size = mask + 1 in
-  let head_val = Atomic.get head in
-  let tail_val = Atomic.fenceless_get tail in
+let push t element =
+  let size = t.mask + 1 in
+  let head_val = Atomic.get t.head in
+  let tail_val = Atomic.fenceless_get t.tail in
   if head_val + size == tail_val then raise Full
   else begin
-    Array.set array (tail_val land mask) (Some element);
-    Atomic.incr tail
+    Array.set t.array (tail_val land t.mask) (Some element);
+    Atomic.incr t.tail
   end
 
-let try_push { array; head; tail; mask; _ } element =
-  let size = mask + 1 in
-  let head_val = Atomic.get head in
-  let tail_val = Atomic.fenceless_get tail in
+let try_push t element =
+  let size = t.mask + 1 in
+  let head_val = Atomic.get t.head in
+  let tail_val = Atomic.fenceless_get t.tail in
   if head_val + size == tail_val then false
   else begin
-    Array.set array (tail_val land mask) (Some element);
-    Atomic.incr tail;
+    Array.set t.array (tail_val land t.mask) (Some element);
+    Atomic.incr t.tail;
     true
   end
 
 exception Empty
 
-let pop { array; head; tail; mask; _ } =
-  let head_val = Atomic.fenceless_get head in
-  let tail_val = Atomic.get tail in
+let pop t =
+  let head_val = Atomic.fenceless_get t.head in
+  let tail_val = Atomic.get t.tail in
   if head_val == tail_val then raise Empty
   else
-    let index = head_val land mask in
-    let v = Array.get array index in
+    let index = head_val land t.mask in
+    let v = Array.get t.array index in
     (* allow gc to collect it *)
-    Array.set array index None;
-    Atomic.incr head;
+    Array.set t.array index None;
+    Atomic.incr t.head;
     match v with None -> assert false | Some v -> v
 
-let pop_opt { array; head; tail; mask; _ } =
-  let head_val = Atomic.fenceless_get head in
-  let tail_val = Atomic.get tail in
+let pop_opt t =
+  let head_val = Atomic.fenceless_get t.head in
+  let tail_val = Atomic.get t.tail in
   if head_val == tail_val then None
   else
-    let index = head_val land mask in
-    let v = Array.get array index in
+    let index = head_val land t.mask in
+    let v = Array.get t.array index in
     (* allow gc to collect it *)
-    Array.set array index None;
-    Atomic.incr head;
+    Array.set t.array index None;
+    Atomic.incr t.head;
     assert (Option.is_some v);
     v
 
-let peek_opt { array; head; tail; mask; _ } =
-  let head_val = Atomic.fenceless_get head in
-  let tail_val = Atomic.get tail in
+let peek_opt t =
+  let head_val = Atomic.fenceless_get t.head in
+  let tail_val = Atomic.get t.tail in
   if head_val == tail_val then None
   else
-    let v = Array.get array @@ (head_val land mask) in
+    let v = Array.get t.array (head_val land t.mask) in
     assert (Option.is_some v);
     v
 
-let peek { array; head; tail; mask; _ } =
-  let head_val = Atomic.fenceless_get head in
-  let tail_val = Atomic.get tail in
+let peek t =
+  let head_val = Atomic.fenceless_get t.head in
+  let tail_val = Atomic.get t.tail in
   if head_val == tail_val then raise Empty
   else
-    let v = Array.get array @@ (head_val land mask) in
+    let v = Array.get t.array (head_val land t.mask) in
     match v with None -> assert false | Some v -> v
 
-let size { head; tail; _ } =
-  let tail = Atomic.get tail in
-  let head = Atomic.fenceless_get head in
+let size t =
+  let tail = Atomic.get t.tail in
+  let head = Atomic.fenceless_get t.head in
   tail - head
