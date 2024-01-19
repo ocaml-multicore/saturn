@@ -31,7 +31,7 @@ let test_parallel () =
   let producer =
     Domain.spawn (fun () ->
         for i = 1 to count do
-          while not (push_not_full q i) do
+          while not (push_not_full q (Float.of_int i)) do
             Domain.cpu_relax ()
           done
         done)
@@ -42,8 +42,8 @@ let test_parallel () =
     match Spsc_queue.pop_opt q with
     | None -> Domain.cpu_relax ()
     | Some v ->
-        assert (v == !last_num + 1);
-        last_num := v
+        assert (v = Float.of_int (!last_num + 1));
+        last_num := Float.to_int v
   done;
   assert (Option.is_none (Spsc_queue.pop_opt q));
   assert (Spsc_queue.size q == 0);
