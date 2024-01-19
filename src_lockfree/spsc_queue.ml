@@ -35,14 +35,15 @@ type 'a t = {
 exception Full
 
 let create ~size_exponent =
-  let size = Int.shift_left 1 size_exponent in
-  {
-    array = Array.make size (Obj.magic ());
-    tail = Atomic.make 0 |> Multicore_magic.copy_as_padded;
-    tail_cache = ref 0 |> Multicore_magic.copy_as_padded;
-    head = Atomic.make 0 |> Multicore_magic.copy_as_padded;
-    head_cache = ref 0 |> Multicore_magic.copy_as_padded;
-  }
+  if size_exponent < 0 || Sys.int_size - 2 < size_exponent then
+    invalid_arg "size_exponent out of range";
+  let size = 1 lsl size_exponent in
+  let array = Array.make size (Obj.magic ()) in
+  let tail = Atomic.make 0 |> Multicore_magic.copy_as_padded in
+  let tail_cache = ref 0 |> Multicore_magic.copy_as_padded in
+  let head = Atomic.make 0 |> Multicore_magic.copy_as_padded in
+  let head_cache = ref 0 |> Multicore_magic.copy_as_padded in
+  { array; tail; tail_cache; head; head_cache }
   |> Multicore_magic.copy_as_padded
 
 let push t element =
