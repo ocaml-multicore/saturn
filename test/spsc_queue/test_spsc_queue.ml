@@ -9,7 +9,7 @@ let test_empty () =
 
 let push_not_full q elt =
   try
-    Spsc_queue.push q elt;
+    Spsc_queue.push_exn q elt;
     true
   with Spsc_queue.Full -> false
 
