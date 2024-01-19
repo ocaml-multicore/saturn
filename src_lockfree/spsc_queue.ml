@@ -24,8 +24,10 @@
 
 module Atomic = Transparent_atomic
 
+type not_float = [ `Not_float of not_float ]
+
 type 'a t = {
-  array : 'a Array.t;
+  array : not_float Array.t;
   tail : int Atomic.t;
   tail_cache : int ref;
   head : int Atomic.t;
@@ -58,7 +60,7 @@ let push t element =
     head == head_cache
   then raise Full
   else begin
-    Array.unsafe_set t.array (tail land (size - 1)) element;
+    Array.unsafe_set t.array (tail land (size - 1)) (Obj.magic element);
     Atomic.incr t.tail
   end
 
@@ -74,7 +76,7 @@ let try_push t element =
     head == head_cache
   then false
   else begin
-    Array.unsafe_set t.array (tail land (size - 1)) element;
+    Array.unsafe_set t.array (tail land (size - 1)) (Obj.magic element);
     Atomic.incr t.tail;
     true
   end
@@ -97,7 +99,7 @@ let pop t =
     (* allow gc to collect it *)
     Array.unsafe_set t.array index (Obj.magic ());
     Atomic.incr t.head;
-    v
+    Obj.magic v
 
 let pop_opt t =
   let head = Atomic.fenceless_get t.head in
@@ -115,7 +117,7 @@ let pop_opt t =
     (* allow gc to collect it *)
     Array.unsafe_set t.array index (Obj.magic ());
     Atomic.incr t.head;
-    Some v
+    Some (Obj.magic v)
 
 let peek_opt t =
   let head = Atomic.fenceless_get t.head in
@@ -127,7 +129,10 @@ let peek_opt t =
     t.tail_cache := tail;
     tail_cache == tail
   then None
-  else Some (Array.unsafe_get t.array (head land (Array.length t.array - 1)))
+  else
+    Some
+      (Array.unsafe_get t.array (head land (Array.length t.array - 1))
+      |> Obj.magic)
 
 let peek t =
   let head = Atomic.fenceless_get t.head in
@@ -139,7 +144,8 @@ let peek t =
     t.tail_cache := tail;
     tail_cache == tail
   then raise Empty
-  else Array.unsafe_get t.array (head land (Array.length t.array - 1))
+  else
+    Array.unsafe_get t.array (head land (Array.length t.array - 1)) |> Obj.magic
 
 let size t =
   let tail = Atomic.get t.tail in
