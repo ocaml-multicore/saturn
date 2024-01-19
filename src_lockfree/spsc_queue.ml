@@ -22,6 +22,8 @@
  * https://dl.acm.org/doi/pdf/10.1145/3437801.3441583
  *)
 
+module Atomic = Transparent_atomic
+
 type 'a t = {
   array : 'a Option.t Array.t;
   tail : int Atomic.t;
@@ -44,26 +46,28 @@ let create ~size_exponent =
 let push { array; head; tail; mask; _ } element =
   let size = mask + 1 in
   let head_val = Atomic.get head in
-  let tail_val = Atomic.get tail in
+  let tail_val = Atomic.fenceless_get tail in
   if head_val + size == tail_val then raise Full
-  else (
+  else begin
     Array.set array (tail_val land mask) (Some element);
-    Atomic.set tail (tail_val + 1))
+    Atomic.incr tail
+  end
 
 let try_push { array; head; tail; mask; _ } element =
   let size = mask + 1 in
   let head_val = Atomic.get head in
-  let tail_val = Atomic.get tail in
+  let tail_val = Atomic.fenceless_get tail in
   if head_val + size == tail_val then false
-  else (
+  else begin
     Array.set array (tail_val land mask) (Some element);
-    Atomic.set tail (tail_val + 1);
-    true)
+    Atomic.incr tail;
+    true
+  end
 
 exception Empty
 
 let pop { array; head; tail; mask; _ } =
-  let head_val = Atomic.get head in
+  let head_val = Atomic.fenceless_get head in
   let tail_val = Atomic.get tail in
   if head_val == tail_val then raise Empty
   else
@@ -71,11 +75,11 @@ let pop { array; head; tail; mask; _ } =
     let v = Array.get array index in
     (* allow gc to collect it *)
     Array.set array index None;
-    Atomic.set head (head_val + 1);
+    Atomic.incr head;
     match v with None -> assert false | Some v -> v
 
 let pop_opt { array; head; tail; mask; _ } =
-  let head_val = Atomic.get head in
+  let head_val = Atomic.fenceless_get head in
   let tail_val = Atomic.get tail in
   if head_val == tail_val then None
   else
@@ -83,12 +87,12 @@ let pop_opt { array; head; tail; mask; _ } =
     let v = Array.get array index in
     (* allow gc to collect it *)
     Array.set array index None;
-    Atomic.set head (head_val + 1);
+    Atomic.incr head;
     assert (Option.is_some v);
     v
 
 let peek_opt { array; head; tail; mask; _ } =
-  let head_val = Atomic.get head in
+  let head_val = Atomic.fenceless_get head in
   let tail_val = Atomic.get tail in
   if head_val == tail_val then None
   else
@@ -97,11 +101,14 @@ let peek_opt { array; head; tail; mask; _ } =
     v
 
 let peek { array; head; tail; mask; _ } =
-  let head_val = Atomic.get head in
+  let head_val = Atomic.fenceless_get head in
   let tail_val = Atomic.get tail in
   if head_val == tail_val then raise Empty
   else
     let v = Array.get array @@ (head_val land mask) in
     match v with None -> assert false | Some v -> v
 
-let size { head; tail; _ } = Atomic.get tail - Atomic.get head
+let size { head; tail; _ } =
+  let tail = Atomic.get tail in
+  let head = Atomic.fenceless_get head in
+  tail - head
