@@ -48,12 +48,13 @@ let create ~size_exponent =
 let push t element =
   let size = Array.length t.array in
   let tail = Atomic.fenceless_get t.tail in
+  let head_cache = !(t.head_cache) in
   if
-    !(t.head_cache) == tail - size
+    head_cache == tail - size
     &&
     let head = Atomic.get t.head in
     t.head_cache := head;
-    head == tail - size
+    head == head_cache
   then raise Full
   else begin
     Array.unsafe_set t.array (tail land (size - 1)) element;
@@ -63,12 +64,13 @@ let push t element =
 let try_push t element =
   let size = Array.length t.array in
   let tail = Atomic.fenceless_get t.tail in
+  let head_cache = !(t.head_cache) in
   if
-    !(t.head_cache) == tail - size
+    head_cache == tail - size
     &&
     let head = Atomic.get t.head in
     t.head_cache := head;
-    head == tail - size
+    head == head_cache
   then false
   else begin
     Array.unsafe_set t.array (tail land (size - 1)) element;
@@ -80,12 +82,13 @@ exception Empty
 
 let pop t =
   let head = Atomic.fenceless_get t.head in
+  let tail_cache = !(t.tail_cache) in
   if
-    head == !(t.tail_cache)
+    head == tail_cache
     &&
     let tail = Atomic.get t.tail in
     t.tail_cache := tail;
-    head == tail
+    tail_cache == tail
   then raise Empty
   else
     let index = head land (Array.length t.array - 1) in
@@ -97,12 +100,13 @@ let pop t =
 
 let pop_opt t =
   let head = Atomic.fenceless_get t.head in
+  let tail_cache = !(t.tail_cache) in
   if
-    head == !(t.tail_cache)
+    head == tail_cache
     &&
     let tail = Atomic.get t.tail in
     t.tail_cache := tail;
-    head == tail
+    tail_cache == tail
   then None
   else
     let index = head land (Array.length t.array - 1) in
@@ -114,23 +118,25 @@ let pop_opt t =
 
 let peek_opt t =
   let head = Atomic.fenceless_get t.head in
+  let tail_cache = !(t.tail_cache) in
   if
-    head == !(t.tail_cache)
+    head == tail_cache
     &&
     let tail = Atomic.get t.tail in
     t.tail_cache := tail;
-    head == tail
+    tail_cache == tail
   then None
   else Some (Array.unsafe_get t.array (head land (Array.length t.array - 1)))
 
 let peek t =
   let head = Atomic.fenceless_get t.head in
+  let tail_cache = !(t.tail_cache) in
   if
-    head == !(t.tail_cache)
+    head == tail_cache
     &&
     let tail = Atomic.get t.tail in
     t.tail_cache := tail;
-    head == tail
+    tail_cache == tail
   then raise Empty
   else Array.unsafe_get t.array (head land (Array.length t.array - 1))
 
