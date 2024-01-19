@@ -33,6 +33,9 @@ module Work_stealing_deque = Saturn_lockfree.Work_stealing_deque
 module Single_prod_single_cons_queue =
   Saturn_lockfree.Single_prod_single_cons_queue
 
+module Single_prod_single_cons_queue_unsafe =
+  Saturn_lockfree.Single_prod_single_cons_queue_unsafe
+
 module Single_consumer_queue = Saturn_lockfree.Single_consumer_queue
 module Relaxed_queue = Mpmc_relaxed_queue
 module Skiplist = Saturn_lockfree.Skiplist
