@@ -1,5 +1,6 @@
 (*
  * Copyright (c) 2022, Bartosz Modelski
+ * Copyright (c) 2024, Vesa Karvonen
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -33,11 +34,12 @@ exception Full
 let create ~size_exponent =
   let size = Int.shift_left 1 size_exponent in
   {
-    head = Atomic.make 0;
-    tail = Atomic.make 0;
+    head = Atomic.make 0 |> Multicore_magic.copy_as_padded;
+    tail = Atomic.make 0 |> Multicore_magic.copy_as_padded;
     mask = size - 1;
     array = Array.init size (fun _ -> None);
   }
+  |> Multicore_magic.copy_as_padded
 
 let push { array; head; tail; mask; _ } element =
   let size = mask + 1 in
