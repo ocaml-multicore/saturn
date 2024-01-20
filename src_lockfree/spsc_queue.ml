@@ -48,23 +48,9 @@ let create ~size_exponent =
   { array; tail; tail_cache; head; head_cache }
   |> Multicore_magic.copy_as_padded
 
-let push t element =
-  let size = Array.length t.array in
-  let tail = Atomic.fenceless_get t.tail in
-  let head_cache = !(t.head_cache) in
-  if
-    head_cache == tail - size
-    &&
-    let head = Atomic.get t.head in
-    t.head_cache := head;
-    head == head_cache
-  then raise Full
-  else begin
-    Array.unsafe_set t.array (tail land (size - 1)) (Obj.magic element);
-    Atomic.incr t.tail
-  end
+type _ mono = Unit : unit mono | Bool : bool mono
 
-let try_push t element =
+let push_as (type r) t element (mono : r mono) : r =
   let size = Array.length t.array in
   let tail = Atomic.fenceless_get t.tail in
   let head_cache = !(t.head_cache) in
@@ -74,16 +60,22 @@ let try_push t element =
     let head = Atomic.get t.head in
     t.head_cache := head;
     head == head_cache
-  then false
+  then match mono with Unit -> raise Full | Bool -> false
   else begin
     Array.unsafe_set t.array (tail land (size - 1)) (Obj.magic element);
     Atomic.incr t.tail;
-    true
+    match mono with Unit -> () | Bool -> true
   end
+
+let push t element = push_as t element Unit
+let try_push t element = push_as t element Bool
 
 exception Empty
 
-let pop t =
+type ('a, _) poly = Option : ('a, 'a option) poly | Value : ('a, 'a) poly
+type op = Peek | Pop
+
+let pop_or_peek_as (type a r) (t : a t) op (poly : (a, r) poly) : r =
   let head = Atomic.fenceless_get t.head in
   let tail_cache = !(t.tail_cache) in
   if
@@ -92,60 +84,23 @@ let pop t =
     let tail = Atomic.get t.tail in
     t.tail_cache := tail;
     tail_cache == tail
-  then raise Empty
+  then match poly with Value -> raise Empty | Option -> None
   else
     let index = head land (Array.length t.array - 1) in
-    let v = Array.unsafe_get t.array index in
-    (* allow gc to collect it *)
-    Array.unsafe_set t.array index (Obj.magic ());
-    Atomic.incr t.head;
-    Obj.magic v
+    let v = Array.unsafe_get t.array index |> Obj.magic in
+    begin
+      match op with
+      | Pop ->
+          Array.unsafe_set t.array index (Obj.magic ());
+          Atomic.incr t.head
+      | Peek -> ()
+    end;
+    match poly with Value -> v | Option -> Some v
 
-let pop_opt t =
-  let head = Atomic.fenceless_get t.head in
-  let tail_cache = !(t.tail_cache) in
-  if
-    head == tail_cache
-    &&
-    let tail = Atomic.get t.tail in
-    t.tail_cache := tail;
-    tail_cache == tail
-  then None
-  else
-    let index = head land (Array.length t.array - 1) in
-    let v = Array.unsafe_get t.array index in
-    (* allow gc to collect it *)
-    Array.unsafe_set t.array index (Obj.magic ());
-    Atomic.incr t.head;
-    Some (Obj.magic v)
-
-let peek_opt t =
-  let head = Atomic.fenceless_get t.head in
-  let tail_cache = !(t.tail_cache) in
-  if
-    head == tail_cache
-    &&
-    let tail = Atomic.get t.tail in
-    t.tail_cache := tail;
-    tail_cache == tail
-  then None
-  else
-    Some
-      (Array.unsafe_get t.array (head land (Array.length t.array - 1))
-      |> Obj.magic)
-
-let peek t =
-  let head = Atomic.fenceless_get t.head in
-  let tail_cache = !(t.tail_cache) in
-  if
-    head == tail_cache
-    &&
-    let tail = Atomic.get t.tail in
-    t.tail_cache := tail;
-    tail_cache == tail
-  then raise Empty
-  else
-    Array.unsafe_get t.array (head land (Array.length t.array - 1)) |> Obj.magic
+let pop t = pop_or_peek_as t Pop Value
+let pop_opt t = pop_or_peek_as t Pop Option
+let peek t = pop_or_peek_as t Peek Value
+let peek_opt t = pop_or_peek_as t Peek Option
 
 let size t =
   let tail = Atomic.get t.tail in
