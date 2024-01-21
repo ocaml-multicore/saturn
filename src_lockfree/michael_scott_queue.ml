@@ -27,7 +27,9 @@ type 'a t = {
 
 let create () =
   let next = Atomic.make Nil in
-  { head = Atomic.make next; tail = Atomic.make next }
+  let head = Atomic.make next |> Multicore_magic.copy_as_padded in
+  let tail = Atomic.make next |> Multicore_magic.copy_as_padded in
+  { head; tail } |> Multicore_magic.copy_as_padded
 
 let is_empty { head; _ } = Atomic.get (Atomic.get head) == Nil
 
