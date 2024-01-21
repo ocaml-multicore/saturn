@@ -16,82 +16,92 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-(* Michael-Scott queue *)
-
-type 'a node = Nil | Next of 'a * 'a node Atomic.t
+module Node = Michael_scott_queue_node
+module Atomic = Node.Atomic
 
 type 'a t = {
-  head : 'a node Atomic.t Atomic.t;
-  tail : 'a node Atomic.t Atomic.t;
+  head : ('a, [ `Next ]) Node.t Atomic.t;
+  tail : ('a, [ `Next ]) Node.t Atomic.t;
 }
 
 let create () =
-  let next = Atomic.make Nil in
-  let head = Atomic.make next |> Multicore_magic.copy_as_padded in
-  let tail = Atomic.make next |> Multicore_magic.copy_as_padded in
+  let node = Node.make (Obj.magic ()) in
+  let head = Atomic.make node |> Multicore_magic.copy_as_padded in
+  let tail = Atomic.make node |> Multicore_magic.copy_as_padded in
   { head; tail } |> Multicore_magic.copy_as_padded
 
-let is_empty { head; _ } = Atomic.get (Atomic.get head) == Nil
+let is_empty t = Atomic.get (Node.as_atomic (Atomic.get t.head)) == Nil
 
 exception Empty
 
-let pop_opt { head; _ } =
-  let b = Backoff.default in
-  let rec loop b =
-    let old_head = Atomic.get head in
-    match Atomic.get old_head with
-    | Nil -> None
-    | Next (value, next) when Atomic.compare_and_set head old_head next ->
-        Some value
-    | _ ->
-        let b = Backoff.once b in
-        loop b
-  in
-  loop b
+type ('a, _) poly = Option : ('a, 'a option) poly | Value : ('a, 'a) poly
 
-let pop { head; _ } =
-  let b = Backoff.default in
-  let rec loop b =
-    let old_head = Atomic.get head in
-    match Atomic.get old_head with
-    | Nil -> raise Empty
-    | Next (value, next) when Atomic.compare_and_set head old_head next -> value
-    | _ ->
-        let b = Backoff.once b in
-        loop b
-  in
-  loop b
-
-let peek_opt { head; _ } =
+let rec pop_as :
+    type a r. (a, [ `Next ]) Node.t Atomic.t -> Backoff.t -> (a, r) poly -> r =
+ fun head backoff poly ->
   let old_head = Atomic.get head in
-  match Atomic.get old_head with Nil -> None | Next (value, _) -> Some value
+  match Atomic.get (Node.as_atomic old_head) with
+  | Nil -> begin match poly with Value -> raise Empty | Option -> None end
+  | Next r as new_head ->
+      if Atomic.compare_and_set head old_head new_head then begin
+        match poly with
+        | Value ->
+            let value = r.value in
+            r.value <- Obj.magic ();
+            value
+        | Option ->
+            let value = r.value in
+            r.value <- Obj.magic ();
+            Some value
+      end
+      else
+        let backoff = Backoff.once backoff in
+        pop_as head backoff poly
 
-let peek { head; _ } =
+let pop_opt t = pop_as t.head Backoff.default Option
+let pop t = pop_as t.head Backoff.default Value
+
+let rec peek_as : type a r. (a, [ `Next ]) Node.t Atomic.t -> (a, r) poly -> r =
+ fun head poly ->
   let old_head = Atomic.get head in
-  match Atomic.get old_head with Nil -> raise Empty | Next (value, _) -> value
+  match Atomic.get (Node.as_atomic old_head) with
+  | Nil -> begin match poly with Value -> raise Empty | Option -> None end
+  | Next r ->
+      let value = r.value in
+      if Atomic.get head == old_head then
+        match poly with Value -> value | Option -> Some value
+      else peek_as head poly
 
-let rec fix_tail tail new_tail =
+let peek_opt t = peek_as t.head Option
+let peek t = peek_as t.head Value
+
+let rec fix_tail tail new_tail backoff =
   let old_tail = Atomic.get tail in
   if
-    Atomic.get new_tail == Nil
+    Atomic.get (Node.as_atomic new_tail) == Nil
     && not (Atomic.compare_and_set tail old_tail new_tail)
-  then fix_tail tail new_tail
+  then fix_tail tail new_tail (Backoff.once backoff)
+
+let rec push tail link (Next _ as new_node : (_, [ `Next ]) Node.t) backoff =
+  match Atomic.get link with
+  | Node.Nil ->
+      if Atomic.compare_and_set link Node.Nil new_node then begin
+        fix_tail tail new_node Backoff.default
+      end
+      else
+        let backoff = Backoff.once backoff in
+        push tail link new_node backoff
+  | Next _ as next -> push tail (Node.as_atomic next) new_node backoff
 
 let push { tail; _ } value =
-  let rec find_tail_and_enq curr_end node =
-    if not (Atomic.compare_and_set curr_end Nil node) then
-      match Atomic.get curr_end with
-      | Nil -> find_tail_and_enq curr_end node
-      | Next (_, n) -> find_tail_and_enq n node
-  in
-  let new_tail = Atomic.make Nil in
-  let newnode = Next (value, new_tail) in
+  let (Next _ as new_node : (_, [ `Next ]) Node.t) = Node.make value in
   let old_tail = Atomic.get tail in
-  find_tail_and_enq old_tail newnode;
-  if not (Atomic.compare_and_set tail old_tail new_tail) then
-    fix_tail tail new_tail
-
-type 'a cursor = 'a node
-
-let snapshot { head; _ } = Atomic.get (Atomic.get head)
-let next = function Nil -> None | Next (a, n) -> Some (a, Atomic.get n)
+  let link = Node.as_atomic old_tail in
+  if Atomic.compare_and_set link Nil new_node then begin
+    if not (Atomic.compare_and_set tail old_tail new_node) then
+      let backoff = Backoff.once Backoff.default in
+      fix_tail tail new_node backoff
+  end
+  else
+    let backoff = Backoff.once Backoff.default in
+    push tail link new_node backoff
