@@ -6,7 +6,7 @@
 (test
  (package saturn_lockfree)
  (name michael_scott_queue_dscheck)
- (libraries atomic dscheck alcotest backoff)
+ (libraries atomic dscheck alcotest backoff multicore-magic)
  (build_if
   (and
    (>= %{ocaml_version} 5)
