@@ -6,7 +6,13 @@
 (test
  (package saturn_lockfree)
  (name michael_scott_queue_dscheck)
- (libraries atomic dscheck alcotest backoff multicore-magic)
+ (libraries
+  atomic
+  dscheck
+  alcotest
+  backoff
+  multicore-magic
+  transparent_atomic)
  (build_if
   (and
    (>= %{ocaml_version} 5)
@@ -14,7 +20,10 @@
     (and
      (= %{arch_sixtyfour} false)
      (= %{architecture} arm)))))
- (modules michael_scott_queue michael_scott_queue_dscheck))
+ (modules
+  michael_scott_queue
+  michael_scott_queue_node
+  michael_scott_queue_dscheck))
 
 (test
  (package saturn_lockfree)

@@ -57,13 +57,3 @@ val peek : 'a t -> 'a
 val peek_opt : 'a t -> 'a option
 (** [peek_opt q] returns the first element in queue [q], or
     returns [None] if the queue is empty. *)
-
-type 'a cursor
-(** The type of cursor. *)
-
-val snapshot : 'a t -> 'a cursor
-(** Obtain a snapshot of the queue. This is a constant time operation. *)
-
-val next : 'a cursor -> ('a * 'a cursor) option
-(** [next c] returns [Some (e, c')] where [e] is the head of the queue and
-    [c'] is the tail, if the queue is non-empty. Otherwise, returns [None]. *)
