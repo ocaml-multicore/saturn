@@ -125,64 +125,76 @@ module M : S = struct
     let a = Atomic.get q.tab in
     let size = b - t in
     let a =
-      if size = CArray.size a then (
+      if size = CArray.size a then begin
         grow q t b;
-        Atomic.get q.tab)
+        Atomic.get q.tab
+      end
       else a
     in
     CArray.put a b v';
     Atomic.set q.bottom (b + 1)
 
-  let[@inline] release ptr =
+  type ('a, _) poly = Option : ('a, 'a option) poly | Value : ('a, 'a) poly
+
+  let[@inline] release : type a r. a ref -> (a, r) poly -> r =
+   fun ptr poly ->
     let res = !ptr in
     (* we know this ptr will never be dereferenced, but want to
        break the reference to ensure that the contents of the
        deque array get garbage collected *)
     ptr := Obj.magic ();
-    res
+    match poly with Option -> Some res | Value -> res
 
-  let pop q =
-    if size q = 0 then raise Exit
+  let pop_as : type a r. a t -> (a, r) poly -> r =
+   fun q poly ->
+    if size q = 0 then match poly with Option -> None | Value -> raise Exit
     else
       let b = Atomic.get q.bottom - 1 in
       Atomic.set q.bottom b;
       let t = Atomic.get q.top in
       let a = Atomic.get q.tab in
       let size = b - t in
-      if size < 0 then (
+      if size < 0 then begin
         (* empty queue *)
         Atomic.set q.bottom (b + 1);
-        raise Exit)
+        match poly with Option -> None | Value -> raise Exit
+      end
       else
         let out = CArray.get a b in
         if b = t then
           (* single last element *)
-          if Atomic.compare_and_set q.top t (t + 1) then (
+          if Atomic.compare_and_set q.top t (t + 1) then begin
             Atomic.set q.bottom (b + 1);
-            release out)
-          else (
+            release out poly
+          end
+          else begin
             Atomic.set q.bottom (b + 1);
-            raise Exit)
-        else (
+            match poly with Option -> None | Value -> raise Exit
+          end
+        else begin
           (* non-empty queue *)
-          if q.next_shrink > size then (
+          if q.next_shrink > size then begin
             Atomic.set q.tab (CArray.shrink a t b);
-            set_next_shrink q);
-          release out)
+            set_next_shrink q
+          end;
+          release out poly
+        end
 
-  let pop_opt q = try Some (pop q) with Exit -> None
+  let pop q = pop_as q Value
+  let pop_opt q = pop_as q Option
 
-  let rec steal backoff q =
+  let rec steal_as : type a r. a t -> Backoff.t -> (a, r) poly -> r =
+   fun q backoff poly ->
     let t = Atomic.get q.top in
     let b = Atomic.get q.bottom in
     let size = b - t in
-    if size <= 0 then raise Exit
+    if size <= 0 then match poly with Option -> None | Value -> raise Exit
     else
       let a = Atomic.get q.tab in
       let out = CArray.get a t in
-      if Atomic.compare_and_set q.top t (t + 1) then release out
-      else steal (Backoff.once backoff) q
+      if Atomic.compare_and_set q.top t (t + 1) then release out poly
+      else steal_as q (Backoff.once backoff) poly
 
-  let steal q = steal Backoff.default q
-  let steal_opt q = try Some (steal q) with Exit -> None
+  let steal q = steal_as q Backoff.default Value
+  let steal_opt q = steal_as q Backoff.default Option
 end
