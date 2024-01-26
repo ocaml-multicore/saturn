@@ -1,46 +1,31 @@
 (** Treiber's Lock Free stack *)
 
-type 'a node = Nil | Next of 'a * 'a node
-type 'a t = { head : 'a node Atomic.t }
+type 'a node = Nil | Cons of { value : 'a; tail : 'a node }
+type 'a t = 'a node Atomic.t
 
-let create () =
-  let head = Nil in
-  { head = Atomic.make head }
+let create () = Atomic.make Nil |> Multicore_magic.copy_as_padded
+let is_empty t = Atomic.get t == Nil
 
-let is_empty q = match Atomic.get q.head with Nil -> true | Next _ -> false
+let rec push t value backoff =
+  let tail = Atomic.get t in
+  let cons = Cons { value; tail } in
+  if not (Atomic.compare_and_set t tail cons) then
+    push t value (Backoff.once backoff)
 
-let rec push backoff q v =
-  let head = Atomic.get q.head in
-  let new_node = Next (v, head) in
-  if Atomic.compare_and_set q.head head new_node then ()
-  else
-    let backoff = Backoff.once backoff in
-    push backoff q v
-
-let push q v = push Backoff.default q v
+let push t value = push t value Backoff.default
 
 exception Empty
 
-let rec pop backoff q =
-  let s = Atomic.get q.head in
-  match s with
-  | Nil -> raise Empty
-  | Next (v, next) ->
-      if Atomic.compare_and_set q.head s next then v
-      else
-        let backoff = Backoff.once backoff in
-        pop backoff q
+type ('a, _) poly = Option : ('a, 'a option) poly | Value : ('a, 'a) poly
 
-let pop q = pop Backoff.default q
+let rec pop_as : type a r. a t -> Backoff.t -> (a, r) poly -> r =
+ fun t backoff poly ->
+  match Atomic.get t with
+  | Nil -> begin match poly with Option -> None | Value -> raise Empty end
+  | Cons cons_r as cons ->
+      if Atomic.compare_and_set t cons cons_r.tail then
+        match poly with Option -> Some cons_r.value | Value -> cons_r.value
+      else pop_as t (Backoff.once backoff) poly
 
-let rec pop_opt backoff q =
-  let s = Atomic.get q.head in
-  match s with
-  | Nil -> None
-  | Next (v, next) ->
-      if Atomic.compare_and_set q.head s next then Some v
-      else
-        let backoff = Backoff.once backoff in
-        pop_opt backoff q
-
-let pop_opt q = pop_opt Backoff.default q
+let pop t = pop_as t Backoff.default Value
+let pop_opt t = pop_as t Backoff.default Option
