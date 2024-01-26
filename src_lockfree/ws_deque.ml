@@ -49,26 +49,24 @@ module CArray = struct
     assert (Int.logand sz (sz - 1) == 0);
     Array.make sz v
 
-  let size t = Array.length t [@@inline]
-  let mask t = size t - 1 [@@inline]
+  let[@inline] size t = Array.length t
+  let[@inline] mask t = size t - 1
 
-  let index i t =
+  let[@inline] index i t =
     (* Because [size t] is a power of two, [i mod (size t)] is the same as
        [i land (size t - 1)], that is, [i land (mask t)]. *)
     Int.logand i (mask t)
-  [@@inline]
 
-  let get t i = Array.unsafe_get t (index i t) [@@inline]
-  let put t i v = Array.unsafe_set t (index i t) v [@@inline]
+  let[@inline] get t i = Array.unsafe_get t (index i t)
+  let[@inline] put t i v = Array.unsafe_set t (index i t) v
 
-  let transfer src dst top num =
+  let[@inline] transfer src dst top num =
     ArrayExtra.blit_circularly (* source array and index: *)
       src
       (index top src) (* target array and index: *)
       dst
       (index top dst) (* number of elements: *)
       num
-  [@@inline]
 
   let grow t top bottom =
     let sz = size t in
@@ -135,14 +133,13 @@ module M : S = struct
     CArray.put a b v';
     Atomic.set q.bottom (b + 1)
 
-  let release ptr =
+  let[@inline] release ptr =
     let res = !ptr in
     (* we know this ptr will never be dereferenced, but want to
        break the reference to ensure that the contents of the
        deque array get garbage collected *)
     ptr := Obj.magic ();
     res
-  [@@inline]
 
   let pop q =
     if size q = 0 then raise Exit
