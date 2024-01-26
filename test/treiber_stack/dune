@@ -6,7 +6,7 @@
 (test
  (package saturn_lockfree)
  (name treiber_stack_dscheck)
- (libraries atomic dscheck alcotest backoff)
+ (libraries atomic dscheck alcotest backoff multicore-magic)
  (enabled_if
   (not
    (and
