@@ -97,12 +97,14 @@ module M : S = struct
   }
 
   let create () =
-    {
-      top = Atomic.make 1;
-      bottom = Atomic.make 1;
-      tab = Atomic.make (CArray.create min_size (Obj.magic ()));
-      next_shrink = 0;
-    }
+    let top = Atomic.make 1 |> Multicore_magic.copy_as_padded in
+    let bottom = Atomic.make 1 |> Multicore_magic.copy_as_padded in
+    let tab =
+      Atomic.make (CArray.create min_size (Obj.magic ()))
+      |> Multicore_magic.copy_as_padded
+    in
+    let next_shrink = 0 in
+    { top; bottom; tab; next_shrink } |> Multicore_magic.copy_as_padded
 
   let set_next_shrink q =
     let sz = CArray.size (Atomic.get q.tab) in
