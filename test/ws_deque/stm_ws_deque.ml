@@ -77,11 +77,7 @@ let () =
           assume (Dom.all_interleavings_ok triple);
           repeat rep_count Dom.agree_prop_par_asym triple)
     in
-    [
-      agree_test_par_asym ~count ~name:(name ^ " parallel");
-      (* Note: this can generate, e.g., pop commands/actions in different threads, thus violating the spec. *)
-      Dom.neg_agree_test_par ~count ~name:(name ^ " parallel, negative");
-    ]
+    [ agree_test_par_asym ~count ~name:(name ^ " parallel") ]
   in
   Stm_run.run ~count:1000 ~name:"Saturn_lockfree.Ws_deque" ~verbose:true
     ~make_domain

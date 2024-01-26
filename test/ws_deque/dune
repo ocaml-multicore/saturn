@@ -11,10 +11,12 @@
 (test
  (package saturn_lockfree)
  (name ws_deque_dscheck)
- (libraries atomic dscheck alcotest backoff)
+ (libraries atomic dscheck alcotest backoff multicore-magic-dscheck)
  (build_if
   (>= %{ocaml_version} 5))
- (modules ArrayExtra ws_deque ws_deque_dscheck))
+ (modules ArrayExtra ws_deque ws_deque_dscheck)
+ (flags
+  (:standard -open Multicore_magic_dscheck)))
 
 (test
  (package saturn_lockfree)
