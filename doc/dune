@@ -1,0 +1,6 @@
+(mdx
+ (package saturn)
+ (enabled_if
+  (>= %{ocaml_version} 5))
+ (files concurrent-size.md)
+ (libraries dscheck))
