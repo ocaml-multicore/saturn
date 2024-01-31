@@ -39,4 +39,6 @@ module Relaxed_queue = Mpmc_relaxed_queue
 module Skiplist = Skiplist
 module Linked_list = Linked_list
 module Hshtbl = Lf_htbl
+module Hshtbl2 = Lf_htbl2
+
 module Size = Size

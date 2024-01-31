@@ -1,0 +1,27 @@
+; (rule
+;  (action
+;   (progn
+;    (copy ../../src_lockfree/lf_resizable_htbl.ml lf_resizable_htbl.ml)
+;    (copy ../../src_lockfree/size.ml size.ml)))
+;  (package saturn_lockfree))
+
+
+; (test
+;  (package saturn_lockfree)
+;  (name dscheck_htbl)
+;  (modules llist size dscheck_htbl)
+;  (libraries atomic transparent_atomic dscheck alcotest multicore-magic))
+
+(test
+ (package saturn_lockfree)
+ (name stm_htbl)
+ (modules stm_htbl)
+ (libraries
+  saturn
+  qcheck-core
+  qcheck-core.runner
+  qcheck-stm.stm
+  qcheck-stm.sequential
+  qcheck-stm.domain)
+ (action
+  (run %{test} --verbose)))
