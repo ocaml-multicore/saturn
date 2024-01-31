@@ -44,6 +44,7 @@ module Snapshot = struct
 
   let[@inline] set s i after =
     let snap = Array.unsafe_get s i in
+    let after = after land max_value in
     let before = Atomic.get snap in
     if
       before = collecting
@@ -53,6 +54,7 @@ module Snapshot = struct
 
   let[@inline] forward s i after =
     let snap = Array.unsafe_get s i in
+    let after = after land max_value in
     while
       let before = Atomic.get snap in
       (before = collecting
@@ -170,21 +172,18 @@ let new_once t update =
 let rec update_once txs once counter =
   let before = Atomic.get counter in
   let index = get_index once in
-  let before_once = before.once in
-  if index != used_index && before_once != once then begin
-    use_index before_once;
-    let value = (before.value + 1) land max_value in
-    let after = { value; once } in
+  if index != used_index && before.once != once then begin
+    use_index before.once;
+    let after = { value = before.value + 1; once } in
     if Atomic.compare_and_set counter before after then begin
       let snapshot = Atomic.get (snapshot_of txs) in
       if Snapshot.is_collecting snapshot then
-        Snapshot.forward snapshot index value
+        Snapshot.forward snapshot index after.value
     end
     else update_once txs once (Array.unsafe_get txs index)
   end
 
-let update_once t once =
-  match once with
+let update_once t = function
   | Once Used -> ()
   | Once (Open _ as once) ->
       let index = get_index once in
