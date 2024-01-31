@@ -1,8 +1,8 @@
 open QCheck
 open STM
+module Hshtbl = Saturn_lockfree.Resizable_hshtbl
 
-
-module Hshtbl = Saturn_lockfree.Hshtbl2
+(* module Hshtbl = Saturn_lockfree.Hshtbl2 *)
 
 module WSDConf = struct
   type cmd =

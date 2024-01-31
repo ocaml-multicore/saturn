@@ -40,5 +40,5 @@ module Skiplist = Skiplist
 module Linked_list = Linked_list
 module Hshtbl = Lf_htbl
 module Hshtbl2 = Lf_htbl2
-
+module Resizable_hshtbl = Lf_resizable_htbl
 module Size = Size
