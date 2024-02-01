@@ -13,7 +13,7 @@ module Key = struct
   (*  let compute_hkey k = reverse k lor 0x00_00_00_01*)
 
   (** unset most significant turn on bit (for int32) *)
-  let _unset_msb key =
+  let unset_msb key =
     let a = key lor (key lsr 1) in
     let a = a lor (a lsr 2) in
     let a = a lor (a lsr 4) in
@@ -53,11 +53,11 @@ type ('k, 'v) t = {
   mask : int Atomic.t;
       (* mutable or  Atomic.t ? Only one domain can change it at any given time *)
   size : Size.t;
-  buckets : ('k, 'v) link Atomic.t array;
+  buckets : ('k, 'v) link Atomic.t array Atomic.t;
 }
 
 let length t = Size.get t.size
-let hash = Stdlib.Hashtbl.hash
+let hash = Fun.id (*Stdlib.Hashtbl.hash*)
 
 (* Can we make it a value instead of a function *)
 let dummy_content () =
@@ -117,50 +117,83 @@ and find_node_rec size mask bucket key prev curr :
           end
     end
 
-let first_bucket () =
-  Atomic.make
-    (Link
+let uninit_bucket =
+  Obj.repr @@ Atomic.make
+  @@ Link
        {
          incr = Size.used_once;
          decr = Size.used_once;
          bindings = [];
          next = Null;
-       })
-
-let rec add_new_bucket_rec size mask bucket rkey prev curr =
-  let found, prev, curr, _ = find_node_rec size mask bucket rkey prev curr in
-  if found == 0 then
-    match curr.next with Null -> assert false | Node node -> node.content
-  else begin
-    let incr = Size.used_once in
-    let content = Atomic.make @@ Link { curr with bindings = []; incr } in
-    let after =
-      (Node { hashed_key = rkey; content } : (_, _, [ `Node ]) node)
-    in
-    if Atomic.compare_and_set prev (Link curr) (Link { curr with next = after })
-    then content
-    else add_new_bucket_rec size mask bucket rkey prev (Atomic.get prev)
-  end
+       }
+  |> Obj.obj
 
 (* This create function does the whole initialization of bucket *)
 let create ~size_exponent : (_, 'v) t =
   let max_size = Int.shift_left 1 size_exponent in
   let mask = Atomic.make (max_size - 1) in
   let size = Size.create () in
-  (* This is the content of node 0 *)
-  let first = first_bucket () in
   {
     mask;
     flag = Atomic.make `Ready;
     size;
     buckets =
-      Array.init max_size (fun i ->
-          if i = 0 then first
-          else
-            let rkey = Key.reverse i in
-            add_new_bucket_rec size (max_size - 1) first rkey first
-              (Atomic.get first));
+      Atomic.make
+      @@ Array.init max_size (fun i ->
+             if i = 0 then
+               Atomic.make
+               @@ Link
+                    {
+                      incr = Size.used_once;
+                      decr = Size.used_once;
+                      bindings = [];
+                      next = Null;
+                    }
+             else uninit_bucket);
   }
+
+let rec init_bucket t buckets mask bucket_index =
+  let parent_key = Key.unset_msb bucket_index in
+  let _, parent_bucket = get_bucket t buckets mask parent_key in
+  let rkey = Key.reverse bucket_index in
+  let found, prev, curr, _ =
+    find_node_rec t.size mask parent_bucket rkey parent_bucket
+      (Atomic.get parent_bucket)
+  in
+  if found == 0 then prev
+  else begin
+    let decr = Size.used_once in
+    let incr = Size.used_once in
+    let new_bucket =
+      Atomic.make @@ Link { bindings = []; incr; decr; next = curr.next }
+    in
+    let after =
+      (Node { hashed_key = rkey; content = new_bucket }
+        : (_, _, [ `Node ]) node)
+    in
+    if Atomic.compare_and_set prev (Link curr) (Link { curr with next = after })
+    then new_bucket
+    else init_bucket t buckets mask bucket_index
+  end
+
+and get_bucket t buckets mask hkey =
+  let bucket_index = hkey land mask in
+  let bucket = Array.get buckets bucket_index in
+  if bucket == uninit_bucket then begin
+    assert (bucket_index <> 0);
+    let bucket = init_bucket t buckets mask bucket_index in
+    (* An Array.set is alright here because the bucket is either uninitialized or
+       as a fixed value (we can not add the corresponding node twice.
+
+       Also, note that when growing we may have a case where some buckets are
+       initialized during the copying of t.buckets. Again, this is ok, the
+       bucket will end up uninitialized again, but the corresponding node will
+       still be in the linked list and it will be quite short to find it
+       again.*)
+    Array.set buckets bucket_index bucket;
+    (bucket_index, bucket)
+  end
+  else (bucket_index, bucket)
 
 let[@tail_mod_cons] rec replace_bindings key value = function
   | [] -> []
@@ -170,8 +203,8 @@ let[@tail_mod_cons] rec replace_bindings key value = function
 
 let[@inline] rec add_replace op t key hkey v =
   let mask = Atomic.get t.mask in
-  let bucket_index = hkey land mask in
-  let bucket = Array.get t.buckets bucket_index in
+  let buckets = Atomic.fenceless_get t.buckets in
+  let bucket_index, bucket = get_bucket t buckets mask hkey in
   if bucket_index = hkey then
     match Atomic.get bucket with
     | Link { next = Mark _; _ } ->
@@ -271,33 +304,47 @@ let replace t key v =
   let hkey = hash key in
   add_replace `Replace t key hkey v
 
-let[@tail_mod_cons] rec remove_first_occ key = function
-  | (k, _) :: xs when k = key -> xs
-  | x :: xs -> x :: remove_first_occ key xs
+let[@tail_mod_cons] rec remove_first_occ key removed = function
+  | (k, _) :: xs when k = key ->
+      removed := true;
+      xs
+  | x :: xs -> x :: remove_first_occ key removed xs
   | [] -> []
 
 let[@inline] rec try_remove t key hkey =
   let mask = Atomic.get t.mask in
-  let bucket_index = hkey land mask in
-  let bucket = Array.get t.buckets bucket_index in
-  if bucket_index == hkey then
+  let buckets = Atomic.fenceless_get t.buckets in
+  let bucket_index, bucket = get_bucket t buckets mask hkey in
+  if bucket_index == hkey then (
     let (Link ({ bindings; _ } as before)) = Atomic.get bucket in
+
+    if before.incr != Size.used_once then begin
+      Size.update_once t.size before.incr;
+      before.incr <- Size.used_once
+    end;
+
     match bindings with
     | [] -> false
-    | _ :: [] ->
-        assert (before.incr == Size.used_once);
-        let decr = Size.new_once t.size Size.decr in
-        let after = { before with bindings = []; decr } in
-        if Atomic.compare_and_set bucket (Link before) (Link after) then (
-          Size.update_once t.size after.decr;
-          true)
-        else try_remove t key hkey
-    | _ :: new_bindings ->
-        let after = { before with bindings = new_bindings } in
-        if Atomic.compare_and_set bucket (Link before) (Link after) then (
-          Size.update_once t.size after.decr;
-          true)
-        else try_remove t key hkey
+    | (k, _) :: [] ->
+        if k != key then false
+        else begin
+          let decr = Size.new_once t.size Size.decr in
+          let after = { before with bindings = []; decr } in
+          if Atomic.compare_and_set bucket (Link before) (Link after) then (
+            Size.update_once t.size after.decr;
+            true)
+          else try_remove t key hkey
+        end
+    | bindings ->
+        let removed_bindings = ref false in
+        let new_bindings = remove_first_occ key removed_bindings bindings in
+        if !removed_bindings then
+          let after = { before with bindings = new_bindings } in
+          if Atomic.compare_and_set bucket (Link before) (Link after) then (
+            Size.update_once t.size after.decr;
+            true)
+          else try_remove t key hkey
+        else false)
   else
     try
       try_remove_rec t.size mask bucket key (Key.reverse hkey) bucket
@@ -336,15 +383,21 @@ and try_remove_rec size mask bucket key rkey prev curr =
                 try_remove_rec size mask bucket key rkey bucket
                   (Atomic.get bucket)
             end
-        | bindings ->
-            let after =
-              { next with bindings = remove_first_occ key bindings }
-            in
-            if Atomic.compare_and_set curr_node.content (Link next) (Link after)
-            then true
-            else
-              try_remove_rec size mask bucket key rkey bucket
-                (Atomic.get bucket)
+        | bindings -> begin
+            let removed_bindinds = ref false in
+            let bindings = remove_first_occ key removed_bindinds bindings in
+            if !removed_bindinds then begin
+              let after = { next with bindings } in
+              if
+                Atomic.compare_and_set curr_node.content (Link next)
+                  (Link after)
+              then true
+              else
+                try_remove_rec size mask bucket key rkey bucket
+                  (Atomic.get bucket)
+            end
+            else false
+          end
       end
 
 let try_remove t key =
@@ -352,33 +405,41 @@ let try_remove t key =
   try_remove t key hkey
 
 let mem t key =
-  let hashed_key = hash key in
+  let hkey = hash key in
   let mask = Atomic.get t.mask in
-  let bucket_index = hashed_key land mask in
-  let bucket = Array.get t.buckets bucket_index in
-  if bucket_index == hashed_key then
-    let (Link { bindings; _ }) = Atomic.get bucket in
-    List.mem_assoc key bindings
+  let buckets = Atomic.fenceless_get t.buckets in
+  let bucket_index, bucket = get_bucket t buckets mask hkey in
+  if bucket_index == hkey then (
+    let (Link ({ bindings; _ } as before)) = Atomic.get bucket in
+
+    if before.incr != Size.used_once then begin
+      Size.update_once t.size before.incr;
+      before.incr <- Size.used_once
+    end;
+
+    List.mem_assoc key bindings)
   else
-    let found, _, _, next =
-      find_node t.size mask bucket (Key.reverse hashed_key)
-    in
+    let found, _, _, next = find_node t.size mask bucket (Key.reverse hkey) in
     if found == 0 then List.mem_assoc key next.bindings else false
 
 let find_all t key =
-  let hashed_key = hash key in
+  let hkey = hash key in
   let mask = Atomic.get t.mask in
-  let bucket_index = hashed_key land mask in
-  let bucket = Array.get t.buckets bucket_index in
-  if bucket_index == hashed_key then
-    let (Link { bindings; _ }) = Atomic.get bucket in
+  let buckets = Atomic.fenceless_get t.buckets in
+  let bucket_index, bucket = get_bucket t buckets mask hkey in
+  if bucket_index == hkey then (
+    let (Link ({ bindings; _ } as before)) = Atomic.get bucket in
+
+    if before.incr != Size.used_once then begin
+      Size.update_once t.size before.incr;
+      before.incr <- Size.used_once
+    end;
+
     List.fold_right
       (fun (k, v) acc -> if k = key then v :: acc else acc)
-      bindings []
+      bindings [])
   else
-    let found, _, _, next =
-      find_node t.size mask bucket (Key.reverse hashed_key)
-    in
+    let found, _, _, next = find_node t.size mask bucket (Key.reverse hkey) in
     if found == 0 then
       List.fold_right
         (fun (k, v) acc -> if k = key then v :: acc else acc)
@@ -386,15 +447,19 @@ let find_all t key =
     else []
 
 let find_opt t key =
-  let hashed_key = hash key in
+  let hkey = hash key in
   let mask = Atomic.get t.mask in
-  let bucket_index = hashed_key land mask in
-  let bucket = Array.get t.buckets bucket_index in
-  if bucket_index == hashed_key then
-    let (Link { bindings; _ }) = Atomic.get bucket in
-    List.assoc_opt key bindings
+  let buckets = Atomic.fenceless_get t.buckets in
+  let bucket_index, bucket = get_bucket t buckets mask hkey in
+  if bucket_index == hkey then (
+    let (Link ({ bindings; _ } as before)) = Atomic.get bucket in
+
+    if before.incr != Size.used_once then begin
+      Size.update_once t.size before.incr;
+      before.incr <- Size.used_once
+    end;
+
+    List.assoc_opt key bindings)
   else
-    let found, _, _, next =
-      find_node t.size mask bucket (Key.reverse hashed_key)
-    in
+    let found, _, _, next = find_node t.size mask bucket (Key.reverse hkey) in
     if found == 0 then List.assoc_opt key next.bindings else None
