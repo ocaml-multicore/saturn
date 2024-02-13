@@ -50,7 +50,10 @@ let create ~size_exponent =
 
 type _ mono = Unit : unit mono | Bool : bool mono
 
-let push_as (type r) t element (mono : r mono) : r =
+(* NOTE: Uses of [@inline never] prevent Flambda from noticing that we might be
+   storing float values into a non-float array. *)
+
+let[@inline never] push_as (type r) t element (mono : r mono) : r =
   let size = Array.length t.array in
   let tail = Atomic.fenceless_get t.tail in
   let head_cache = !(t.head_cache) in
@@ -75,7 +78,7 @@ exception Empty
 type ('a, _) poly = Option : ('a, 'a option) poly | Value : ('a, 'a) poly
 type op = Peek | Pop
 
-let pop_or_peek_as (type a r) (t : a t) op (poly : (a, r) poly) : r =
+let[@inline never] pop_or_peek_as (type a r) t op (poly : (a, r) poly) : r =
   let head = Atomic.fenceless_get t.head in
   let tail_cache = !(t.tail_cache) in
   if

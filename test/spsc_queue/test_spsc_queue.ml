@@ -50,7 +50,13 @@ let test_parallel () =
   Domain.join producer;
   Printf.printf "test_spsc_queue_parallel: ok (transferred = %d)\n" !last_num
 
+let test_float () =
+  let q = Spsc_queue.create ~size_exponent:1 in
+  assert (Spsc_queue.try_push q 1.01);
+  assert (Spsc_queue.pop_opt q = Some 1.01)
+
 let _ =
   test_empty ();
   test_full ();
-  test_parallel ()
+  test_parallel ();
+  test_float ()
