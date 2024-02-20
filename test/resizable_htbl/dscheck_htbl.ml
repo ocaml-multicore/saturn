@@ -1,4 +1,4 @@
-module Htbl = Lf_htbl
+module Htbl = Lf_resizable_htbl
 
 let simple_two_domains_remove_add () =
   Atomic.trace (fun () ->

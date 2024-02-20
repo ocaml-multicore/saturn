@@ -1,14 +1,14 @@
 (rule
  (action
   (progn
-   (copy ../../src_lockfree/lf_htbl.ml lf_htbl.ml)
+   (copy ../../src_lockfree/lf_resizable_htbl.ml lf_resizable_htbl.ml)
    (copy ../../src_lockfree/size.ml size.ml)))
  (package saturn_lockfree))
 
 (test
  (package saturn_lockfree)
  (name dscheck_htbl)
- (modules lf_htbl size dscheck_htbl)
+ (modules lf_resizable_htbl size dscheck_htbl)
  (libraries atomic transparent_atomic dscheck alcotest multicore-magic))
 
 (test
