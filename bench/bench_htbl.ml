@@ -62,7 +62,7 @@ let run_one ~budgetf ~n_domains ?(n_ops = 20 * Util.iter_factor)
       percent_mem percent_add percent_rem
   in
   Times.record ~budgetf ~n_domains ~init ~work ()
-  |> Util.thruput_metrics ~n:n_ops ~singular:"operation" ~config
+  |> Times.to_thruput_metrics ~n:n_ops ~singular:"operation" ~config
 
 let run_suite ~budgetf =
   Util.cross [ 10; 50; 90 ] [ 1; 2; 4 ]
