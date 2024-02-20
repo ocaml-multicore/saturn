@@ -84,30 +84,22 @@ let tests_two_domains =
       Test.make ~name:"parallel_add" (pair small_nat small_nat)
         (fun (npush1, npush2) ->
           let sl = Skiplist.create ~compare:Int.compare () in
-          let sema = Semaphore.Binary.make false in
+          let barrier = Barrier.create 2 in
           let lpush1 = List.init npush1 (fun i -> i) in
           let lpush2 = List.init npush2 (fun i -> i + npush1) in
-          let work lpush =
-            List.map
-              (fun elt ->
-                let completed = Skiplist.try_add sl elt in
-                Domain.cpu_relax ();
-                completed)
-              lpush
-          in
+          let work lpush = List.map (Skiplist.try_add sl) lpush in
 
           let domain1 =
-            Domain.spawn (fun () ->
-                Semaphore.Binary.release sema;
-                work lpush1)
+            Domain.spawn @@ fun () ->
+            Barrier.await barrier;
+            work lpush1
           in
           let popped2 =
-            while not (Semaphore.Binary.try_acquire sema) do
-              Domain.cpu_relax ()
-            done;
+            Barrier.await barrier;
             work lpush2
           in
           let popped1 = Domain.join domain1 in
+
           let rec compare_all_true l =
             match l with
             | true :: t -> compare_all_true t
@@ -119,32 +111,29 @@ let tests_two_domains =
       Test.make ~count:10000 ~name:"parallel_add_remove"
         (pair small_nat small_nat) (fun (npush1, npush2) ->
           let sl = Skiplist.create ~compare:Int.compare () in
-          let sema = Semaphore.Binary.make false in
+          let barrier = Barrier.create 2 in
 
           let lpush1 = List.init npush1 (fun i -> i) in
           let lpush2 = List.init npush2 (fun i -> i + npush1) in
 
           let work lpush =
-            List.map
+            List.iter
               (fun elt ->
-                ignore @@ Skiplist.try_add sl elt;
-                Domain.cpu_relax ();
-                Skiplist.try_remove sl elt)
+                assert (Skiplist.try_add sl elt);
+                assert (Skiplist.try_remove sl elt))
               lpush
           in
 
           let domain1 =
-            Domain.spawn (fun () ->
-                Semaphore.Binary.release sema;
-                work lpush1)
+            Domain.spawn @@ fun () ->
+            Barrier.await barrier;
+            work lpush1
           in
-          let _ =
-            while not (Semaphore.Binary.try_acquire sema) do
-              Domain.cpu_relax ()
-            done;
+          let () =
+            Barrier.await barrier;
             work lpush2
           in
-          let _ = Domain.join domain1 in
+          let () = Domain.join domain1 in
 
           let rec check_none_present l =
             match l with
@@ -156,27 +145,27 @@ let tests_two_domains =
       (* TEST 3: Parallel push and pop using the same elements in two domains *)
       Test.make ~name:"parallel_add_remove_same_list" (list int) (fun lpush ->
           let sl = Skiplist.create ~compare:Int.compare () in
-          let sema = Semaphore.Binary.make false in
-          let add_all_elems l = List.map (Skiplist.try_add sl) l in
-          let remove_all_elems l = List.map (Skiplist.try_remove sl) l in
+          let barrier = Barrier.create 2 in
+          let add_all_elems l =
+            List.iter (fun elt -> Skiplist.try_add sl elt |> ignore) l
+          in
+          let remove_all_elems l =
+            List.iter (fun elt -> Skiplist.try_remove sl elt |> ignore) l
+          in
 
           let domain1 =
-            Domain.spawn (fun () ->
-                Semaphore.Binary.release sema;
-                Domain.cpu_relax ();
-                let add1 = add_all_elems lpush in
-                let remove1 = remove_all_elems lpush in
-                (add1, remove1))
+            Domain.spawn @@ fun () ->
+            Barrier.await barrier;
+            add_all_elems lpush;
+            remove_all_elems lpush
           in
-          let _, _ =
-            while not (Semaphore.Binary.try_acquire sema) do
-              Domain.cpu_relax ()
-            done;
-            let add2 = add_all_elems lpush in
-            let remove2 = remove_all_elems lpush in
-            (add2, remove2)
+          let () =
+            Barrier.await barrier;
+            add_all_elems lpush;
+            remove_all_elems lpush
           in
-          let _, _ = Domain.join domain1 in
+          let () = Domain.join domain1 in
+
           let rec check_none_present l =
             match l with
             | h :: t ->

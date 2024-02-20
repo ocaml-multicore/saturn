@@ -31,13 +31,23 @@ let run_one ~budgetf ~n_adders ~n_takers ?(n_msgs = 50 * Util.iter_factor)
               work ()
           | `Not_lockfree ->
               let rec loop n =
-                if 0 < n then loop (n - Bool.to_int (Not_lockfree.push t i))
+                if 0 < n then
+                  if Not_lockfree.push t i then loop (n - 1)
+                  else begin
+                    Domain.cpu_relax ();
+                    loop n
+                  end
                 else work ()
               in
               loop n
           | `CAS_interface ->
               let rec loop n =
-                if 0 < n then loop (n - Bool.to_int (CAS_interface.push t i))
+                if 0 < n then
+                  if CAS_interface.push t i then loop (n - 1)
+                  else begin
+                    Domain.cpu_relax ();
+                    loop n
+                  end
                 else work ()
               in
               loop n
@@ -56,15 +66,25 @@ let run_one ~budgetf ~n_adders ~n_takers ?(n_msgs = 50 * Util.iter_factor)
               work ()
           | `Not_lockfree ->
               let rec loop n =
-                if 0 < n then
-                  loop (n - Bool.to_int (Option.is_some (Not_lockfree.pop t)))
+                if 0 < n then begin
+                  match Not_lockfree.pop t with
+                  | None ->
+                      Domain.cpu_relax ();
+                      loop n
+                  | Some _ -> loop (n - 1)
+                end
                 else work ()
               in
               loop n
           | `CAS_interface ->
               let rec loop n =
-                if 0 < n then
-                  loop (n - Bool.to_int (Option.is_some (CAS_interface.pop t)))
+                if 0 < n then begin
+                  match CAS_interface.pop t with
+                  | None ->
+                      Domain.cpu_relax ();
+                      loop n
+                  | Some _ -> loop (n - 1)
+                end
                 else work ()
               in
               loop n

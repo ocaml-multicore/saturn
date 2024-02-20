@@ -77,7 +77,11 @@ let tests_one_producer_one_stealer =
           let stealer =
             Domain.spawn (fun () ->
                 let steal' deque =
-                  try Some (Ws_deque.steal deque) with Exit -> None
+                  match Ws_deque.steal deque with
+                  | value -> Some value
+                  | exception Exit ->
+                      Domain.cpu_relax ();
+                      None
                 in
                 extract_n_of_deque deque steal' n)
           in
@@ -91,7 +95,7 @@ let tests_one_producer_one_stealer =
              (fun found_opt expected ->
                match found_opt with
                | Some found -> found = expected
-               | _ -> false)
+               | None -> false)
              nfirst expected_stolen)
           &&
           (* The [n - (List.length l)] last values of [steal_list]
@@ -120,11 +124,11 @@ let tests_one_producer_one_stealer =
             Domain.spawn (fun () ->
                 Barrier.await barrier;
                 let steal' deque =
-                  let res =
-                    try Some (Ws_deque.steal deque) with Exit -> None
-                  in
-                  Domain.cpu_relax ();
-                  res
+                  match Ws_deque.steal deque with
+                  | value -> Some value
+                  | exception Exit ->
+                      Domain.cpu_relax ();
+                      None
                 in
                 extract_n_of_deque deque steal' n)
           in
@@ -169,11 +173,13 @@ let tests_one_producer_one_stealer =
           (* Initialization - sequential pushes*)
           let deque = deque_of_list l in
           let barrier = Barrier.create 2 in
-          let _ = Random.self_init () in
+          Random.self_init ();
           let pop' deque =
-            let res = try Some (Ws_deque.pop deque) with Exit -> None in
-            Domain.cpu_relax ();
-            res
+            match Ws_deque.pop deque with
+            | value -> Some value
+            | exception Exit ->
+                Domain.cpu_relax ();
+                None
           in
 
           (* The stealer domain steals [nsteal] times. If a value [v] is stolen,
@@ -183,11 +189,11 @@ let tests_one_producer_one_stealer =
             Domain.spawn (fun () ->
                 Barrier.await barrier;
                 let steal' deque =
-                  let res =
-                    try Some (Ws_deque.steal deque) with Exit -> None
-                  in
-                  Domain.cpu_relax ();
-                  res
+                  match Ws_deque.steal deque with
+                  | value -> Some value
+                  | exception Exit ->
+                      Domain.cpu_relax ();
+                      None
                 in
                 extract_n_of_deque deque steal' nsteal)
           in
@@ -235,8 +241,12 @@ let tests_one_producer_two_stealers =
             let res = Array.make nsteal None in
 
             for i = 0 to nsteal - 1 do
-              res.(i) <- (try Some (Ws_deque.steal deque) with Exit -> None);
-              Domain.cpu_relax ()
+              res.(i) <-
+                (match Ws_deque.steal deque with
+                | value -> Some value
+                | exception Exit ->
+                    Domain.cpu_relax ();
+                    None)
             done;
             res
           in

@@ -64,7 +64,7 @@ let tests_one_consumer_one_producer =
           Barrier.await barrier;
           for _ = 1 to List.length lpush do
             while Option.is_none (pop_opt stack) do
-              ()
+              Domain.cpu_relax ()
             done
           done;
 

@@ -5,7 +5,7 @@ open STM
 open Util
 module Spsc_queue = Saturn_lockfree.Single_prod_single_cons_queue
 
-module SPSCConf = struct
+module Spec = struct
   type cmd = Push of int | Pop | Peek
 
   let show_cmd c =
@@ -66,31 +66,32 @@ module SPSCConf = struct
     | _, _ -> false
 end
 
-module SPSC_seq = STM_sequential.Make (SPSCConf)
-module SPSC_dom = STM_domain.Make (SPSCConf)
-
-(* [arb_cmds_par] differs in what each triple component generates:
-   "Producer domain" cmds can't be [Pop], "consumer domain" cmds can only be [Pop]. *)
-let arb_cmds_par =
-  SPSC_dom.arb_triple 20 12 SPSCConf.producer_cmd SPSCConf.producer_cmd
-    SPSCConf.consumer_cmd
-
-(* A parallel agreement test - w/repeat and retries combined *)
-let agree_test_par_asym ~count ~name =
-  let rep_count = 20 in
-  Test.make ~retries:10 ~count ~name arb_cmds_par (fun triple ->
-      assume (SPSC_dom.all_interleavings_ok triple);
-      repeat rep_count SPSC_dom.agree_prop_par_asym triple)
-
 let () =
-  let count = 1000 in
-  QCheck_base_runner.run_tests_main
+  let make_domain ~count ~name
+      (module Dom : Stm_run.STM_domain
+        with type Spec.cmd = Spec.cmd
+         and type Spec.state = Spec.state
+         and type Spec.sut = Spec.sut) =
+    (* [arb_cmds_par] differs in what each triple component generates:
+       "Producer domain" cmds can't be [Pop], "consumer domain" cmds can only be [Pop]. *)
+    let arb_cmds_par =
+      Dom.arb_triple 20 12 Spec.producer_cmd Spec.producer_cmd Spec.consumer_cmd
+    in
+    (* A parallel agreement test - w/repeat and retries combined *)
+    let agree_test_par_asym ~count ~name =
+      let rep_count = 20 in
+      Test.make ~retries:10 ~count ~name:(name ^ " parallel") arb_cmds_par
+      @@ fun triple ->
+      assume (Dom.all_interleavings_ok triple);
+      repeat rep_count Dom.agree_prop_par_asym triple
+    in
     [
-      SPSC_seq.agree_test ~count
-        ~name:"STM Saturn_lockfree.Spsc_queue test sequential";
-      agree_test_par_asym ~count
-        ~name:"STM Saturn_lockfree.Spsc_queue test parallel";
+      agree_test_par_asym ~count ~name;
       (* Note: this can generate, e.g., pop commands/actions in different threads, thus violating the spec. *)
-      SPSC_dom.neg_agree_test_par ~count
-        ~name:"STM Saturn_lockfree.Spsc_queue test parallel, negative";
+      Dom.neg_agree_test_par ~count ~name:(name ^ " parallel, negative");
     ]
+  in
+  Stm_run.run ~count:1000 ~name:"Saturn_lockfree.Spsc_queue" ~verbose:true
+    ~make_domain
+    (module Spec)
+  |> exit

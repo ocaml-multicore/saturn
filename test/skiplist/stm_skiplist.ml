@@ -9,7 +9,7 @@ module Skiplist = struct
   let try_add s k = try_add s k ()
 end
 
-module WSDConf = struct
+module Spec = struct
   type cmd = Mem of int | Add of int | Remove of int | Length
 
   let show_cmd c =
@@ -64,13 +64,6 @@ module WSDConf = struct
     | _, _ -> false
 end
 
-module WSDT_seq = STM_sequential.Make (WSDConf)
-module WSDT_dom = STM_domain.Make (WSDConf)
-
 let () =
-  let count = 1000 in
-  QCheck_base_runner.run_tests_main
-    [
-      WSDT_seq.agree_test ~count ~name:"STM Lockfree.Skiplist test sequential";
-      WSDT_dom.agree_test_par ~count ~name:"STM Lockfree.Skiplist test parallel";
-    ]
+  Stm_run.run ~count:1000 ~verbose:true ~name:"Lockfree.Skiplist" (module Spec)
+  |> exit

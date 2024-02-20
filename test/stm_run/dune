@@ -1,0 +1,24 @@
+(rule
+ (enabled_if %{lib-available:qcheck-stm.domain})
+ (action
+  (copy stm_run.ocaml5.ml stm_run.ml)))
+
+(rule
+ (enabled_if
+  (not %{lib-available:qcheck-stm.domain}))
+ (action
+  (copy stm_run.ocaml4.ml stm_run.ml)))
+
+(library
+ (name stm_run)
+ (libraries
+  qcheck-core
+  qcheck-core.runner
+  qcheck-stm.stm
+  qcheck-stm.sequential
+  qcheck-stm.thread
+  (select
+   empty.ml
+   from
+   (qcheck-stm.domain -> empty.ocaml5.ml)
+   (-> empty.ocaml4.ml))))

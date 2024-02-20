@@ -5,7 +5,7 @@ open STM
 open Util
 module Ws_deque = Saturn_lockfree.Work_stealing_deque
 
-module WSDConf = struct
+module Spec = struct
   type cmd = Push of int | Pop | Steal
 
   let show_cmd c =
@@ -60,29 +60,30 @@ module WSDConf = struct
     | _, _ -> false
 end
 
-module WSDT_seq = STM_sequential.Make (WSDConf)
-module WSDT_dom = STM_domain.Make (WSDConf)
-
-(* A parallel agreement test - w/repeat and retries combined *)
-let agree_test_par_asym ~count ~name =
-  let rep_count = 20 in
-  let seq_len, par_len = (20, 12) in
-  Test.make ~retries:10 ~count ~name
-    (* "Owner domain" cmds can't be [Steal], "stealer domain" cmds can only be [Steal]. *)
-    (WSDT_dom.arb_triple_asym seq_len par_len WSDConf.arb_cmd WSDConf.arb_cmd
-       WSDConf.stealer_cmd) (fun triple ->
-      assume (WSDT_dom.all_interleavings_ok triple);
-      repeat rep_count WSDT_dom.agree_prop_par_asym triple)
-
 let () =
-  let count = 1000 in
-  QCheck_base_runner.run_tests_main
+  let make_domain ~count ~name
+      (module Dom : Stm_run.STM_domain
+        with type Spec.cmd = Spec.cmd
+         and type Spec.state = Spec.state
+         and type Spec.sut = Spec.sut) =
+    (* A parallel agreement test - w/repeat and retries combined *)
+    let agree_test_par_asym ~count ~name =
+      let rep_count = 20 in
+      let seq_len, par_len = (20, 12) in
+      Test.make ~retries:10 ~count ~name
+        (* "Owner domain" cmds can't be [Steal], "stealer domain" cmds can only be [Steal]. *)
+        (Dom.arb_triple_asym seq_len par_len Spec.arb_cmd Spec.arb_cmd
+           Spec.stealer_cmd) (fun triple ->
+          assume (Dom.all_interleavings_ok triple);
+          repeat rep_count Dom.agree_prop_par_asym triple)
+    in
     [
-      WSDT_seq.agree_test ~count
-        ~name:"STM Saturn_lockfree.Ws_deque test sequential";
-      agree_test_par_asym ~count
-        ~name:"STM Saturn_lockfree.Ws_deque test parallel";
+      agree_test_par_asym ~count ~name:(name ^ " parallel");
       (* Note: this can generate, e.g., pop commands/actions in different threads, thus violating the spec. *)
-      WSDT_dom.neg_agree_test_par ~count
-        ~name:"STM Saturn_lockfree.Ws_deque test parallel, negative";
+      Dom.neg_agree_test_par ~count ~name:(name ^ " parallel, negative");
     ]
+  in
+  Stm_run.run ~count:1000 ~name:"Saturn_lockfree.Ws_deque" ~verbose:true
+    ~make_domain
+    (module Spec)
+  |> exit

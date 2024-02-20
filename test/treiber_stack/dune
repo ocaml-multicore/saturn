@@ -7,11 +7,13 @@
  (package saturn_lockfree)
  (name treiber_stack_dscheck)
  (libraries atomic dscheck alcotest backoff multicore-magic)
- (enabled_if
-  (not
-   (and
-    (= %{arch_sixtyfour} false)
-    (= %{architecture} arm))))
+ (build_if
+  (and
+   (>= %{ocaml_version} 5)
+   (not
+    (and
+     (= %{arch_sixtyfour} false)
+     (= %{architecture} arm)))))
  (modules treiber_stack treiber_stack_dscheck))
 
 (test
@@ -23,6 +25,7 @@
   qcheck
   qcheck-core
   qcheck-alcotest
+  domain_shims
   alcotest)
  (modules qcheck_treiber_stack))
 
@@ -30,14 +33,6 @@
  (package saturn_lockfree)
  (name stm_treiber_stack)
  (modules stm_treiber_stack)
- (libraries
-  saturn_lockfree
-  qcheck-core
-  qcheck-core.runner
-  qcheck-stm.stm
-  qcheck-stm.sequential
-  qcheck-stm.domain)
+ (libraries saturn_lockfree qcheck-core qcheck-stm.stm stm_run)
  (enabled_if
-  (= %{arch_sixtyfour} true))
- (action
-  (run %{test} --verbose)))
+  (= %{arch_sixtyfour} true)))
