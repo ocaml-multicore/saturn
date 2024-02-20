@@ -241,7 +241,8 @@ let[@tail_mod_cons] rec remove_first_occ key removed = function
   | x :: xs -> x :: remove_first_occ key removed xs
   | [] -> []
 
-let[@inline] rec try_remove t key hkey =
+let[@inline] rec try_remove : ('k, 'v) t -> 'k -> int -> bool =
+ fun t key hkey ->
   let mask = t.mask in
   let bucket_index = hkey land mask in
   let bucket = Array.get t.buckets bucket_index in
@@ -328,68 +329,46 @@ let try_remove t key =
   let hkey = hash key in
   try_remove t key hkey
 
-let mem t key =
+type ('a, _) poly =
+  | Mem : ('a, bool) poly
+  | All : ('a, 'a list) poly
+  | Option : ('a, 'a option) poly
+
+let[@inline] find_as : type a r. ('k, a) t -> 'k -> (a, r) poly -> r =
+ fun t key poly ->
   let hashed_key = hash key in
   let mask = t.mask in
   let bucket_index = hashed_key land mask in
   let bucket = Array.get t.buckets bucket_index in
-  if bucket_index == hashed_key then (
+  if bucket_index == hashed_key then begin
     let (Link ({ bindings; _ } as before)) = Atomic.get bucket in
 
     if before.incr != Size.used_once then begin
       Size.update_once t.size before.incr;
       before.incr <- Size.used_once
     end;
-
-    List.mem_assoc key bindings)
-  else
-    let found, _, _, next =
-      find_node t.size mask bucket (Key.reverse hashed_key)
-    in
-    if found == 0 then List.mem_assoc key next.bindings else false
-
-let find_all t key =
-  let hashed_key = hash key in
-  let mask = t.mask in
-  let bucket_index = hashed_key land mask in
-  let bucket = Array.get t.buckets bucket_index in
-  if bucket_index == hashed_key then (
-    let (Link ({ bindings; _ } as before)) = Atomic.get bucket in
-
-    if before.incr != Size.used_once then begin
-      Size.update_once t.size before.incr;
-      before.incr <- Size.used_once
-    end;
-
-    List.fold_right
-      (fun (k, v) acc -> if k = key then v :: acc else acc)
-      bindings [])
+    match poly with
+    | All ->
+        List.fold_right
+          (fun (k, v) acc -> if k = key then v :: acc else acc)
+          bindings []
+    | Option -> List.assoc_opt key bindings
+    | Mem -> List.mem_assoc key bindings
+  end
   else
     let found, _, _, next =
       find_node t.size mask bucket (Key.reverse hashed_key)
     in
     if found == 0 then
-      List.fold_right
-        (fun (k, v) acc -> if k = key then v :: acc else acc)
-        next.bindings []
-    else []
+      match poly with
+      | All ->
+          List.fold_right
+            (fun (k, v) acc -> if k = key then v :: acc else acc)
+            next.bindings []
+      | Option -> List.assoc_opt key next.bindings
+      | Mem -> List.mem_assoc key next.bindings
+    else match poly with All -> [] | Option -> None | Mem -> false
 
-let find_opt t key =
-  let hashed_key = hash key in
-  let mask = t.mask in
-  let bucket_index = hashed_key land mask in
-  let bucket = Array.get t.buckets bucket_index in
-  if bucket_index == hashed_key then (
-    let (Link ({ bindings; _ } as before)) = Atomic.get bucket in
-
-    if before.incr != Size.used_once then begin
-      Size.update_once t.size before.incr;
-      before.incr <- Size.used_once
-    end;
-
-    List.assoc_opt key bindings)
-  else
-    let found, _, _, next =
-      find_node t.size mask bucket (Key.reverse hashed_key)
-    in
-    if found == 0 then List.assoc_opt key next.bindings else None
+let find_all t key = find_as t key All
+let find_opt t key = find_as t key Option
+let mem t key = find_as t key Mem
