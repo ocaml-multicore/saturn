@@ -5,7 +5,7 @@ open STM
 open Util
 module Mpsc_queue = Saturn_lockfree.Single_consumer_queue
 
-module MPSCConf = struct
+module Spec = struct
   type cmd = Push of int | Pop | Peek | Push_head of int | Is_empty | Close
 
   let show_cmd c =
@@ -90,31 +90,31 @@ module MPSCConf = struct
     | _, _ -> false
 end
 
-module MPSC_seq = STM_sequential.Make (MPSCConf)
-module MPSC_dom = STM_domain.Make (MPSCConf)
-
-(* [arb_cmds_par] differs in what each triple component generates:
-   "Consumer domain" cmds can't be [Push] (but can be [Pop], [Is_empty], [Close] or [Push_head]),
-   "producer domain" cmds can't be [Push_head] or [Pop] (but can be [Push], [Is_empty] or [Close]). *)
-let arb_cmds_par =
-  MPSC_dom.arb_triple 20 12 MPSCConf.arb_cmd MPSCConf.arb_cmd
-    MPSCConf.producer_cmd
-
-(* A parallel agreement test - w/repeat and retries combined *)
-let agree_test_par_asym ~count ~name =
-  let rep_count = 50 in
-  Test.make ~retries:10 ~count ~name arb_cmds_par (fun triple ->
-      assume (MPSC_dom.all_interleavings_ok triple);
-      repeat rep_count MPSC_dom.agree_prop_par_asym triple)
-
 let () =
-  let count = 1000 in
-  QCheck_base_runner.run_tests_main
+  let make_domain ~count ~name
+      (module Dom : Stm_run.STM_domain
+        with type Spec.cmd = Spec.cmd
+         and type Spec.state = Spec.state
+         and type Spec.sut = Spec.sut) =
+    (* [arb_cmds_par] differs in what each triple component generates:
+       "Consumer domain" cmds can't be [Push] (but can be [Pop], [Is_empty], [Close] or [Push_head]),
+       "producer domain" cmds can't be [Push_head] or [Pop] (but can be [Push], [Is_empty] or [Close]). *)
+    let arb_cmds_par =
+      Dom.arb_triple 20 12 Spec.arb_cmd Spec.arb_cmd Spec.producer_cmd
+    in
+    (* A parallel agreement test - w/repeat and retries combined *)
+    let agree_test_par_asym ~count ~name =
+      let rep_count = 50 in
+      Test.make ~retries:10 ~count ~name arb_cmds_par (fun triple ->
+          assume (Dom.all_interleavings_ok triple);
+          repeat rep_count Dom.agree_prop_par_asym triple)
+    in
     [
-      MPSC_seq.agree_test ~count
-        ~name:"STM Saturn_lockfree.Mpsc_queue test sequential";
-      agree_test_par_asym ~count
-        ~name:"STM Saturn_lockfree.Mpsc_queue test parallel";
-      MPSC_dom.neg_agree_test_par ~count
-        ~name:"STM Saturn_lockfree.Mpsc_queue test parallel, negative";
+      agree_test_par_asym ~count ~name:(name ^ " parallel");
+      Dom.neg_agree_test_par ~count ~name:(name ^ " parallel, negative");
     ]
+  in
+  Stm_run.run ~count:1000 ~name:"Saturn_lockfree.Mpsc_queue" ~verbose:true
+    ~make_domain
+    (module Spec)
+  |> exit

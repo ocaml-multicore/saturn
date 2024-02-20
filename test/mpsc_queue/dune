@@ -7,6 +7,8 @@
  (package saturn_lockfree)
  (name mpsc_queue_dscheck)
  (libraries atomic dscheck alcotest)
+ (build_if
+  (>= %{ocaml_version} 5))
  (modules mpsc_queue mpsc_queue_dscheck))
 
 (test
@@ -18,6 +20,7 @@
   qcheck
   qcheck-core
   qcheck-alcotest
+  domain_shims
   alcotest)
  (modules qcheck_mpsc_queue))
 
@@ -28,12 +31,8 @@
  (libraries
   saturn_lockfree
   qcheck-core
-  qcheck-core.runner
   qcheck-multicoretests-util
   qcheck-stm.stm
-  qcheck-stm.sequential
-  qcheck-stm.domain)
+  stm_run)
  (enabled_if
-  (= %{arch_sixtyfour} true))
- (action
-  (run %{test} --verbose)))
+  (= %{arch_sixtyfour} true)))

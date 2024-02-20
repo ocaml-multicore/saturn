@@ -16,7 +16,7 @@ let push_not_full q elt =
 let test_full () =
   let q = Spsc_queue.create ~size_exponent:3 in
   while push_not_full q () do
-    ()
+    Domain.cpu_relax ()
   done;
   assert (Spsc_queue.size q == 8);
   print_string "test_spsc_queue_full: ok\n"
@@ -40,7 +40,7 @@ let test_parallel () =
   let last_num = ref 0 in
   while !last_num < count do
     match Spsc_queue.pop_opt q with
-    | None -> ()
+    | None -> Domain.cpu_relax ()
     | Some v ->
         assert (v == !last_num + 1);
         last_num := v

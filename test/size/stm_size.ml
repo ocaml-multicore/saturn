@@ -58,13 +58,7 @@ module Spec = struct
     | _, _ -> false
 end
 
-module Seq = STM_sequential.Make (Spec)
-module Par = STM_domain.Make (Spec)
-
 let () =
-  let count = 1000 in
-  QCheck_base_runner.run_tests_main
-    [
-      Seq.agree_test ~count ~name:"STM Saturn_lockfree.Size test sequential";
-      Par.agree_test_par ~count ~name:"STM Saturn_lockfree.Size test parallel";
-    ]
+  Stm_run.run ~count:1000 ~verbose:true ~name:"Saturn_lockfree.Size"
+    (module Spec)
+  |> exit

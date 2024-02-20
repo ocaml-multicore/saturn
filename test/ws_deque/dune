@@ -12,12 +12,14 @@
  (package saturn_lockfree)
  (name ws_deque_dscheck)
  (libraries atomic dscheck alcotest backoff)
+ (build_if
+  (>= %{ocaml_version} 5))
  (modules ArrayExtra ws_deque ws_deque_dscheck))
 
 (test
  (package saturn_lockfree)
  (name test_ws_deque)
- (libraries saturn_lockfree)
+ (libraries saturn_lockfree domain_shims)
  (modules test_ws_deque))
 
 (test
@@ -29,6 +31,7 @@
   qcheck
   qcheck-core
   qcheck-alcotest
+  domain_shims
   alcotest)
  (enabled_if
   (not
@@ -44,12 +47,8 @@
  (libraries
   saturn_lockfree
   qcheck-core
-  qcheck-core.runner
   qcheck-multicoretests-util
   qcheck-stm.stm
-  qcheck-stm.sequential
-  qcheck-stm.domain)
+  stm_run)
  (enabled_if
-  (= %{arch_sixtyfour} true))
- (action
-  (run %{test} --verbose)))
+  (= %{arch_sixtyfour} true)))

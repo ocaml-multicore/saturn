@@ -4,7 +4,7 @@ open QCheck
 open STM
 module Ms_queue = Saturn_lockfree.Queue
 
-module MSQConf = struct
+module Spec = struct
   type cmd = Push of int | Pop | Peek | Is_empty
 
   let show_cmd c =
@@ -58,15 +58,8 @@ module MSQConf = struct
     | _, _ -> false
 end
 
-module MSQ_seq = STM_sequential.Make (MSQConf)
-module MSQ_dom = STM_domain.Make (MSQConf)
-
 let () =
-  let count = 500 in
-  QCheck_base_runner.run_tests_main
-    [
-      MSQ_seq.agree_test ~count
-        ~name:"STM Saturn_lockfree.Michael_scott_queue test sequential";
-      MSQ_dom.agree_test_par ~count
-        ~name:"STM Saturn_lockfree.Michael_scott_queue test parallel";
-    ]
+  Stm_run.run ~count:500 ~verbose:true
+    ~name:"Saturn_lockfree.Michael_scott_queue"
+    (module Spec)
+  |> exit

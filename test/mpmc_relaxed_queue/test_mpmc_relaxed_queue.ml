@@ -31,13 +31,13 @@ let two_threads_test (push, pop) () =
               Alcotest.(check int)
                 "popped items should follow FIFO order" item !i;
               i := !i + 1
-          | None -> ()
+          | None -> Domain.cpu_relax ()
         done)
   in
   (* enqueue *)
   let i = ref 0 in
   while !i < num_of_elements do
-    if push queue !i then i := !i + 1
+    if push queue !i then i := !i + 1 else Domain.cpu_relax ()
   done;
   Domain.join dequeuer |> ignore;
   ()
@@ -50,7 +50,7 @@ module Wait_for_others = struct
   let wait { currently; total_expected } =
     Atomic.incr currently;
     while Atomic.get currently < total_expected do
-      ()
+      Domain.cpu_relax ()
     done
 end
 
@@ -59,6 +59,7 @@ let taker wfo queue num_of_elements () =
   let i = ref 0 in
   while !i < num_of_elements do
     if Option.is_some (Relaxed_queue.Not_lockfree.pop queue) then i := !i + 1
+    else Domain.cpu_relax ()
   done
 
 let pusher wfo queue num_of_elements () =
@@ -66,6 +67,7 @@ let pusher wfo queue num_of_elements () =
   let i = ref 0 in
   while !i < num_of_elements do
     if Relaxed_queue.Not_lockfree.push queue !i then i := !i + 1
+    else Domain.cpu_relax ()
   done
 
 let run_test num_takers num_pushers () =

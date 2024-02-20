@@ -44,8 +44,11 @@ module Not_lockfree = struct
         time_to_try_push_forward nth_attempt && ccas head tail_val (tail_val + 1)
       then (* pushed forward head *)
         false
-      else (* retry *)
+      else begin
+        Domain.cpu_relax ();
+        (* retry *)
         take_or_rollback (nth_attempt + 1)
+      end
     in
 
     (* if succeeded return true otherwise clean up *)
@@ -87,7 +90,10 @@ module Not_lockfree = struct
           && ccas tail old_head (old_head + 1)
         then (* pushed tail forward *)
           None
-        else take_or_rollback (nth_attempt + 1)
+        else begin
+          Domain.cpu_relax ();
+          take_or_rollback (nth_attempt + 1)
+        end
       in
 
       (* return if got item, clean up otherwise *)
@@ -99,7 +105,7 @@ module Not_lockfree = struct
       let head_val = Atomic.get head in
       let size = mask + 1 in
       if tail_val - head_val >= size then false
-      else if ccas tail tail_val (tail_val + 1) then (
+      else if ccas tail tail_val (tail_val + 1) then begin
         let index = tail_val land mask in
         let cell = Array.get array index in
         (*
@@ -119,25 +125,28 @@ module Not_lockfree = struct
           standard interface.
         *)
         while not (Atomic.compare_and_set cell None (Some item)) do
-          ()
+          Domain.cpu_relax ()
         done;
-        true)
+        true
+      end
       else push t item
 
     let rec pop ({ array; tail; head; mask; _ } as t) =
       let tail_val = Atomic.get tail in
       let head_val = Atomic.get head in
       if head_val - tail_val >= 0 then None
-      else if ccas head head_val (head_val + 1) then (
+      else if ccas head head_val (head_val + 1) then begin
         let index = head_val land mask in
         let cell = Array.get array index in
         let item = ref (Atomic.get cell) in
         while
           not (Option.is_some !item && Atomic.compare_and_set cell !item None)
         do
+          Domain.cpu_relax ();
           item := Atomic.get cell
         done;
-        !item)
+        !item
+      end
       else pop t
   end
 end

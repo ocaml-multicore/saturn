@@ -1,2 +1,3 @@
 (library
- (name barrier))
+ (name barrier)
+ (libraries domain_shims))

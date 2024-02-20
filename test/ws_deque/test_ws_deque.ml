@@ -65,7 +65,9 @@ let test_concurrent_workload () =
           decr n
         and pop () =
           match pop q with
-          | exception Exit -> false
+          | exception Exit ->
+              Domain.cpu_relax ();
+              false
           | x ->
               popped := x :: !popped;
               true
@@ -88,7 +90,7 @@ let test_concurrent_workload () =
         Domain.spawn (fun () ->
             let steal () =
               match steal q with
-              | exception Exit -> ()
+              | exception Exit -> Domain.cpu_relax ()
               | x -> stolen.(i) <- x :: stolen.(i)
             in
 

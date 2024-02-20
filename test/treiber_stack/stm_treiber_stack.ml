@@ -4,7 +4,7 @@ open QCheck
 open STM
 module Treiber_stack = Saturn_lockfree.Stack
 
-module TSConf = struct
+module Spec = struct
   type cmd = Push of int | Pop | Is_empty
 
   let show_cmd c =
@@ -55,15 +55,7 @@ module TSConf = struct
     | _, _ -> false
 end
 
-module TS_seq = STM_sequential.Make (TSConf)
-module TS_dom = STM_domain.Make (TSConf)
-
 let () =
-  let count = 500 in
-  QCheck_base_runner.run_tests_main
-    [
-      TS_seq.agree_test ~count
-        ~name:"STM Saturn_lockfree.Treiber_stack test sequential";
-      TS_dom.agree_test_par ~count
-        ~name:"STM Saturn_lockfree.Treiber_stack test parallel";
-    ]
+  Stm_run.run ~count:500 ~verbose:true ~name:"Saturn_lockfree.Treiber_stack"
+    (module Spec)
+  |> exit

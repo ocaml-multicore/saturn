@@ -29,7 +29,11 @@ let run_one ~budgetf ?(n_domains = 1) () =
     | work ->
         work own;
         run own
-    | exception Exit -> if not !exit then run own
+    | exception Exit ->
+        if not !exit then begin
+          Domain.cpu_relax ();
+          run own
+        end
   in
 
   let spawn own work =
@@ -42,7 +46,9 @@ let run_one ~budgetf ?(n_domains = 1) () =
     let x = !promise in
     if x == Obj.magic exit then begin
       begin
-        match try_own own with exception Exit -> () | work -> work own
+        match try_own own with
+        | exception Exit -> Domain.cpu_relax ()
+        | work -> work own
       end;
       await own promise
     end

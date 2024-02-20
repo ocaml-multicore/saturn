@@ -17,13 +17,22 @@ let run_one ~budgetf ?(size_exponent = 3) ?(n_msgs = 80 * Util.iter_factor) () =
   let work i () =
     if i = 0 then
       let rec loop n =
-        if 0 < n then loop (n - Bool.to_int (Queue.try_push t n))
+        if 0 < n then
+          if Queue.try_push t n then loop (n - 1)
+          else begin
+            Domain.cpu_relax ();
+            loop n
+          end
       in
       loop n_msgs
     else
       let rec loop n =
         if 0 < n then
-          match Queue.pop_opt t with Some _ -> loop (n - 1) | None -> loop n
+          match Queue.pop_opt t with
+          | Some _ -> loop (n - 1)
+          | None ->
+              Domain.cpu_relax ();
+              loop n
       in
       loop n_msgs
   in
