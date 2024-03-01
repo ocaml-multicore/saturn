@@ -14,48 +14,50 @@
 
 external fenceless_get : 'a Atomic.t -> 'a = "%field0"
 
-type 'a node =
-  | Null
-  | Node of {
-      mutable _next : 'a node;
+type ('a, _) node =
+  | Null : ('a, [> `Null ]) node
+  | Node : {
+      mutable _next : 'a link;
       mutable value : 'a;
       mutable capacity : int;
       mutable counter : int;
     }
+      -> ('a, [> `Node ]) node
 
-type 'a record = {
-  mutable _next : 'a node;
-  mutable value : 'a;
-  mutable capacity : int;
-  mutable counter : int;
-}
+and 'a link = Link : ('a, [< `Null | `Node ]) node -> 'a link [@@unboxed]
 
-external next_as_atomic : 'a node -> 'a node Atomic.t = "%identity"
+external link_as_node : 'a link -> ('a, [ `Node ]) node = "%identity"
+
+external next_as_atomic : ('a, [< `Node ]) node -> 'a link Atomic.t
+  = "%identity"
+
+let[@inline] get_capacity (Node r : (_, [< `Node ]) node) = r.capacity
+
+let[@inline] set_capacity (Node r : (_, [< `Node ]) node) value =
+  r.capacity <- value
+
+let[@inline] get_counter (Node r : (_, [< `Node ]) node) = r.counter
+
+let[@inline] set_counter (Node r : (_, [< `Node ]) node) value =
+  r.counter <- value
 
 let[@inline] get_next node = Atomic.get (next_as_atomic node)
 let[@inline] fenceless_get_next node = fenceless_get (next_as_atomic node)
-
-external as_record : 'a node -> 'a record = "%identity"
-
-let[@inline] get_capacity node = (as_record node).capacity
-let[@inline] set_capacity node value = (as_record node).capacity <- value
-let[@inline] get_counter node = (as_record node).counter
-let[@inline] set_counter node value = (as_record node).counter <- value
 
 let[@inline] compare_and_set_next node before after =
   Atomic.compare_and_set (next_as_atomic node) before after
 
 type 'a t = {
-  head : 'a node Atomic.t;
+  head : ('a, [ `Node ]) node Atomic.t;
   head_waiters : (unit -> unit) list Atomic.t;
   capacity : int;
   tail_waiters : (unit -> unit) list Atomic.t;
-  tail : 'a node Atomic.t;
+  tail : ('a, [ `Node ]) node Atomic.t;
 }
 
 let create ?(capacity = Int.max_int) () =
   let value = Obj.magic () in
-  let node = Node { _next = Null; value; capacity; counter = 0 } in
+  let node = Node { _next = Link Null; value; capacity; counter = 0 } in
   let head = Atomic.make node
   and head_waiters = Atomic.make []
   and tail_waiters = Atomic.make []
@@ -66,16 +68,16 @@ let capacity_of t = t.capacity
 
 let is_empty t =
   let head = Atomic.get t.head in
-  fenceless_get_next head == Null
+  fenceless_get_next head == Link Null
 
 let rec snapshot t =
   let head = Atomic.get t.head in
   let tail = fenceless_get t.tail in
   match fenceless_get_next tail with
-  | Node _ as node ->
+  | Link (Node _ as node) ->
       Atomic.compare_and_set t.tail tail node |> ignore;
       snapshot t
-  | Null ->
+  | Link Null ->
       (* The [Sys.opaque_identity] below prevents OCaml 5 from optimizing the
          repeated load away. *)
       if Atomic.get (Sys.opaque_identity t.head) != head then snapshot t
@@ -99,19 +101,20 @@ let rec release_all waiters =
 let rec peek t =
   let old_head = Atomic.get t.head in
   match fenceless_get_next old_head with
-  | Null ->
+  | Link Null ->
       let dla = Domain_local_await.prepare_for_await () in
       let releases = Atomic.get t.tail_waiters in
       if Atomic.compare_and_set t.tail_waiters releases (dla.release :: releases)
-      then (
+      then begin
         if old_head != Atomic.get t.tail then release_all t.tail_waiters
         else
           try dla.await ()
           with exn ->
             release_all t.tail_waiters;
-            raise exn);
+            raise exn
+      end;
       peek t
-  | Node r ->
+  | Link (Node r) ->
       let value = r.value in
       (* The [Sys.opaque_identity] below prevents OCaml 5 from optimizing the
          repeated load away. *)
@@ -125,8 +128,8 @@ let[@inline] peek t = peek t
 let rec peek_opt t =
   let head = Atomic.get t.head in
   match fenceless_get_next head with
-  | Null -> None
-  | Node r ->
+  | Link Null -> None
+  | Link (Node r) ->
       let value = r.value in
       (* The [Sys.opaque_identity] below prevents OCaml 5 from optimizing the
          repeated load away. *)
@@ -140,24 +143,26 @@ let[@inline] peek_opt t = peek_opt t
 let rec pop backoff t =
   let old_head = Atomic.get t.head in
   match fenceless_get_next old_head with
-  | Null ->
+  | Link Null ->
       let dla = Domain_local_await.prepare_for_await () in
       let releases = Atomic.get t.tail_waiters in
       if Atomic.compare_and_set t.tail_waiters releases (dla.release :: releases)
-      then (
+      then begin
         if old_head != Atomic.get t.tail then release_all t.tail_waiters
         else
           try dla.await ()
           with exn ->
             release_all t.tail_waiters;
-            raise exn);
+            raise exn
+      end;
       pop backoff t
-  | Node node as new_head ->
-      if Atomic.compare_and_set t.head old_head new_head then (
+  | Link (Node node as new_head) ->
+      if Atomic.compare_and_set t.head old_head new_head then begin
         let value = node.value in
         node.value <- Obj.magic ();
         release_all t.head_waiters;
-        value)
+        value
+      end
       else pop (Backoff.once backoff) t
 
 let[@inline] pop t = pop Backoff.default t
@@ -167,13 +172,14 @@ let[@inline] pop t = pop Backoff.default t
 let rec pop_opt backoff t =
   let old_head = Atomic.get t.head in
   match fenceless_get_next old_head with
-  | Null -> None
-  | Node node as new_head ->
-      if Atomic.compare_and_set t.head old_head new_head then (
+  | Link Null -> None
+  | Link (Node node as new_head) ->
+      if Atomic.compare_and_set t.head old_head new_head then begin
         let value = node.value in
         node.value <- Obj.magic ();
         release_all t.head_waiters;
-        Some value)
+        Some value
+      end
       else pop_opt (Backoff.once backoff) t
 
 let[@inline] pop_opt t = pop_opt Backoff.default t
@@ -183,7 +189,7 @@ let[@inline] pop_opt t = pop_opt Backoff.default t
 let rec fix_tail tail new_tail =
   let old_tail = Atomic.get tail in
   if
-    get_next new_tail == Null
+    get_next new_tail == Link Null
     && not (Atomic.compare_and_set tail old_tail new_tail)
   then fix_tail tail new_tail
 
@@ -191,13 +197,14 @@ let rec fix_tail tail new_tail =
 
 let rec push t new_node old_tail =
   let capacity = get_capacity old_tail in
-  if capacity = 0 then (
+  if capacity = 0 then begin
     let old_head = Atomic.get t.head in
     let length = get_counter old_tail - get_counter old_head in
     let capacity = t.capacity - length in
-    if 0 < capacity then (
+    if 0 < capacity then begin
       set_capacity old_tail capacity;
-      push t new_node old_tail)
+      push t new_node old_tail
+    end
     else
       let dla = Domain_local_await.prepare_for_await () in
       let releases = Atomic.get t.head_waiters in
@@ -209,19 +216,22 @@ let rec push t new_node old_tail =
           with exn ->
             release_all t.head_waiters;
             raise exn);
-      push t new_node old_tail)
-  else (
+      push t new_node old_tail
+  end
+  else begin
     set_capacity new_node (capacity - 1);
     set_counter new_node (get_counter old_tail + 1);
-    if not (compare_and_set_next old_tail Null new_node) then
-      push t new_node (get_next old_tail)
-    else (
+    if not (compare_and_set_next old_tail (Link Null) (Link new_node)) then
+      push t new_node (link_as_node (get_next old_tail))
+    else begin
       if not (Atomic.compare_and_set t.tail old_tail new_node) then
         fix_tail t.tail new_node;
-      release_all t.tail_waiters))
+      release_all t.tail_waiters
+    end
+  end
 
 let[@inline] push t value =
-  let new_node = Node { _next = Null; value; capacity = 0; counter = 0 } in
+  let new_node = Node { _next = Link Null; value; capacity = 0; counter = 0 } in
   push t new_node (Atomic.get t.tail)
 
 (* *)
@@ -233,20 +243,23 @@ let rec try_push t new_node old_tail =
     let length = get_counter old_tail - get_counter old_head in
     let capacity = t.capacity - length in
     0 < capacity
-    &&
-    (set_capacity old_tail capacity;
-     try_push t new_node old_tail)
-  else (
+    && begin
+         set_capacity old_tail capacity;
+         try_push t new_node old_tail
+       end
+  else begin
     set_capacity new_node (capacity - 1);
     set_counter new_node (get_counter old_tail + 1);
-    if not (compare_and_set_next old_tail Null new_node) then
-      try_push t new_node (get_next old_tail)
-    else (
+    if not (compare_and_set_next old_tail (Link Null) (Link new_node)) then
+      try_push t new_node (link_as_node (get_next old_tail))
+    else begin
       if not (Atomic.compare_and_set t.tail old_tail new_node) then
         fix_tail t.tail new_node;
       release_all t.tail_waiters;
-      true))
+      true
+    end
+  end
 
 let[@inline] try_push t value =
-  let new_node = Node { _next = Null; value; capacity = 0; counter = 0 } in
+  let new_node = Node { _next = Link Null; value; capacity = 0; counter = 0 } in
   try_push t new_node (Atomic.get t.tail)
