@@ -7,8 +7,6 @@ let benchmarks =
     ("Saturn_lockfree Skiplist", Bench_skiplist.run_suite);
     ("Saturn_lockfree Stack", Bench_stack.run_suite);
     ("Saturn_lockfree Work_stealing_deque", Bench_ws_deque.run_suite);
-    ("Stdlib Queue", Bench_stdlib_queue.run_suite);
-    ("Stdlib Stack", Bench_stdlib_stack.run_suite);
   ]
 
 let () = Multicore_bench.Cmd.run ~benchmarks ()
