@@ -10,6 +10,8 @@ let () =
 (test
  (package saturn)
  (name main)
+ (action
+  (run %{test} -brief))
  (libraries saturn multicore-bench multicore-magic |}
   ^ maybe_domain_shims ^ {| ))
 |}
