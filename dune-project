@@ -7,6 +7,7 @@
 (authors "KC Sivaramakrishnan")
 (maintainers "Carine Morel" "KC Sivaramakrishnan" "Sudha Parimala")
 (documentation "https://ocaml-multicore.github.io/saturn/")
+(using mdx 0.4)
 (package
  (name saturn)
  (synopsis "Collection of parallelism-safe data structures for Multicore OCaml")
@@ -17,6 +18,7 @@
   (multicore-magic (and (>= 2.1.0) :with-test))
   (multicore-bench (and (>= 0.1.2) :with-test))
   (backoff (and (>= 0.1.0) :with-test))
+  (mdx (and (>= 2.3.1) :with-test))
   (alcotest (and (>= 1.7.0) :with-test))
   (qcheck (and (>= 0.21.3) :with-test))
   (qcheck-stm (and (>= 0.3) :with-test))
