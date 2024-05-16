@@ -1,4 +1,4 @@
-FROM ocaml/opam:debian-ocaml-5.1
+FROM ocaml/opam:debian-ocaml-5.2
 RUN sudo ln -sf /usr/bin/opam-2.1 /usr/bin/opam
 WORKDIR bench-dir
 RUN sudo chown opam .
