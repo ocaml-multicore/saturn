@@ -21,85 +21,91 @@
  * https://dl.acm.org/doi/pdf/10.1145/3437801.3441583
  *)
 
+module Padded_int_ref = struct
+  type t = int array
+
+  let[@inline] make s i : t = Array.make s i
+  let[@inline] get (t : t) = Array.unsafe_get t 0
+  let[@inline] set (t : t) v = Array.unsafe_set t 0 v
+end
+
 type 'a t = {
   array : 'a Option.t Array.t;
   tail : int Atomic.t;
+  tail_cache : Padded_int_ref.t;
   head : int Atomic.t;
-  mask : int;
+  head_cache : Padded_int_ref.t ;
 }
 
 exception Full
 
 let create ~size_exponent =
-  let size = Int.shift_left 1 size_exponent in
-  {
-    head = Atomic.make 0;
-    tail = Atomic.make 0;
-    mask = size - 1;
-    array = Array.init size (fun _ -> None);
-  }
+  if size_exponent < 0 || Sys.int_size - 2 < size_exponent then
+    invalid_arg "size_exponent out of range";
+  let size = 1 lsl size_exponent in
+  let array = Array.make size None in
+  let tail = Atomic.make_contended 0 in
+  let s = Obj.size (Obj.repr tail) in
+  let tail_cache = Padded_int_ref.make s 0 in
+  let head = Atomic.make_contended 0 in
+  let head_cache = Padded_int_ref.make s 0 in
+  { array; tail; tail_cache; head; head_cache }
 
-let push { array; head; tail; mask; _ } element =
-  let size = mask + 1 in
-  let head_val = Atomic.get head in
-  let tail_val = Atomic.get tail in
-  if head_val + size == tail_val then raise Full
-  else (
-    Array.set array (tail_val land mask) (Some element);
-    Atomic.set tail (tail_val + 1))
+type _ mono = Unit : unit mono | Bool : bool mono
 
-let try_push { array; head; tail; mask; _ } element =
-  let size = mask + 1 in
-  let head_val = Atomic.get head in
-  let tail_val = Atomic.get tail in
-  if head_val + size == tail_val then false
-  else (
-    Array.set array (tail_val land mask) (Some element);
-    Atomic.set tail (tail_val + 1);
-    true)
+let push_as (type r) t element (mono : r mono) : r =
+  let size = Array.length t.array in
+  let tail = Atomic.get t.tail in
+  let head_cache = Padded_int_ref.get t.head_cache in
+  if
+    head_cache == tail - size
+    &&
+    let head = Atomic.get t.head in
+    Padded_int_ref.set t.head_cache head;
+    head == head_cache
+  then match mono with Unit -> raise_notrace Full | Bool -> false
+  else begin
+    Array.unsafe_set t.array (tail land (size - 1)) (Some element);
+    Atomic.incr t.tail;
+    match mono with Unit -> () | Bool -> true
+  end
+
+let push_exn t element = push_as t element Unit
+let try_push t element = push_as t element Bool
 
 exception Empty
 
-let pop { array; head; tail; mask; _ } =
-  let head_val = Atomic.get head in
-  let tail_val = Atomic.get tail in
-  if head_val == tail_val then raise Empty
-  else
-    let index = head_val land mask in
-    let v = Array.get array index in
-    (* allow gc to collect it *)
-    Array.set array index None;
-    Atomic.set head (head_val + 1);
-    match v with None -> assert false | Some v -> v
+type ('a, _) poly = Option : ('a, 'a option) poly | Value : ('a, 'a) poly
+type op = Peek | Pop
 
-let pop_opt { array; head; tail; mask; _ } =
-  let head_val = Atomic.get head in
-  let tail_val = Atomic.get tail in
-  if head_val == tail_val then None
+let pop_or_peek_as (type a r) (t : a t) op (poly : (a, r) poly) : r =
+  let head = Atomic.get t.head in
+  let tail_cache = Padded_int_ref.get t.tail_cache in
+  if
+    head == tail_cache
+    &&
+    let tail = Atomic.get t.tail in
+    Padded_int_ref.set t.tail_cache tail;
+    tail_cache == tail
+  then match poly with Value -> raise_notrace Empty | Option -> None
   else
-    let index = head_val land mask in
-    let v = Array.get array index in
-    (* allow gc to collect it *)
-    Array.set array index None;
-    Atomic.set head (head_val + 1);
-    assert (Option.is_some v);
-    v
+    let index = head land (Array.length t.array - 1) in
+    let v = Array.unsafe_get t.array (head land (Array.length t.array - 1)) in
+    begin
+      match op with
+      | Pop ->
+          Array.unsafe_set t.array index None;
+          Atomic.incr t.head
+      | Peek -> ()
+    end;
+    match poly with Value -> Option.get v | Option -> v
 
-let peek_opt { array; head; tail; mask; _ } =
-  let head_val = Atomic.get head in
-  let tail_val = Atomic.get tail in
-  if head_val == tail_val then None
-  else
-    let v = Array.get array @@ (head_val land mask) in
-    assert (Option.is_some v);
-    v
+let pop_exn t = pop_or_peek_as t Pop Value
+let pop_opt t = pop_or_peek_as t Pop Option
+let peek_exn t = pop_or_peek_as t Peek Value
+let peek_opt t = pop_or_peek_as t Peek Option
 
-let peek { array; head; tail; mask; _ } =
-  let head_val = Atomic.get head in
-  let tail_val = Atomic.get tail in
-  if head_val == tail_val then raise Empty
-  else
-    let v = Array.get array @@ (head_val land mask) in
-    match v with None -> assert false | Some v -> v
-
-let size { head; tail; _ } = Atomic.get tail - Atomic.get head
+let size t =
+  let tail = Atomic.get t.tail in
+  let head = Atomic.get t.head in
+  tail - head

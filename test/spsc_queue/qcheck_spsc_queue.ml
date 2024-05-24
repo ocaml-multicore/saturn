@@ -18,7 +18,7 @@ let pop_n_times q n =
     if count = 0 then acc
     else
       try
-        let v = Spsc_queue.pop q in
+        let v = Spsc_queue.pop_exn q in
         Domain.cpu_relax ();
         loop (count - 1) (Some v :: acc)
       with Spsc_queue.Empty -> loop (count - 1) (None :: acc)
@@ -47,7 +47,7 @@ let tests =
              raised. *)
           let not_full_queue =
             try
-              List.iter (Spsc_queue.push q) l;
+              List.iter (Spsc_queue.push_exn q) l;
               true
             with Spsc_queue.Full -> false
           in
@@ -79,7 +79,7 @@ let tests =
              raised. *)
           let not_full_queue =
             try
-              List.iter (Spsc_queue.push q) l;
+              List.iter (Spsc_queue.push_exn q) l;
               true
             with Spsc_queue.Full -> false
           in
@@ -135,7 +135,7 @@ let tests =
           (* Initialization *)
           let barrier = Barrier.create 2 in
           let q = Spsc_queue.create ~size_exponent in
-          List.iter (Spsc_queue.push q) l;
+          List.iter (Spsc_queue.push_exn q) l;
 
           (* Consumer pops *)
           let consumer =
@@ -150,7 +150,7 @@ let tests =
                 (* Main domain pushes.*)
                 List.iter
                   (fun elt ->
-                    Spsc_queue.push q elt;
+                    Spsc_queue.push_exn q elt;
                     Domain.cpu_relax ())
                   l')
           in
@@ -173,7 +173,7 @@ let tests =
           let q = Spsc_queue.create ~size_exponent in
           let is_full =
             try
-              List.iter (Spsc_queue.push q) l;
+              List.iter (Spsc_queue.push_exn q) l;
               false
             with Spsc_queue.Full -> true
           in
@@ -191,7 +191,7 @@ let tests =
 
           (* Initialisation : pushing l in a new spsc queue. *)
           let q = Spsc_queue.create ~size_exponent in
-          List.iter (Spsc_queue.push q) l;
+          List.iter (Spsc_queue.push_exn q) l;
 
           (* Test : we consecutively peek and pop and check both
              matches with pushed elements. *)
@@ -217,13 +217,13 @@ let tests =
 
           (* Initialisation : pushing l in a new spsc queue. *)
           let q = Spsc_queue.create ~size_exponent in
-          List.iter (Spsc_queue.push q) l;
+          List.iter (Spsc_queue.push_exn q) l;
 
           (* Test : we consecutively peek and pop and check both
              matches with pushed elements. *)
           let rec loop pushed =
             let peeked =
-              try Some (Spsc_queue.peek q) with Spsc_queue.Empty -> None
+              try Some (Spsc_queue.peek_exn q) with Spsc_queue.Empty -> None
             in
             match (pushed, peeked) with
             | [], None -> (
@@ -258,7 +258,7 @@ let tests =
                 List.iter
                   (fun elt ->
                     Domain.cpu_relax ();
-                    Spsc_queue.push q elt)
+                    Spsc_queue.push_exn q elt)
                   pushed)
           in
 

@@ -16,9 +16,18 @@ val size : 'a t -> int
 (** {1 Producer functions} *)
 
 exception Full
-(** Raised when {!push} is applied to a full queue. *)
+(** Raised when {!push_exn} is applied to a full queue. 
+    This exception is meant to avoid allocations required by an option type. 
+    As such, it does not registed backtrace information and it is recommended
+    to use the following pattern to catch it.  
+    {[
+    match push_exn q v with 
+     | value -> (* ... *)
+     | exception Full -> (* ... *)
+    ]}
+*)
 
-val push : 'a t -> 'a -> unit
+val push_exn : 'a t -> 'a -> unit
 (** [push q v] adds the element [v] at the end of the queue [q]. This
     method can be used by at most one domain at the time.
 
@@ -34,10 +43,19 @@ val try_push : 'a t -> 'a -> bool
 (** {2 Consumer functions} *)
 
 exception Empty
-(** Raised when {!pop} or {!peek} is applied to an empty queue. *)
+(** Raised when {!pop_exn} or {!peek_exn} is applied to an empty queue. 
+    This exception is meant to avoid allocations required by an option type. 
+    As such, it does not registed backtrace information and it is recommended
+    to use the following pattern to catch it.  
+    {[
+    match pop_exn q with 
+     | value -> (* ... *)
+     | exception Empty -> (* ... *)
+    ]}
+*)
 
-val pop : 'a t -> 'a
-(** [pop q] removes and returns the first element in queue [q]. This
+val pop_exn : 'a t -> 'a
+(** [pop_exn q] removes and returns the first element in queue [q]. This
     method can be used by at most one domain at the time.
 
     @raise Empty if [q] is empty.
@@ -48,8 +66,8 @@ val pop_opt : 'a t -> 'a option
     returns [None] if the queue is empty. This method can be used by
     at most one domain at the time. *)
 
-val peek : 'a t -> 'a
-(** [peek q] returns the first element in queue [q]. This method can be
+val peek_exn : 'a t -> 'a
+(** [peek_exn q] returns the first element in queue [q]. This method can be
     used by at most one domain at the time.
 
     @raise Empty if [q] is empty.

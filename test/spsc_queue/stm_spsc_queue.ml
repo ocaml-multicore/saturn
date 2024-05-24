@@ -47,9 +47,9 @@ module Spec = struct
 
   let run c d =
     match c with
-    | Push i -> Res (result unit exn, protect (fun d -> Spsc_queue.push d i) d)
-    | Pop -> Res (result int exn, protect Spsc_queue.pop d)
-    | Peek -> Res (result int exn, protect Spsc_queue.peek d)
+    | Push i -> Res (result unit exn, protect (fun d -> Spsc_queue.push_exn d i) d)
+    | Pop -> Res (result int exn, protect Spsc_queue.pop_exn d)
+    | Peek -> Res (result int exn, protect Spsc_queue.peek_exn d)
 
   let postcond c ((n, s) : state) res =
     match (c, res) with
