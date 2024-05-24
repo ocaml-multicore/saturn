@@ -34,7 +34,7 @@ type 'a t = {
   tail : int Atomic.t;
   tail_cache : Padded_int_ref.t;
   head : int Atomic.t;
-  head_cache : Padded_int_ref.t ;
+  head_cache : Padded_int_ref.t;
 }
 
 exception Full
