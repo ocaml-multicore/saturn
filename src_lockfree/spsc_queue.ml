@@ -90,7 +90,7 @@ let pop_or_peek_as (type a r) (t : a t) op (poly : (a, r) poly) : r =
   then match poly with Value -> raise_notrace Empty | Option -> None
   else
     let index = head land (Array.length t.array - 1) in
-    let v = Array.unsafe_get t.array (head land (Array.length t.array - 1)) in
+    let v = Array.unsafe_get t.array index in
     begin
       match op with
       | Pop ->
