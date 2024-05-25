@@ -1,6 +1,7 @@
 [API Reference](https://ocaml-multicore.github.io/saturn/) &middot;
-[Benchmarks](https://bench.ci.dev/ocaml-multicore/saturn/branch/main) &middot;
-[Stdlib Benchmarks](https://bench.ci.dev/ocaml-multicore/multicore-bench/branch/main)
+[Benchmarks](https://bench.ci.dev/ocaml-multicore/saturn/branch/main?worker=pascal&image=bench.Dockerfile)
+&middot;
+[Stdlib Benchmarks](https://bench.ci.dev/ocaml-multicore/multicore-bench/branch/main?worker=pascal&image=bench.Dockerfile)
 
 <!--
 ```ocaml
