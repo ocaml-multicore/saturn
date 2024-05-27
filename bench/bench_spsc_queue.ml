@@ -78,11 +78,19 @@ let run_one ~unsafe ~budgetf ?(size_exponent = 3)
       (work, before)
   in
 
-  let config = Printf.sprintf "2 workers, capacity %d" (1 lsl size_exponent) in
+  let config =
+    Printf.sprintf "2 workers, capacity %d (%s)" (1 lsl size_exponent)
+      (if unsafe then "unsafe" else "safe")
+  in
   Times.record ~budgetf ~n_domains:2 ~before ~init ~work ()
   |> Times.to_thruput_metrics ~n:n_msgs ~singular:"message" ~config
 
-let run_suite ~unsafe ~budgetf =
-  [ 0; 3; 6; 9; 12; 15 ]
-  |> List.concat_map @@ fun size_exponent ->
-     run_one ~budgetf ~size_exponent ~unsafe ()
+let run_suite ~budgetf =
+  let run ~unsafe =
+    [ 0; 3; 6; 9; 12; 15 ]
+    |> List.concat_map @@ fun size_exponent ->
+       run_one ~budgetf ~size_exponent ~unsafe ()
+  in
+  List.fold_right2
+    (fun safe unsafe acc -> safe :: unsafe :: acc)
+    (run ~unsafe:false) (run ~unsafe:true) []
