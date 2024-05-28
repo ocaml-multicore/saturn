@@ -63,14 +63,14 @@ let[@inline never] push_as (type r) t element (mono : r mono) : r =
     let head = Atomic.get t.head in
     t.head_cache := head;
     head == head_cache
-  then match mono with Unit -> raise Full | Bool -> false
+  then match mono with Unit -> raise_notrace Full | Bool -> false
   else begin
     Array.unsafe_set t.array (tail land (size - 1)) (Obj.magic element);
     Atomic.incr t.tail;
     match mono with Unit -> () | Bool -> true
   end
 
-let push t element = push_as t element Unit
+let push_exn t element = push_as t element Unit
 let try_push t element = push_as t element Bool
 
 exception Empty
@@ -87,7 +87,7 @@ let[@inline never] pop_or_peek_as (type a r) t op (poly : (a, r) poly) : r =
     let tail = Atomic.get t.tail in
     t.tail_cache := tail;
     tail_cache == tail
-  then match poly with Value -> raise Empty | Option -> None
+  then match poly with Value -> raise_notrace Empty | Option -> None
   else
     let index = head land (Array.length t.array - 1) in
     let v = Array.unsafe_get t.array index |> Obj.magic in
@@ -100,9 +100,9 @@ let[@inline never] pop_or_peek_as (type a r) t op (poly : (a, r) poly) : r =
     end;
     match poly with Value -> v | Option -> Some v
 
-let pop t = pop_or_peek_as t Pop Value
+let pop_exn t = pop_or_peek_as t Pop Value
 let pop_opt t = pop_or_peek_as t Pop Option
-let peek t = pop_or_peek_as t Peek Value
+let peek_exn t = pop_or_peek_as t Peek Value
 let peek_opt t = pop_or_peek_as t Peek Option
 
 let size t =

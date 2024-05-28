@@ -10,11 +10,11 @@ let run_one ~unsafe ~budgetf ?(size_exponent = 3)
 
       let before () =
         while Queue.size t <> 0 do
-          Queue.pop t |> ignore
+          Queue.pop_exn t |> ignore
         done;
         let n = Random.int ((1 lsl size_exponent) + 1) in
         for i = 1 to n do
-          Queue.push t i
+          Queue.push_exn t i
         done
       in
       let work i () =
