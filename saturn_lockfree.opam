@@ -8,7 +8,7 @@ homepage: "https://github.com/ocaml-multicore/saturn"
 doc: "https://ocaml-multicore.github.io/saturn/"
 bug-reports: "https://github.com/ocaml-multicore/saturn/issues"
 depends: [
-  "dune" {>= "3.9"}
+  "dune" {>= "3.14"}
   "ocaml" {>= "4.13"}
   "domain_shims" {>= "0.1.0" & with-test}
   "backoff" {>= "0.1.0"}
@@ -21,7 +21,8 @@ depends: [
   "qcheck-alcotest" {>= "0.21.3" & with-test}
   "yojson" {>= "2.0.2" & with-test}
   "dscheck" {>= "0.4.0" & with-test}
-  "odoc" {with-doc}
+  "sherlodoc" {>= "0.2" & with-doc}
+  "odoc" {>= "2.4.1" & with-doc}
 ]
 build: [
   ["dune" "subst"] {dev}
