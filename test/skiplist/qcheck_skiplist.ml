@@ -1,5 +1,5 @@
 module Skiplist = struct
-  include Saturn.Skiplist
+  include Saturn_lockfree.Skiplist
 
   let try_add s k = try_add s k ()
 end
