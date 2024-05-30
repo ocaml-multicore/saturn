@@ -3,13 +3,23 @@
   (copy ../../src_lockfree/spsc_queue.ml spsc_queue.ml))
  (package saturn_lockfree))
 
+(rule
+ (action
+  (copy ../../src_lockfree/spsc_queue_unsafe.ml spsc_queue_unsafe.ml))
+ (package saturn_lockfree))
+
+(rule
+ (action
+  (copy ../../src_lockfree/spsc_queue_intf.ml spsc_queue_intf.ml))
+ (package saturn_lockfree))
+
 (test
  (package saturn_lockfree)
  (name spsc_queue_dscheck)
  (libraries atomic dscheck alcotest multicore-magic transparent_atomic)
  (build_if
   (>= %{ocaml_version} 5))
- (modules spsc_queue spsc_queue_dscheck))
+ (modules spsc_queue spsc_queue_unsafe spsc_queue_intf spsc_queue_dscheck))
 
 (test
  (package saturn_lockfree)
