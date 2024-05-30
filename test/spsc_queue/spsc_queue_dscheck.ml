@@ -56,28 +56,28 @@ module Dscheck_spsc (Spsc_queue : Spsc_queue_intf.SPSC_queue) = struct
 
   let tests name =
     let open Alcotest in
-
-      [
-        ("basic_"^name, [ test_case "simple-test" `Slow (with_trace create_test) ]);
-        ( "wrap-arounds_"^name,
-          let with_shift s =
-            test_case
-              (Printf.sprintf "shift-by-%d" s)
-              `Slow
-              (with_trace ~shift_by:s create_test)
-          in
-          [ with_shift 1; with_shift 6; with_shift 11 ] );
-        ( "size_"^name,
-          [ test_case "linearizes-with-1-thr" `Slow size_linearizes_with_1_thr ]
-        );
-      ]
+    [
+      ( "basic_" ^ name,
+        [ test_case "simple-test" `Slow (with_trace create_test) ] );
+      ( "wrap-arounds_" ^ name,
+        let with_shift s =
+          test_case
+            (Printf.sprintf "shift-by-%d" s)
+            `Slow
+            (with_trace ~shift_by:s create_test)
+        in
+        [ with_shift 1; with_shift 6; with_shift 11 ] );
+      ( "size_" ^ name,
+        [ test_case "linearizes-with-1-thr" `Slow size_linearizes_with_1_thr ]
+      );
+    ]
 end
 
 let () =
   let module Safe = Dscheck_spsc (Spsc_queue) in
-  let safe_test = Safe.tests "safe"in
+  let safe_test = Safe.tests "safe" in
   let module Unsafe = Dscheck_spsc (Spsc_queue_unsafe) in
   let unsafe_test = Unsafe.tests "unsafe" in
 
   let open Alcotest in
-  run ("spsc_queue_dscheck") (safe_test @ unsafe_test)
+  run "spsc_queue_dscheck" (safe_test @ unsafe_test)
