@@ -14,14 +14,14 @@
 (test
  (package saturn_lockfree)
  (name test_spsc_queue)
- (libraries saturn_lockfree domain_shims)
+ (libraries spsc_queues domain_shims)
  (modules test_spsc_queue))
 
 (test
  (package saturn_lockfree)
  (name qcheck_spsc_queue)
  (libraries
-  saturn_lockfree
+  spsc_queues
   barrier
   qcheck
   qcheck-core
@@ -35,7 +35,7 @@
  (name stm_spsc_queue)
  (modules stm_spsc_queue)
  (libraries
-  saturn_lockfree
+  spsc_queues
   qcheck-core
   qcheck-multicoretests-util
   qcheck-stm.stm
