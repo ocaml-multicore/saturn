@@ -2,7 +2,7 @@ open QCheck
 open STM
 
 module Skiplist = struct
-  include Saturn.Skiplist
+  include Saturn_lockfree.Skiplist
 
   type nonrec 'a t = ('a, unit) t
 
