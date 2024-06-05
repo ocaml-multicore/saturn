@@ -79,8 +79,8 @@ let run_one ~unsafe ~budgetf ?(size_exponent = 3)
   in
 
   let config =
-    Printf.sprintf "2 workers, capacity %d (%s)" (1 lsl size_exponent)
-      (if unsafe then "unsafe" else "safe")
+    Printf.sprintf "2 workers, capacity %d%s" (1 lsl size_exponent)
+      (if unsafe then " (unsafe)" else "")
   in
   Times.record ~budgetf ~n_domains:2 ~before ~init ~work ()
   |> Times.to_thruput_metrics ~n:n_msgs ~singular:"message" ~config
