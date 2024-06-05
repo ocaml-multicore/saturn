@@ -311,7 +311,7 @@ module Qcheck_spsc (Spsc_queue : Spsc_queues.SPSC_tests) = struct
     ]
 end
 
-let main () =
+let () =
   let module Safe = Qcheck_spsc (Spsc_queues.Spsc_queue) in
   let module Unsafe = Qcheck_spsc (Spsc_queues.Spsc_queue_unsafe) in
   let to_alcotest = List.map QCheck_alcotest.to_alcotest in
@@ -320,6 +320,3 @@ let main () =
       (Spsc_queues.Spsc_queue.name, to_alcotest Safe.tests);
       (Spsc_queues.Spsc_queue_unsafe.name, to_alcotest Unsafe.tests);
     ]
-;;
-
-main ()
