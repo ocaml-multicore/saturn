@@ -1,5 +1,0 @@
-(library
- (name transparent_atomic)
- (libraries dscheck)
- (enabled_if
-  (>= %{ocaml_version} 5)))

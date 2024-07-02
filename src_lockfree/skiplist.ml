@@ -28,7 +28,7 @@
 (* TODO: Grow and possibly shrink the skiplist or e.g. adjust search and node
    generation based on the dynamic number of bindings. *)
 
-module Atomic = Transparent_atomic
+module Atomic = Multicore_magic.Transparent_atomic
 
 (* OCaml doesn't allow us to use one of the unused (always 0) bits in pointers
    for the marks and an indirection is needed.  This representation avoids the

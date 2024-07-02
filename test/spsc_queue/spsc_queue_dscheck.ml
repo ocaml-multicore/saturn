@@ -1,3 +1,5 @@
+module Atomic = Dscheck.TracedAtomic
+
 module Dscheck_spsc (Spsc_queue : Spsc_queue_intf.SPSC_queue) = struct
   let create_test ~shift_by () =
     let queue = Spsc_queue.create ~size_exponent:2 in
