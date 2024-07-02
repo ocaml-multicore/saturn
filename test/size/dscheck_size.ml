@@ -1,3 +1,4 @@
+module Atomic = Dscheck.TracedAtomic
 open Linked_set.Make (Atomic) (Size)
 
 let test_underflow_and_overflow () =

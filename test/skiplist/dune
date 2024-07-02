@@ -11,7 +11,9 @@
  (modules skiplist size dscheck_skiplist)
  (build_if
   (>= %{ocaml_version} 5))
- (libraries atomic transparent_atomic dscheck alcotest multicore-magic))
+ (libraries alcotest dscheck multicore-magic-dscheck)
+ (flags
+  (:standard -open Multicore_magic_dscheck)))
 
 (test
  (package saturn_lockfree)

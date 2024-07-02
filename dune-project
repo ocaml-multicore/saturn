@@ -7,6 +7,7 @@
 (authors "KC Sivaramakrishnan")
 (maintainers "Carine Morel" "KC Sivaramakrishnan" "Sudha Parimala")
 (documentation "https://ocaml-multicore.github.io/saturn/")
+
 (package
  (name saturn)
  (synopsis "Collection of parallelism-safe data structures for Multicore OCaml")
@@ -25,6 +26,7 @@
   (dscheck (and (>= 0.4.0) :with-test))
   (sherlodoc (and (>= 0.2) :with-doc))
   (odoc (and (>= 2.4.1) :with-doc))))
+
 (package
  (name saturn_lockfree)
  (synopsis "Collection of lock-free data structures for Multicore OCaml")
@@ -33,6 +35,7 @@
   (domain_shims (and (>= 0.1.0) :with-test))
   (backoff (>= 0.1.0))
   (multicore-magic (>= 2.1.0))
+  (multicore-magic-dscheck (and (= dev) :with-test))
   (alcotest (and (>= 1.7.0) :with-test))
   (qcheck (and (>= 0.21.3) :with-test))
   (qcheck-core (and (>= 0.21.3) :with-test))
@@ -40,6 +43,6 @@
   (qcheck-multicoretests-util (and (>= 0.3) :with-test))
   (qcheck-alcotest (and (>= 0.21.3) :with-test))
   (yojson (and (>= 2.0.2) :with-test))
-  (dscheck (and (>= 0.4.0) :with-test))
+  (dscheck (and (= dev) :with-test))
   (sherlodoc (and (>= 0.2) :with-doc))
   (odoc (and (>= 2.4.1) :with-doc))))

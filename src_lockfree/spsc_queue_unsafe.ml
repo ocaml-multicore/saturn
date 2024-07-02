@@ -22,7 +22,7 @@
  * https://dl.acm.org/doi/pdf/10.1145/3437801.3441583
  *)
 
-module Atomic = Transparent_atomic
+module Atomic = Multicore_magic.Transparent_atomic
 
 type not_float = [ `Not_float of not_float ]
 
