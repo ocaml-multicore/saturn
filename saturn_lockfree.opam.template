@@ -1,7 +1,7 @@
 pin-depends:
   [[
   "multicore-magic-dscheck.dev"
-  "git+https://github.com/lyrm/multicore-magic.git#02fa833f5aef137c1ce1bf233bb777f0e8b5a6fa"
+  "git+https://github.com/lyrm/multicore-magic.git#b25fec98d5c0fcadf3520b80b5fa9ec4b91779af"
   ]
   [
   "dscheck.dev"
