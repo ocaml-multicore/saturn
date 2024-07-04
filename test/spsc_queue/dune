@@ -16,7 +16,7 @@
 (test
  (package saturn_lockfree)
  (name spsc_queue_dscheck)
- (libraries alcotest dscheck multicore-magic-dscheck)
+ (libraries alcotest atomic dscheck multicore-magic-dscheck)
  (build_if
   (>= %{ocaml_version} 5))
  (modules spsc_queue spsc_queue_unsafe spsc_queue_intf spsc_queue_dscheck)
