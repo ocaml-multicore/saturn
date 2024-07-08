@@ -97,11 +97,8 @@ let push { tail; _ } value =
   let (Next _ as new_node : (_, [ `Next ]) Node.t) = Node.make value in
   let old_tail = Atomic.get tail in
   let link = Node.as_atomic old_tail in
-  if Atomic.compare_and_set link Nil new_node then begin
-    if not (Atomic.compare_and_set tail old_tail new_node) then
-      let backoff = Backoff.once Backoff.default in
-      fix_tail tail new_node backoff
-  end
+  if Atomic.compare_and_set link Nil new_node then
+    Atomic.compare_and_set tail old_tail new_node |> ignore
   else
     let backoff = Backoff.once Backoff.default in
     push tail link new_node backoff
