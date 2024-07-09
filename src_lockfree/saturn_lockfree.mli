@@ -32,6 +32,7 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 
 module Queue = Michael_scott_queue
 module Queue_unsafe = Michael_scott_queue_unsafe
+module Lazy_queue = Lazy_queue
 module Stack = Treiber_stack
 module Work_stealing_deque = Ws_deque
 module Single_prod_single_cons_queue = Spsc_queue
