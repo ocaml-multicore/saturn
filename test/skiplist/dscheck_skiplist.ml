@@ -1,5 +1,13 @@
 open Skiplist
 
+module Atomic = Dscheck.TracedAtomic
+(** This is needed in this order as the skiplist.ml file contains 
+  {[
+  module Atomic = Multicore_magic.Transparent_atomic 
+  ]}
+  which is in multicore-magic-dscheck library only a subset of [Dscheck.TracedAtomic] function.
+*)
+
 let test_max_height_of () =
   let s = create ~max_height:1 ~compare () in
   assert (max_height_of s = 1);

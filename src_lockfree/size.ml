@@ -15,7 +15,7 @@
 (** ⚠️ Beware that this implementation uses a bunch of low level data
     representation tricks to minimize overheads. *)
 
-module Atomic = Transparent_atomic
+module Atomic = Multicore_magic.Transparent_atomic
 
 let max_value = Int.max_int
 
