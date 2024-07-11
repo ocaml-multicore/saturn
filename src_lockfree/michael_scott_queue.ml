@@ -59,7 +59,7 @@ let peek_as : type a r. a node Atomic.t Atomic.t -> (a, r) poly -> r =
   let old_head = Atomic.get head in
   match Atomic.get old_head with
   | Nil -> begin
-      match poly with Value -> raise Empty | Option -> raise Empty
+      match poly with Value -> raise Empty | Option -> None
     end
   | Next (value, _) -> (
       match poly with Value -> value | Option -> Some value)
