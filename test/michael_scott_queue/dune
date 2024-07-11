@@ -3,10 +3,31 @@
   (copy ../../src_lockfree/michael_scott_queue.ml michael_scott_queue.ml))
  (package saturn_lockfree))
 
+(rule
+ (action
+  (copy
+   ../../src_lockfree/michael_scott_queue_unsafe_node.ml
+   michael_scott_queue_unsafe_node.ml))
+ (package saturn_lockfree))
+
+(rule
+ (action
+  (copy
+   ../../src_lockfree/michael_scott_queue_unsafe.ml
+   michael_scott_queue_unsafe.ml))
+ (package saturn_lockfree))
+
+(rule
+ (action
+  (copy
+   ../../src_lockfree/michael_scott_queue_intf.ml
+   michael_scott_queue_intf.ml))
+ (package saturn_lockfree))
+
 (test
  (package saturn_lockfree)
  (name michael_scott_queue_dscheck)
- (libraries atomic dscheck alcotest backoff)
+ (libraries alcotest atomic backoff dscheck multicore-magic-dscheck)
  (build_if
   (and
    (>= %{ocaml_version} 5)
@@ -14,12 +35,20 @@
     (and
      (= %{arch_sixtyfour} false)
      (= %{architecture} arm)))))
- (modules michael_scott_queue michael_scott_queue_dscheck))
+ (modules
+  michael_scott_queue
+  michael_scott_queue_unsafe
+  michael_scott_queue_unsafe_node
+  michael_scott_queue_intf
+  michael_scott_queue_dscheck)
+ (flags
+  (:standard -open Multicore_magic_dscheck)))
 
 (test
  (package saturn_lockfree)
  (name qcheck_michael_scott_queue)
  (libraries
+  ms_queues
   saturn_lockfree
   barrier
   qcheck
@@ -33,6 +62,6 @@
  (package saturn_lockfree)
  (name stm_michael_scott_queue)
  (modules stm_michael_scott_queue)
- (libraries saturn_lockfree qcheck-core qcheck-stm.stm stm_run)
+ (libraries ms_queues saturn_lockfree qcheck-core qcheck-stm.stm stm_run)
  (enabled_if
   (= %{arch_sixtyfour} true)))
