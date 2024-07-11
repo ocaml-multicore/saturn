@@ -1,9 +1,0 @@
-pin-depends:
-  [[
-  "multicore-magic-dscheck.dev"
-  "git+https://github.com/lyrm/multicore-magic.git#b25fec98d5c0fcadf3520b80b5fa9ec4b91779af"
-  ]
-  [
-  "dscheck.dev"
-  "git+https://github.com/lyrm/dscheck.git#d325890d36267dc0d4d76cbd38860ee67cee731e"
-  ]]

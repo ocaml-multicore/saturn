@@ -12,8 +12,8 @@ depends: [
   "ocaml" {>= "4.13"}
   "domain_shims" {>= "0.1.0" & with-test}
   "backoff" {>= "0.1.0"}
-  "multicore-magic" {>= "2.1.0"}
-  "multicore-magic-dscheck" {= "dev" & with-test}
+  "multicore-magic" {>= "2.3.0"}
+  "multicore-magic-dscheck" {>= "2.3.0" & with-test}
   "alcotest" {>= "1.7.0" & with-test}
   "qcheck" {>= "0.21.3" & with-test}
   "qcheck-core" {>= "0.21.3" & with-test}
@@ -21,7 +21,7 @@ depends: [
   "qcheck-multicoretests-util" {>= "0.3" & with-test}
   "qcheck-alcotest" {>= "0.21.3" & with-test}
   "yojson" {>= "2.0.2" & with-test}
-  "dscheck" {= "dev" & with-test}
+  "dscheck" {>= "0.5.0" & with-test}
   "sherlodoc" {>= "0.2" & with-doc}
   "odoc" {>= "2.4.1" & with-doc}
 ]
@@ -40,12 +40,3 @@ build: [
   ]
 ]
 dev-repo: "git+https://github.com/ocaml-multicore/saturn.git"
-pin-depends:
-  [[
-  "multicore-magic-dscheck.dev"
-  "git+https://github.com/lyrm/multicore-magic.git#b25fec98d5c0fcadf3520b80b5fa9ec4b91779af"
-  ]
-  [
-  "dscheck.dev"
-  "git+https://github.com/lyrm/dscheck.git#d325890d36267dc0d4d76cbd38860ee67cee731e"
-  ]]
