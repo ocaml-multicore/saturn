@@ -4,7 +4,9 @@ module Queue = Saturn_lockfree.Queue
 let run_one_domain ~budgetf ?(n_msgs = 50 * Util.iter_factor) () =
   let t = Queue.create () in
 
-  let op push = if push then Queue.push_exn t 101 else Queue.pop_opt t |> ignore in
+  let op push =
+    if push then Queue.push_exn t 101 else Queue.pop_opt t |> ignore
+  in
 
   let init _ =
     assert (Queue.is_empty t);
