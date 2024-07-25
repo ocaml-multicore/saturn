@@ -6,13 +6,6 @@
 (rule
  (action
   (copy
-   ../../src_lockfree/michael_scott_queue_unsafe_node.ml
-   michael_scott_queue_unsafe_node.ml))
- (package saturn_lockfree))
-
-(rule
- (action
-  (copy
    ../../src_lockfree/michael_scott_queue_unsafe.ml
    michael_scott_queue_unsafe.ml))
  (package saturn_lockfree))
