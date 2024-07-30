@@ -33,6 +33,7 @@
  (synopsis "Collection of lock-free data structures for Multicore OCaml")
  (depends
   (ocaml (>= 4.13))
+  (domain-local-await (>= 1.0.1))
   (domain_shims (and (>= 0.1.0) :with-test))
   (backoff (>= 0.1.0))
   (multicore-magic (>= 2.3.0))

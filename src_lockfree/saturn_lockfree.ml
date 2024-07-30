@@ -26,6 +26,7 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 ########
 *)
 
+module Cue = Cue
 module Queue = Michael_scott_queue
 module Stack = Treiber_stack
 module Work_stealing_deque = Ws_deque
