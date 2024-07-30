@@ -47,8 +47,8 @@ is distributed under the
 - [Usage](#usage)
   - [Data Structures With Domain Roles](#data-structures-with-domain-roles)
   - [About Composability](#about-composability)
-      - [Extending Data Structures](#extending-data-structures)
-      - [Composable Parallelism-Safe Data Structures](#composable-parallelism-safe-data-structures)
+    - [Extending Data Structures](#extending-data-structures)
+    - [Composable Parallelism-Safe Data Structures](#composable-parallelism-safe-data-structures)
 - [Testing](#testing)
 - [Benchmarks](#benchmarks)
   - [Contributing](#contributing)
@@ -305,9 +305,16 @@ more details), not a lot can go wrong here. At least, data corruption or
 segmentation fault won't happen like it can in other languages.
 
 ## Safe and unsafe data structures
-Some data structures are available in two versions: a normal version and a more optimized but **unsafe** version. The **unsafe** version utilizes `Obj.magic` in a way that may be unsafe with `flambda2` optimizations.
 
-The reason for providing the unsafe version is that certain optimizations require features that are currently not available in OCaml, such as arrays of atomics or atomic fields in records. We recommend using the normal version of a data structure unless its performance is not sufficient for your use case. In that case, you can try the unsafe version.
+Some data structures are available in two versions: a normal version and a more
+optimized but **unsafe** version. The **unsafe** version utilizes `Obj.magic` in
+a way that may be unsafe with `flambda2` optimizations.
+
+The reason for providing the unsafe version is that certain optimizations
+require features that are currently not available in OCaml, such as arrays of
+atomics or atomic fields in records. We recommend using the normal version of a
+data structure unless its performance is not sufficient for your use case. In
+that case, you can try the unsafe version.
 
 Currently, there are two data structures with an unsafe version:
 
