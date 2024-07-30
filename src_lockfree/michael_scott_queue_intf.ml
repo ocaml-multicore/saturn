@@ -35,7 +35,7 @@ module type MS_QUEUE = sig
   val is_empty : 'a t -> bool
   (** [is_empty q] returns empty if [q] is empty. *)
 
-  val push_exn : 'a t -> 'a -> unit
+  val push : 'a t -> 'a -> unit
   (** [push q v] adds the element [v] at the end of the queue [q]. *)
 
   exception Empty

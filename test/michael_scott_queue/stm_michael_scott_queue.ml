@@ -42,7 +42,7 @@ module STM_ms_queue (Queue : Ms_queues.MS_queue_tests) = struct
 
     let run c d =
       match c with
-      | Push i -> Res (unit, Ms_queue.push_exn d i)
+      | Push i -> Res (unit, Ms_queue.push d i)
       | Pop -> Res (result int exn, protect Ms_queue.pop_exn d)
       | Peek -> Res (result int exn, protect Ms_queue.peek_exn d)
       | Is_empty -> Res (bool, Ms_queue.is_empty d)

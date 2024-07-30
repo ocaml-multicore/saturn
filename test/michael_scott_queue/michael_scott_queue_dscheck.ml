@@ -19,7 +19,7 @@ struct
         (* producer *)
         Atomic.spawn (fun () ->
             for i = 1 to items_total do
-              Michael_scott_queue.push_exn queue i
+              Michael_scott_queue.push queue i
             done);
 
         (* consumer *)
@@ -47,7 +47,7 @@ struct
 
         (* producer *)
         Atomic.spawn (fun () ->
-            List.iter (fun elt -> Michael_scott_queue.push_exn queue elt) pushed);
+            List.iter (fun elt -> Michael_scott_queue.push queue elt) pushed);
 
         (* consumer *)
         let popped = ref [] in
@@ -89,7 +89,7 @@ struct
         for _ = 1 to 2 do
           Atomic.spawn (fun () ->
               for _ = 1 to items_total / 2 do
-                Michael_scott_queue.push_exn queue 0
+                Michael_scott_queue.push queue 0
               done)
         done;
 
@@ -117,7 +117,7 @@ struct
                 List.iter
                   (fun elt ->
                     (* even nums belong to thr 1, odd nums to thr 2 *)
-                    Michael_scott_queue.push_exn stack elt;
+                    Michael_scott_queue.push stack elt;
                     lpop :=
                       Option.get (Michael_scott_queue.pop_opt stack) :: !lpop)
                   lpush)

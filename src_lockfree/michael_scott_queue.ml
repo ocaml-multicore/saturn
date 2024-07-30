@@ -72,7 +72,7 @@ let rec fix_tail tail new_tail =
     && not (Atomic.compare_and_set tail old_tail new_tail)
   then fix_tail tail new_tail
 
-let push_exn { tail; _ } value =
+let push { tail; _ } value =
   let rec find_tail_and_enq curr_end node =
     if not (Atomic.compare_and_set curr_end Nil node) then
       match Atomic.get curr_end with

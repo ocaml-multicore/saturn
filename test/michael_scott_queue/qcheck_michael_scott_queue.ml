@@ -7,7 +7,7 @@ module Qcheck_ms_queue (Queue : Ms_queues.MS_queue_tests) = struct
             assume (lpush <> []);
             (* Building a random queue *)
             let queue = Queue.create () in
-            List.iter (Queue.push_exn queue) lpush;
+            List.iter (Queue.push queue) lpush;
 
             (* Testing property *)
             not (Queue.is_empty queue));
@@ -15,7 +15,7 @@ module Qcheck_ms_queue (Queue : Ms_queues.MS_queue_tests) = struct
         Test.make ~name:"push_pop_opt_until_empty" (list int) (fun lpush ->
             (* Building a random queue *)
             let queue = Queue.create () in
-            List.iter (Queue.push_exn queue) lpush;
+            List.iter (Queue.push queue) lpush;
 
             (* Popping until [is_empty q] is true *)
             let count = ref 0 in
@@ -30,7 +30,7 @@ module Qcheck_ms_queue (Queue : Ms_queues.MS_queue_tests) = struct
         Test.make ~name:"fifo" (list int) (fun lpush ->
             (* Building a random queue *)
             let queue = Queue.create () in
-            List.iter (Queue.push_exn queue) lpush;
+            List.iter (Queue.push queue) lpush;
 
             let out = ref [] in
             let insert v = out := v :: !out in
@@ -47,7 +47,7 @@ module Qcheck_ms_queue (Queue : Ms_queues.MS_queue_tests) = struct
         Test.make ~name:"fifo_peek_opt" (list int) (fun lpush ->
             (* Building a random queue *)
             let queue = Queue.create () in
-            List.iter (Queue.push_exn queue) lpush;
+            List.iter (Queue.push queue) lpush;
 
             let pop = ref [] in
             let peek = ref [] in
@@ -81,7 +81,7 @@ module Qcheck_ms_queue (Queue : Ms_queues.MS_queue_tests) = struct
             let producer =
               Domain.spawn (fun () ->
                   Barrier.await barrier;
-                  List.iter (Queue.push_exn queue) lpush)
+                  List.iter (Queue.push queue) lpush)
             in
 
             Barrier.await barrier;
@@ -115,7 +115,7 @@ module Qcheck_ms_queue (Queue : Ms_queues.MS_queue_tests) = struct
             let producer =
               Domain.spawn (fun () ->
                   Barrier.await barrier;
-                  List.iter (Queue.push_exn queue) pushed)
+                  List.iter (Queue.push queue) pushed)
             in
 
             let peeked = ref [] in
@@ -162,7 +162,7 @@ module Qcheck_ms_queue (Queue : Ms_queues.MS_queue_tests) = struct
             let work lpush =
               List.map
                 (fun elt ->
-                  Queue.push_exn queue elt;
+                  Queue.push queue elt;
                   Domain.cpu_relax ();
                   Queue.pop_opt queue)
                 lpush
@@ -226,7 +226,7 @@ module Qcheck_ms_queue (Queue : Ms_queues.MS_queue_tests) = struct
                   match lpush with
                   | [] -> popped
                   | elt :: xs ->
-                      Queue.push_exn queue elt;
+                      Queue.push queue elt;
                       loop xs popped)
                 else (
                   incr consecutive_pop;

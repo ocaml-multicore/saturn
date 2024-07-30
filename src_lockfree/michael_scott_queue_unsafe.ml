@@ -93,7 +93,7 @@ let rec push tail link (Next _ as new_node : (_, [ `Next ]) Node.t) backoff =
         push tail link new_node backoff
   | Next _ as next -> push tail (Node.as_atomic next) new_node backoff
 
-let push_exn { tail; _ } value =
+let push { tail; _ } value =
   let (Next _ as new_node : (_, [ `Next ]) Node.t) = Node.make value in
   let old_tail = Atomic.get tail in
   let link = Node.as_atomic old_tail in
