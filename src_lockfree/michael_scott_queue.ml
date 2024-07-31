@@ -79,9 +79,14 @@ let push { tail; _ } value =
       | Nil -> find_tail_and_enq curr_end node
       | Next (_, n) -> find_tail_and_enq n node
   in
+
   let new_tail = Atomic.make Nil in
   let newnode = Next (value, new_tail) in
   let old_tail = Atomic.get tail in
-  find_tail_and_enq old_tail newnode;
+  if not (Atomic.compare_and_set old_tail Nil newnode) then begin
+    match Atomic.get old_tail with
+    | Nil -> find_tail_and_enq old_tail newnode
+    | Next (_, n) -> find_tail_and_enq n newnode
+  end;
   if not (Atomic.compare_and_set tail old_tail new_tail) then
     fix_tail tail new_tail
