@@ -27,46 +27,43 @@ type 'a t = {
 
 let create () =
   let next = Atomic.make Nil in
-  { head = Atomic.make next; tail = Atomic.make next }
+  let head = Atomic.make_contended next in
+  let tail = Atomic.make_contended next in
+  { head; tail }
 
 let is_empty { head; _ } = Atomic.get (Atomic.get head) == Nil
 
 exception Empty
 
-let pop_opt { head; _ } =
-  let b = Backoff.default in
-  let rec loop b =
-    let old_head = Atomic.get head in
-    match Atomic.get old_head with
-    | Nil -> None
-    | Next (value, next) when Atomic.compare_and_set head old_head next ->
-        Some value
-    | _ ->
-        let b = Backoff.once b in
-        loop b
-  in
-  loop b
+type ('a, _) poly = Option : ('a, 'a option) poly | Value : ('a, 'a) poly
 
-let pop { head; _ } =
-  let b = Backoff.default in
-  let rec loop b =
-    let old_head = Atomic.get head in
-    match Atomic.get old_head with
-    | Nil -> raise Empty
-    | Next (value, next) when Atomic.compare_and_set head old_head next -> value
-    | _ ->
-        let b = Backoff.once b in
-        loop b
-  in
-  loop b
-
-let peek_opt { head; _ } =
+let rec pop_as :
+    type a r. a node Atomic.t Atomic.t -> Backoff.t -> (a, r) poly -> r =
+ fun head backoff poly ->
   let old_head = Atomic.get head in
-  match Atomic.get old_head with Nil -> None | Next (value, _) -> Some value
+  match Atomic.get old_head with
+  | Nil -> begin match poly with Value -> raise Empty | Option -> None end
+  | Next (value, next) ->
+      if Atomic.compare_and_set head old_head next then begin
+        match poly with Value -> value | Option -> Some value
+      end
+      else
+        let backoff = Backoff.once backoff in
+        pop_as head backoff poly
 
-let peek { head; _ } =
+let pop_exn t = pop_as t.head Backoff.default Value
+let pop_opt t = pop_as t.head Backoff.default Option
+
+let peek_as : type a r. a node Atomic.t Atomic.t -> (a, r) poly -> r =
+ fun head poly ->
   let old_head = Atomic.get head in
-  match Atomic.get old_head with Nil -> raise Empty | Next (value, _) -> value
+  match Atomic.get old_head with
+  | Nil -> begin match poly with Value -> raise Empty | Option -> None end
+  | Next (value, _) -> (
+      match poly with Value -> value | Option -> Some value)
+
+let peek_opt t = peek_as t.head Option
+let peek_exn t = peek_as t.head Value
 
 let rec fix_tail tail new_tail =
   let old_tail = Atomic.get tail in
@@ -82,14 +79,14 @@ let push { tail; _ } value =
       | Nil -> find_tail_and_enq curr_end node
       | Next (_, n) -> find_tail_and_enq n node
   in
+
   let new_tail = Atomic.make Nil in
   let newnode = Next (value, new_tail) in
   let old_tail = Atomic.get tail in
-  find_tail_and_enq old_tail newnode;
+  if not (Atomic.compare_and_set old_tail Nil newnode) then begin
+    match Atomic.get old_tail with
+    | Nil -> find_tail_and_enq old_tail newnode
+    | Next (_, n) -> find_tail_and_enq n newnode
+  end;
   if not (Atomic.compare_and_set tail old_tail new_tail) then
     fix_tail tail new_tail
-
-type 'a cursor = 'a node
-
-let snapshot { head; _ } = Atomic.get (Atomic.get head)
-let next = function Nil -> None | Next (a, n) -> Some (a, Atomic.get n)

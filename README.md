@@ -14,9 +14,10 @@
 This repository is a collection of parallelism-safe data structures for OCaml 5.
 They are contained in two packages:
 
-- Saturn that includes all data structures (including the lock-free ones) and
-  should be used by default if you just want parallelism-safe data structures;
-- Saturn_lockfree that includes only lock-free data structures.
+- **Saturn** that includes all data structures (including the lock-free ones)
+  and should be used by default if you just want parallelism-safe data
+  structures;
+- **Saturn_lockfree** that includes only lock-free data structures.
 
 It aims to provide an industrial-strength, well-tested (and possibly
 model-checked and verified in the future), well documented, and maintained
@@ -33,15 +34,24 @@ is distributed under the
 
 # Contents
 
+- [Saturn — Parallelism-Safe Data Structures for Multicore OCaml](#saturn--parallelism-safe-data-structures-for-multicore-ocaml)
+- [Contents](#contents)
 - [Installation](#installation)
+  - [Getting OCaml 5.0](#getting-ocaml-50)
+  - [Getting Saturn](#getting-saturn)
 - [Introduction](#introduction)
   - [Provided data structures](#provided-data-structures)
   - [Motivation](#motivation)
+    - [A note about races in OCaml](#a-note-about-races-in-ocaml)
+  - [Safe and unsafe data structures](#safe-and-unsafe-data-structures)
 - [Usage](#usage)
-  - [Data structures with domain roles](#data-structures-with-domain-roles)
-  - [About composability](#about-composability)
+  - [Data Structures With Domain Roles](#data-structures-with-domain-roles)
+  - [About Composability](#about-composability)
+    - [Extending Data Structures](#extending-data-structures)
+    - [Composable Parallelism-Safe Data Structures](#composable-parallelism-safe-data-structures)
 - [Testing](#testing)
 - [Benchmarks](#benchmarks)
+  - [Contributing](#contributing)
 
 # Installation
 
@@ -78,6 +88,14 @@ opam switch list-available
 ```sh
 opam install saturn
 ```
+
+or
+
+```sh
+opam install saturn_lockfree
+```
+
+if you prefer to use only lock-free data structures.
 
 # Introduction
 
@@ -285,6 +303,23 @@ Because of the great properties of OCaml 5 memory model (see the
 [OCaml Manual](https://v2.ocaml.org/manual/parallelism.html#s%3Apar_mm_easy) for
 more details), not a lot can go wrong here. At least, data corruption or
 segmentation fault won't happen like it can in other languages.
+
+## Safe and unsafe data structures
+
+Some data structures are available in two versions: a normal version and a more
+optimized but **unsafe** version. The **unsafe** version utilizes `Obj.magic` in
+a way that may be unsafe with `flambda2` optimizations.
+
+The reason for providing the unsafe version is that certain optimizations
+require features that are currently not available in OCaml, such as arrays of
+atomics or atomic fields in records. We recommend using the normal version of a
+data structure unless its performance is not sufficient for your use case. In
+that case, you can try the unsafe version.
+
+Currently, there are two data structures with an unsafe version:
+
+- `Single_cons_single_prod_unsafe`: a single consumer single producer queue
+- `Queue_unsafe`: a Michael Scott queue
 
 # Usage
 

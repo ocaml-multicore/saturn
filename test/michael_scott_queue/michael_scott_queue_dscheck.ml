@@ -1,12 +1,41 @@
-let drain queue =
-  let remaining = ref 0 in
-  while not (Michael_scott_queue.is_empty queue) do
-    remaining := !remaining + 1;
-    assert (Option.is_some (Michael_scott_queue.pop_opt queue))
-  done;
-  !remaining
+module Atomic = Dscheck.TracedAtomic
 
-let producer_consumer () =
+module type MS_queue = sig
+  include Michael_scott_queue_intf.MS_QUEUE
+
+  val name : string
+  val drain : 'a t -> int
+end
+
+module MS_queue_safe : MS_queue = struct
+  include Michael_scott_queue
+
+  let name = "safe"
+
+  let drain (queue : 'a Michael_scott_queue.t) =
+    let remaining = ref 0 in
+    while not (Michael_scott_queue.is_empty queue) do
+      remaining := !remaining + 1;
+      assert (Option.is_some (Michael_scott_queue.pop_opt queue))
+    done;
+    !remaining
+end
+
+module MS_queue_unsafe : MS_queue = struct
+  include Michael_scott_queue_unsafe
+
+  let name = "unsafe"
+
+  let drain queue =
+    let remaining = ref 0 in
+    while not (Michael_scott_queue_unsafe.is_empty queue) do
+      remaining := !remaining + 1;
+      assert (Option.is_some (Michael_scott_queue_unsafe.pop_opt queue))
+    done;
+    !remaining
+end
+
+let producer_consumer (module Michael_scott_queue : MS_queue) () =
   Atomic.trace (fun () ->
       let queue = Michael_scott_queue.create () in
       let items_total = 4 in
@@ -31,10 +60,10 @@ let producer_consumer () =
       (* checks*)
       Atomic.final (fun () ->
           Atomic.check (fun () ->
-              let remaining = drain queue in
+              let remaining = Michael_scott_queue.drain queue in
               !popped + remaining = items_total)))
 
-let producer_consumer_peek () =
+let producer_consumer_peek (module Michael_scott_queue : MS_queue) () =
   Atomic.trace (fun () ->
       let queue = Michael_scott_queue.create () in
       let items_total = 1 in
@@ -71,11 +100,11 @@ let producer_consumer_peek () =
               in
               check pushed (List.rev !peeked) (List.rev !popped));
           Atomic.check (fun () ->
-              let remaining = drain queue in
+              let remaining = Michael_scott_queue.drain queue in
               let popped = List.filter Option.is_some !popped in
               List.length popped + remaining = items_total)))
 
-let two_producers () =
+let two_producers (module Michael_scott_queue : MS_queue) () =
   Atomic.trace (fun () ->
       let queue = Michael_scott_queue.create () in
       let items_total = 4 in
@@ -91,10 +120,10 @@ let two_producers () =
       (* checks*)
       Atomic.final (fun () ->
           Atomic.check (fun () ->
-              let remaining = drain queue in
+              let remaining = Michael_scott_queue.drain queue in
               remaining = items_total)))
 
-let two_domains () =
+let two_domains (module Michael_scott_queue : MS_queue) () =
   Atomic.trace (fun () ->
       let stack = Michael_scott_queue.create () in
       let n1, n2 = (2, 1) in
@@ -137,15 +166,24 @@ let two_domains () =
               let is_sorted l = List.sort (fun a b -> -compare a b) l = l in
               is_sorted l1 && is_sorted l2 && is_sorted l3 && is_sorted l4)))
 
-let () =
+let tests (module Michael_scott_queue : MS_queue) =
   let open Alcotest in
-  run "michael_scott_queue_dscheck"
-    [
-      ( "basic",
-        [
-          test_case "1-producer-1-consumer" `Slow producer_consumer;
-          test_case "1-producer-1-consumer-peek" `Slow producer_consumer_peek;
-          test_case "2-producers" `Slow two_producers;
-          test_case "2-domains" `Slow two_domains;
-        ] );
-    ]
+  [
+    ( "basic_" ^ Michael_scott_queue.name,
+      [
+        test_case "1-producer-1-consumer" `Slow
+          (producer_consumer (module Michael_scott_queue));
+        test_case "1-producer-1-consumer-peek" `Slow
+          (producer_consumer_peek (module Michael_scott_queue));
+        test_case "2-producers" `Slow
+          (two_producers (module Michael_scott_queue));
+        test_case "2-domains" `Slow (two_domains (module Michael_scott_queue));
+      ] );
+  ]
+
+let () =
+  let safe_test = tests (module MS_queue_safe) in
+  let unsafe_test = tests (module MS_queue_unsafe) in
+
+  let open Alcotest in
+  run "michael_scott_queue_dscheck" (safe_test @ unsafe_test)
