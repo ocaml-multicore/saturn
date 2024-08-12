@@ -1,4 +1,4 @@
-(* Copyright (c) 2023, Vesa Karvonen <vesa.a.j.k@gmail.com>
+(* Copyright (c) 2023-2024, Vesa Karvonen <vesa.a.j.k@gmail.com>
 
    Permission to use, copy, modify, and/or distribute this software for any
    purpose with or without fee is hereby granted, provided that the above
@@ -91,6 +91,60 @@ and push_with t value backoff counter prefix =
     push t value backoff (Atomic.fenceless_get t.tail)
 
 let push t value = push t value Backoff.default (Atomic.fenceless_get t.tail)
+
+let rec push_head t value backoff =
+  match Atomic.get t.head with
+  | H (Cons cons_r) as suffix ->
+      let after = Cons { counter = cons_r.counter - 1; value; suffix } in
+      if not (Atomic.compare_and_set t.head suffix (H after)) then
+        push_head t value (Backoff.once backoff)
+  | H (Head head_r) as head -> begin
+      match Atomic.get t.tail with
+      | T (Snoc snoc_r as move) ->
+          if Atomic.get t.head != head then push_head t value backoff
+          else if head_r.counter = snoc_r.counter then begin
+            let prefix = T (Snoc { snoc_r with value }) in
+            let after =
+              Snoc { snoc_r with counter = snoc_r.counter + 1; prefix }
+            in
+            if not (Atomic.compare_and_set t.tail (T move) (T after)) then
+              push_head t value (Backoff.once backoff)
+          end
+          else
+            let tail = Tail { counter = snoc_r.counter; move } in
+            let backoff =
+              if Atomic.compare_and_set t.tail (T move) (T tail) then backoff
+              else Backoff.once backoff
+            in
+            push_head t value backoff
+      | T (Tail tail_r) as prefix -> begin
+          match tail_r.move with
+          | Used ->
+              if Atomic.get t.head == head then begin
+                let tail =
+                  Snoc { counter = tail_r.counter + 1; value; prefix }
+                in
+                if not (Atomic.compare_and_set t.tail prefix (T tail)) then
+                  push_head t value (Backoff.once backoff)
+              end
+              else push_head t value backoff
+          | Snoc move_r as move ->
+              begin
+                match Atomic.get t.head with
+                | H (Head head_r as head) when head_r.counter < move_r.counter
+                  ->
+                    let after = rev move in
+                    if
+                      Atomic.fenceless_get t.head == H head
+                      && Atomic.compare_and_set t.head (H head) (H after)
+                    then tail_r.move <- Used
+                | _ -> ()
+              end;
+              push_head t value backoff
+        end
+    end
+
+let push_head t value = push_head t value Backoff.default
 
 type ('a, _) poly = Option : ('a, 'a option) poly | Value : ('a, 'a) poly
 

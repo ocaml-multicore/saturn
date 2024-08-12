@@ -11,10 +11,11 @@ let () =
   assert (Queue.pop_opt q = None)
 
 module Spec = struct
-  type cmd = Push of int | Pop_opt | Length
+  type cmd = Push of int | Push_head of int | Pop_opt | Length
 
   let show_cmd = function
     | Push x -> "Push " ^ string_of_int x
+    | Push_head x -> "Push_head " ^ string_of_int x
     | Pop_opt -> "Pop_opt"
     | Length -> "Length"
 
@@ -22,6 +23,7 @@ module Spec = struct
     type t = int list * int list
 
     let push x (h, t) = if h == [] then ([ x ], []) else (h, x :: t)
+    let push_head x (h, t) = (x :: h, t)
     let peek_opt (h, _) = match h with x :: _ -> Some x | [] -> None
     let length (h, t) = List.length h + List.length t
 
@@ -36,6 +38,7 @@ module Spec = struct
     let open QCheck in
     [
       Gen.int_range 1 10000 |> Gen.map (fun x -> Push x);
+      Gen.int_range 1 10000 |> Gen.map (fun x -> Push_head x);
       Gen.return Pop_opt;
       Gen.return Length;
     ]
@@ -48,6 +51,7 @@ module Spec = struct
   let next_state c s =
     match c with
     | Push x -> State.push x s
+    | Push_head x -> State.push_head x s
     | Pop_opt -> State.drop s
     | Length -> s
 
@@ -57,6 +61,7 @@ module Spec = struct
     let open STM in
     match c with
     | Push x -> Res (unit, Queue.push d x)
+    | Push_head x -> Res (unit, Queue.push_head d x)
     | Pop_opt -> Res (option int, Queue.pop_opt d)
     | Length -> Res (int, Queue.length d)
 
@@ -64,6 +69,7 @@ module Spec = struct
     let open STM in
     match (c, res) with
     | Push _x, Res ((Unit, _), ()) -> true
+    | Push_head _x, Res ((Unit, _), ()) -> true
     | Pop_opt, Res ((Option Int, _), res) -> res = State.peek_opt s
     | Length, Res ((Int, _), res) -> res = State.length s
     | _, _ -> false

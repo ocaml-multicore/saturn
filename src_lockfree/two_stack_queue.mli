@@ -7,6 +7,9 @@ val create : unit -> 'a t
 val push : 'a t -> 'a -> unit
 (** *)
 
+val push_head : 'a t -> 'a -> unit
+(** *)
+
 exception Empty
 (** Raised by {!pop_exn} in case the queue is empty. *)
 
