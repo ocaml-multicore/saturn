@@ -1,10 +1,24 @@
+### 0.5.0
+
+- Optimized Michael-Scott queue with a safe and an unsafe versions (@lyrm,
+  @polytypic)
+- Optimize spsc queue : unsafe optimizations (@lyrm, @polytypic)
+- Optimize spsc queue : optimizations without Obj.magic (@lyrm, @polytypic)
+- Tweak treiber stack (@polytypic)
+- Disable implicit transitive dependencies (@polytypic)
+- Fix dune rules to specify package (@polytypic)
+- Lock free skiplist with size (@polytypic, @lyrm, @sooraj-srini)
+- Wait-free size for lock free data structures (@polytypic, @lyrm, @nikochiko)
+
 ### 0.4.1
 
 - pop_opt, peek, peek_opt functions for queue (@lyrm)
 - Remove 'name' field from benchmark results (@Sudha247)
-- Better README (@lyrm, @Sudha247, @polytypic, @art-w, @christinerose, @ILeandersson, @kayceesrk)
+- Better README (@lyrm, @Sudha247, @polytypic, @art-w, @christinerose,
+  @ILeandersson, @kayceesrk)
 - Add .nojekyll (@lyrm)
-- Add a barrier module in tests to replace the use of Semaphore (@lyrm, @polytypic)
+- Add a barrier module in tests to replace the use of Semaphore (@lyrm,
+  @polytypic)
 - Remove .merlin and .ocp-indent files. (@lyrm)
 - Correct issue caused by saturn_lockfree module beeing named Lockfree (@lyrm)
 - Generate opam files automatically (@sudha247)
