@@ -39,10 +39,10 @@ module type MS_QUEUE = sig
   (** [push q v] adds the element [v] at the end of the queue [q]. *)
 
   exception Empty
-  (** Raised when {!pop} or {!peek} is applied to an empty queue. *)
+  (** Raised when {!pop_exn} or {!peek_exn} is applied to an empty queue. *)
 
   val pop_exn : 'a t -> 'a
-  (** [pop q] removes and returns the first element in queue [q].
+  (** [pop_exn q] removes and returns the first element in queue [q].
 
     @raise Empty if [q] is empty. *)
 
@@ -51,7 +51,7 @@ module type MS_QUEUE = sig
     returns [None] if the queue is empty. *)
 
   val peek_exn : 'a t -> 'a
-  (** [peek q] returns the first element in queue [q].
+  (** [peek_exn q] returns the first element in queue [q].
 
     @raise Empty if [q] is empty. *)
 
