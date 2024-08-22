@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>Size (saturn_lockfree.Saturn_lockfree.Size)</title><meta charset="utf-8"/><link rel="stylesheet" href="../../../odoc.support/odoc.css"/><meta name="generator" content="odoc 2.4.2"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><script src="../../../odoc.support/highlight.pack.js"></script><script>hljs.initHighlightingOnLoad();</script></head><body class="odoc"><nav class="odoc-nav"><a href="../index.html">Up</a> – <a href="../../index.html">saturn_lockfree</a> &#x00BB; <a href="../index.html">Saturn_lockfree</a> &#x00BB; Size</nav><header class="odoc-preamble"><h1>Module <code><span>Saturn_lockfree.Size</span></code></h1><p>Wait-free size counter for lock-free data structures</p><p>This is inspired by the paper <a href="https://arxiv.org/pdf/2209.07100.pdf">Concurrent Size</a> by Gal Sela and Erez Petrank and users may find the paper and, in particular, the figure 3 of a transformed data structure in the paper enlightening.</p><p>The algorithm used by this module differs from <a href="https://arxiv.org/pdf/2209.07100.pdf">the paper</a> in some important ways. First of all, unlike in the paper, the algorithm does not require the number of threads to be limited and given unique integer indices to ensure correctness. Instead, the algorithm uses a lock-free transactional approach to performing the counter <a href="#val-update_once" title="update_once">updates at most once</a>. Another difference is that the algorithm is also designed to give correct answer in case of internal counter overflow.</p><p>Consider the following singly linked list representation and internal <code>try_find</code> operation:</p><pre class="language-ocaml"><code>type 'a node =
+  | Null
+  | Node of {
+      next : 'a node Atomic.t;
+      datum : 'a;
+    }
+  | Mark of {
+      node : 'a node;
+    }
+
+type 'a t = {
+  head : 'a node Atomic.t;
+}
+
+let rec try_find t prev datum = function
+  | Mark _ -&gt; try_find t t.head datum (Atomic.get t.head)
+  | Null -&gt; Null
+  | Node r as node -&gt; begin
+      match Atomic.get r.next with
+      | Mark r -&gt;
+          if Atomic.compare_and_set prev node r.node then
+            try_find t prev datum r.node
+          else try_find t prev datum (Atomic.get prev)
+      | (Null | Node _) as next -&gt;
+          if r.datum == datum then
+            node
+          else try_find t r.next datum next
+    end</code></pre><p>To enhance the list with size, a <code>size</code> counter is added to the list, an <code>incr</code> update is added to nodes, a <code>decr</code> update is added to marked links from nodes to be removed, and <code>try_find</code> is enhanced to perform the updates once after witnessing the updates while traversing the data structure:</p><pre class="language-ocaml"><code>type 'a node =
+  | Null
+  | Node of {
+      next : 'a node Atomic.t;
+      datum : 'a;
+      mutable incr : Size.once; (* ADDED *)
+    }
+  | Mark of {
+      node : 'a node;
+      decr : Size.once; (* ADDED *)
+    }
+
+type 'a t = {
+  head : 'a node Atomic.t;
+  size : Size.t; (* ADDED *)
+}
+
+let rec try_find t prev datum = function
+  | Mark _ -&gt; try_find t t.head datum (Atomic.get t.head)
+  | Null -&gt; Null
+  | Node r as node -&gt; begin
+      match Atomic.get r.next with
+      | Mark r -&gt;
+          Size.update_once t.size r.decr; (* ADDED *)
+          if Atomic.compare_and_set prev node r.node then
+            try_find t prev datum r.node
+          else try_find t prev datum (Atomic.get prev)
+      | (Null | Node _) as next -&gt;
+          if r.datum == datum then begin
+            if r.incr != Size.used_once then begin
+              Size.update_once t.size r.incr; (* ADDED *)
+              r.incr &lt;- Size.used_once
+            end;
+            node
+          end
+          else try_find t r.next datum next
+    end</code></pre><p>Notice how the mutable <code>incr</code> field is tested against and overwritten with <a href="#val-used_once"><code>used_once</code></a> after being performed. This can improve performance as nodes are potentially witnessed many times over their lifetime unlike the marked links which are removed as soon as possible.</p><p>All operations that witness a particular node or the removal of a node must perform the updates of the size counter. This ensures that the commit point of the operations becomes the update of the size counter. This approach is general enough to enhance many kinds of lock-free data structures with a correct (linearizable) size.</p></header><div class="odoc-content"><div class="odoc-spec"><div class="spec type anchored" id="type-t"><a href="#type-t" class="anchor"></a><code><span><span class="keyword">type</span> t</span></code></div><div class="spec-doc"><p>The type of a size counter.</p></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-create"><a href="#val-create" class="anchor"></a><code><span><span class="keyword">val</span> create : <span>unit <span class="arrow">&#45;&gt;</span></span> <a href="#type-t">t</a></span></code></div><div class="spec-doc"><p><code>create ()</code> allocates a new size counter. The initial value of the size counter will be <code>0</code>.</p></div></div><div class="odoc-spec"><div class="spec type anchored" id="type-once"><a href="#type-once" class="anchor"></a><code><span><span class="keyword">type</span> once</span></code></div><div class="spec-doc"><p>The type of an at most once update of a size counter.</p></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-used_once"><a href="#val-used_once" class="anchor"></a><code><span><span class="keyword">val</span> used_once : <a href="#type-once">once</a></span></code></div><div class="spec-doc"><p><code>used_once</code> is a constant for an at most <a href="#type-once"><code>once</code></a> update that has already been used.</p></div></div><div class="odoc-spec"><div class="spec type anchored" id="type-update"><a href="#type-update" class="anchor"></a><code><span><span class="keyword">type</span> update</span></code></div><div class="spec-doc"><p>The type of an update on a size counter.</p></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-decr"><a href="#val-decr" class="anchor"></a><code><span><span class="keyword">val</span> decr : <a href="#type-update">update</a></span></code></div><div class="spec-doc"><p><code>decr</code> is an update that decrements a size counter.</p></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-incr"><a href="#val-incr" class="anchor"></a><code><span><span class="keyword">val</span> incr : <a href="#type-update">update</a></span></code></div><div class="spec-doc"><p><code>incr</code> is an update that increments a size counter.</p></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-new_once"><a href="#val-new_once" class="anchor"></a><code><span><span class="keyword">val</span> new_once : <span><a href="#type-t">t</a> <span class="arrow">&#45;&gt;</span></span> <span><a href="#type-update">update</a> <span class="arrow">&#45;&gt;</span></span> <a href="#type-once">once</a></span></code></div><div class="spec-doc"><p><code>new_once size update</code> creates a new at most <a href="#type-once"><code>once</code></a> update that, when passed to <a href="#val-update_once"><code>update_once</code></a>, will perform the <code>update</code> on the <code>size</code> counter.</p><p>⚠️ When calling <a href="#val-update_once"><code>update_once</code></a> the same <code>size</code> counter must be used.</p></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-update_once"><a href="#val-update_once" class="anchor"></a><code><span><span class="keyword">val</span> update_once : <span><a href="#type-t">t</a> <span class="arrow">&#45;&gt;</span></span> <span><a href="#type-once">once</a> <span class="arrow">&#45;&gt;</span></span> unit</span></code></div><div class="spec-doc"><p><code>update_once size once</code> performs the update, increment or decrement, of the <code>size</code> counter at most <code>once</code>.</p><p>⚠️ The <code>once</code> update must be either <a href="#val-used_once"><code>used_once</code></a> or must have been created by <a href="#val-new_once"><code>new_once</code></a> with the same <code>size</code> counter.</p></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-max_value"><a href="#val-max_value" class="anchor"></a><code><span><span class="keyword">val</span> max_value : int</span></code></div><div class="spec-doc"><p><code>max_value</code> is the maximum value of a counter.</p></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-get"><a href="#val-get" class="anchor"></a><code><span><span class="keyword">val</span> get : <span><a href="#type-t">t</a> <span class="arrow">&#45;&gt;</span></span> int</span></code></div><div class="spec-doc"><p><code>get size</code> computes and returns the current value of the size counter. The value will always be a non-negative value between <code>0</code> and <code>max_value</code>.</p><p>The computation is done in a wait-free manner, which means that parallel updates of the size counter cannot force <code>get size</code> to starve nor can parallel computations of the size force counter updates to starve.</p></div></div></div></body></html>
