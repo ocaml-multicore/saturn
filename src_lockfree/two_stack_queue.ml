@@ -159,7 +159,7 @@ let rec pop_as : type a r. a t -> _ -> (a, r) poly -> a head -> r =
         let backoff = Backoff.once backoff in
         pop_as t backoff poly (Atomic.fenceless_get t.head)
   | H (Head head_r as head) -> begin
-      match Atomic.fenceless_get t.tail with
+      match Atomic.get t.tail with
       | T (Snoc snoc_r as move) ->
           if head_r.counter = snoc_r.counter then
             if Atomic.compare_and_set t.tail (T move) snoc_r.prefix then
