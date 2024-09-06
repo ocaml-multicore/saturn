@@ -1,19 +1,43 @@
 open Multicore_bench
-module Queue = Saturn_lockfree.Queue
 
-let run_one_domain ~budgetf ?(n_msgs = 50 * Util.iter_factor) () =
-  let t = Queue.create () in
+module type BENCHQUEUE = sig
+  type 'a t
 
-  let op push = if push then Queue.push t 101 else Queue.pop_opt t |> ignore in
+  val create : unit -> 'a t
+  val push : 'a -> 'a t -> unit
+  val take_opt : 'a t -> 'a option
+  val is_empty : 'a t -> bool
+end
 
-  let init _ =
-    assert (Queue.is_empty t);
-    Util.generate_push_and_pop_sequence n_msgs
-  in
-  let work _ bits = Util.Bits.iter op bits in
+module LFQueue = struct
+  type 'a t = 'a Saturn.Queue.t
 
-  Times.record ~budgetf ~n_domains:1 ~init ~work ()
-  |> Times.to_thruput_metrics ~n:n_msgs ~singular:"message" ~config:"one domain"
+  let create = Saturn.Queue.create
+  let push elt q = Saturn.Queue.push q elt
+  let take_opt = Saturn.Queue.pop_opt
+  let is_empty = Saturn.Queue.is_empty
+end
+
+module RunOneDomain (Queue : BENCHQUEUE) = struct
+  let run ~budgetf ?(n_msgs = 50 * Util.iter_factor) () =
+    let t = Queue.create () in
+
+    let op push =
+      if push then Queue.push 101 t else Queue.take_opt t |> ignore
+    in
+
+    let init _ =
+      assert (Queue.is_empty t);
+      Util.generate_push_and_pop_sequence n_msgs
+    in
+    let work _ bits = Util.Bits.iter op bits in
+
+    Times.record ~budgetf ~n_domains:1 ~init ~work ()
+    |> Times.to_thruput_metrics ~n:n_msgs ~singular:"message"
+         ~config:"one domain"
+end
+
+module Queue = Saturn.Queue
 
 let run_one ~budgetf ?(n_adders = 2) ?(n_takers = 2)
     ?(n_msgs = 50 * Util.iter_factor) () =
@@ -72,8 +96,13 @@ let run_one ~budgetf ?(n_adders = 2) ?(n_takers = 2)
   Times.record ~budgetf ~n_domains ~init ~work ()
   |> Times.to_thruput_metrics ~n:n_msgs ~singular:"message" ~config
 
+module LFRunOneDomain = RunOneDomain (LFQueue)
+module StdRunOneDomain = RunOneDomain (Stdlib.Queue)
+
 let run_suite ~budgetf =
-  run_one_domain ~budgetf ()
+  LFRunOneDomain.run ~budgetf ()
   @ (Util.cross [ 1; 2 ] [ 1; 2 ]
     |> List.concat_map @@ fun (n_adders, n_takers) ->
        run_one ~budgetf ~n_adders ~n_takers ())
+
+let run_suite_std ~budgetf = StdRunOneDomain.run ~budgetf ()
