@@ -7,6 +7,9 @@ let () =
   Jbuild_plugin.V1.send
   @@ {|
 
+ (include_subdirs unqualified)
+
+
 (library
  (name saturn_lockfree)
  (public_name saturn_lockfree)

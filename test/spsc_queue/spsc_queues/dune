@@ -1,6 +1,8 @@
 (rule
  (action
-  (copy ../../../src_lockfree/spsc_queue_intf.ml spsc_queue_intf.ml))
+  (copy
+   ../../../src_lockfree/spsc_queue/spsc_queue_intf.ml
+   spsc_queue_intf.ml))
  (package saturn_lockfree))
 
 (library
