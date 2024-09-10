@@ -17,6 +17,7 @@
   qcheck-stm.stm
   qcheck-stm.sequential
   qcheck-stm.thread
+  unix
   (select
    empty.ml
    from

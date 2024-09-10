@@ -43,3 +43,6 @@ module type STM_domain = sig
   val agree_test_par_asym : count:int -> name:string -> QCheck.Test.t
   val neg_agree_test_par_asym : count:int -> name:string -> QCheck.Test.t
 end
+
+let default_count = 1_000
+let default_budgetf = 60.0

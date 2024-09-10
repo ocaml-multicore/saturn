@@ -58,10 +58,7 @@ module STM_ms_queue (Queue : Ms_queues.MS_queue_tests) = struct
       | _, _ -> false
   end
 
-  let run () =
-    Stm_run.run ~count:500 ~verbose:true
-      ~name:("Saturn_lockfree." ^ Queue.name)
-      (module Spec)
+  let run () = Stm_run.run ~name:("Saturn_lockfree." ^ Queue.name) (module Spec)
 end
 
 let () =
