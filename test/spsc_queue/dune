@@ -1,16 +1,18 @@
 (rule
  (action
-  (copy ../../src_lockfree/spsc_queue.ml spsc_queue.ml))
+  (copy ../../src_lockfree/spsc_queue/spsc_queue.ml spsc_queue.ml))
  (package saturn_lockfree))
 
 (rule
  (action
-  (copy ../../src_lockfree/spsc_queue_unsafe.ml spsc_queue_unsafe.ml))
+  (copy
+   ../../src_lockfree/spsc_queue/spsc_queue_unsafe.ml
+   spsc_queue_unsafe.ml))
  (package saturn_lockfree))
 
 (rule
  (action
-  (copy ../../src_lockfree/spsc_queue_intf.ml spsc_queue_intf.ml))
+  (copy ../../src_lockfree/spsc_queue/spsc_queue_intf.ml spsc_queue_intf.ml))
  (package saturn_lockfree))
 
 (test

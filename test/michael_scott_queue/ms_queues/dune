@@ -1,7 +1,7 @@
 (rule
  (action
   (copy
-   ../../../src_lockfree/michael_scott_queue_intf.ml
+   ../../../src_lockfree/michael_scott_queue/michael_scott_queue_intf.ml
    michael_scott_queue_intf.ml))
  (package saturn_lockfree))
 
