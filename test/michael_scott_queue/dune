@@ -57,6 +57,4 @@
  (package saturn_lockfree)
  (name stm_michael_scott_queue)
  (modules stm_michael_scott_queue)
- (libraries ms_queues saturn_lockfree qcheck-core qcheck-stm.stm stm_run)
- (enabled_if
-  (= %{arch_sixtyfour} true)))
+ (libraries ms_queues saturn_lockfree qcheck-core qcheck-stm.stm stm_run))

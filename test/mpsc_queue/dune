@@ -33,6 +33,4 @@
   qcheck-core
   qcheck-multicoretests-util
   qcheck-stm.stm
-  stm_run)
- (enabled_if
-  (= %{arch_sixtyfour} true)))
+  stm_run))
