@@ -101,24 +101,24 @@ module type HTBL = sig
 
     An example top-level session:
     {[
-      # let t : (int, string) Picos_aux_htbl.t =
-          Picos_aux_htbl.create
+      # let t : (int, string) Saturn.Htbl.t =
+          Saturn.Htbl.create
             ~hashed_type:(module Int) ()
-      val t : (int, string) Picos_aux_htbl.t = <abstr>
+      val t : (int, string) Saturn.Htbl.t = <abstr>
 
-      # Picos_aux_htbl.try_add t 42 "The answer"
+      # Saturn.Htbl.try_add t 42 "The answer"
       - : bool = true
 
-      # Picos_aux_htbl.try_add t 101 "Basics"
+      # Saturn.Htbl.try_add t 101 "Basics"
       - : bool = true
 
-      # Picos_aux_htbl.find_exn t 42
+      # Saturn.Htbl.find_exn t 42
       - : string = "The answer"
 
-      # Picos_aux_htbl.try_add t 101 "The basics"
+      # Saturn.Htbl.try_add t 101 "The basics"
       - : bool = false
 
-      # Picos_aux_htbl.remove_all t |> List.of_seq
+      # Saturn.Htbl.remove_all t |> List.of_seq
       - : (int * string) list = [(101, "Basics"); (42, "The answer")]
     ]} *)
 end
