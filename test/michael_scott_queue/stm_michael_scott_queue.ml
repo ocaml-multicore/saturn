@@ -1,9 +1,8 @@
+open QCheck
+open STM
+
 (** Sequential and Parallel model-based tests of michael_scott_queue *)
 module STM_ms_queue (Queue : Ms_queues.MS_queue_tests) = struct
-  open QCheck
-  open STM
-  module Ms_queue = Saturn_lockfree.Queue
-
   module Spec = struct
     type cmd = Push of int | Pop | Peek | Is_empty
 
@@ -15,7 +14,7 @@ module STM_ms_queue (Queue : Ms_queues.MS_queue_tests) = struct
       | Is_empty -> "Is_empty"
 
     type state = int list
-    type sut = int Ms_queue.t
+    type sut = int Queue.t
 
     let arb_cmd _s =
       let int_gen = Gen.nat in
@@ -29,7 +28,7 @@ module STM_ms_queue (Queue : Ms_queues.MS_queue_tests) = struct
            ])
 
     let init_state = []
-    let init_sut () = Ms_queue.create ()
+    let init_sut () = Queue.create ()
     let cleanup _ = ()
 
     let next_state c s =
@@ -42,17 +41,17 @@ module STM_ms_queue (Queue : Ms_queues.MS_queue_tests) = struct
 
     let run c d =
       match c with
-      | Push i -> Res (unit, Ms_queue.push d i)
-      | Pop -> Res (result int exn, protect Ms_queue.pop_exn d)
-      | Peek -> Res (result int exn, protect Ms_queue.peek_exn d)
-      | Is_empty -> Res (bool, Ms_queue.is_empty d)
+      | Push i -> Res (unit, Queue.push d i)
+      | Pop -> Res (result int exn, protect Queue.pop_exn d)
+      | Peek -> Res (result int exn, protect Queue.peek_exn d)
+      | Is_empty -> Res (bool, Queue.is_empty d)
 
     let postcond c (s : state) res =
       match (c, res) with
       | Push _, Res ((Unit, _), _) -> true
       | (Pop | Peek), Res ((Result (Int, Exn), _), res) -> (
           match List.rev s with
-          | [] -> res = Error Ms_queue.Empty
+          | [] -> res = Error Queue.Empty
           | j :: _ -> res = Ok j)
       | Is_empty, Res ((Bool, _), res) -> res = (s = [])
       | _, _ -> false
