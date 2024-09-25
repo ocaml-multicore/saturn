@@ -83,7 +83,5 @@ let () =
       Dom.neg_agree_test_par ~count ~name:(name ^ " parallel, negative");
     ]
   in
-  Stm_run.run ~count:1000 ~name:"Saturn_lockfree.Ws_deque" ~verbose:true
-    ~make_domain
-    (module Spec)
+  Stm_run.run ~name:"Saturn_lockfree.Ws_deque" ~make_domain (module Spec)
   |> exit

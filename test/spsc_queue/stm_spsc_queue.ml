@@ -96,9 +96,9 @@ module STM_spsc (Spsc_queue : Spsc_queues.SPSC_tests) = struct
         Dom.neg_agree_test_par ~count ~name:(name ^ " parallel, negative");
       ]
     in
-    Stm_run.run ~count:1000
+    Stm_run.run
       ~name:("Saturn_lockfree." ^ Spsc_queue.name)
-      ~verbose:true ~make_domain
+      ~make_domain
       (module Spec)
 end
 

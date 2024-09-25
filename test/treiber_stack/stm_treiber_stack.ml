@@ -55,7 +55,4 @@ module Spec = struct
     | _, _ -> false
 end
 
-let () =
-  Stm_run.run ~count:500 ~verbose:true ~name:"Saturn_lockfree.Treiber_stack"
-    (module Spec)
-  |> exit
+let () = Stm_run.run ~name:"Saturn_lockfree.Treiber_stack" (module Spec) |> exit
