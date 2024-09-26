@@ -40,3 +40,4 @@ module Single_consumer_queue = Mpsc_queue
 module Relaxed_queue = Mpmc_relaxed_queue
 module Skiplist = Skiplist
 module Size = Size
+module Two_stack_queue = Two_stack_queue
