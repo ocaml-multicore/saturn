@@ -1,42 +1,32 @@
 (rule
  (action
-  (copy
-   ../../src_lockfree/htbl/htbl.ml
-   htbl.ml))
+  (copy ../../src_lockfree/htbl/htbl.ml htbl.ml))
  (package saturn_lockfree))
 
 (rule
  (action
-  (copy
-   ../../src_lockfree/htbl/htbl_unsafe.ml
-   htbl_unsafe.ml))
+  (copy ../../src_lockfree/htbl/htbl_unsafe.ml htbl_unsafe.ml))
  (package saturn_lockfree))
 
 (rule
  (action
-  (copy
-   ../../src_lockfree/htbl/htbl_intf.ml
-   htbl_intf.ml))
+  (copy ../../src_lockfree/htbl/htbl_intf.ml htbl_intf.ml))
  (package saturn_lockfree))
 
- (test
-  (package saturn_lockfree)
-  (name dscheck_htbl)
-  (libraries alcotest atomic backoff dscheck multicore-magic-dscheck)
-  (build_if
-   (and
-    (>= %{ocaml_version} 5)
-    (not
-     (and
-      (= %{arch_sixtyfour} false)
-      (= %{architecture} arm)))))
-  (modules
-   htbl
-   htbl_unsafe
-   htbl_intf
-   dscheck_htbl)
-  (flags
-   (:standard -open Multicore_magic_dscheck)))
+(test
+ (package saturn_lockfree)
+ (name dscheck_htbl)
+ (libraries alcotest atomic backoff dscheck multicore-magic-dscheck)
+ (build_if
+  (and
+   (>= %{ocaml_version} 5)
+   (not
+    (and
+     (= %{arch_sixtyfour} false)
+     (= %{architecture} arm)))))
+ (modules htbl htbl_unsafe htbl_intf dscheck_htbl)
+ (flags
+  (:standard -open Multicore_magic_dscheck)))
 
 (test
  (package saturn_lockfree)
