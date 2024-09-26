@@ -1,17 +1,18 @@
-let[@inline never] impossible () = failwith "impossible"
+(* Copyright (c) 2023 Vesa Karvonen
 
-let ceil_pow_2_minus_1 n =
-  let n = Nativeint.of_int n in
-  let n = Nativeint.logor n (Nativeint.shift_right_logical n 1) in
-  let n = Nativeint.logor n (Nativeint.shift_right_logical n 2) in
-  let n = Nativeint.logor n (Nativeint.shift_right_logical n 4) in
-  let n = Nativeint.logor n (Nativeint.shift_right_logical n 8) in
-  let n = Nativeint.logor n (Nativeint.shift_right_logical n 16) in
-  Nativeint.to_int
-    (if Sys.int_size > 32 then
-       Nativeint.logor n (Nativeint.shift_right_logical n 32)
-     else n)
+   Permission to use, copy, modify, and/or distribute this software for any
+   purpose with or without fee is hereby granted, provided that the above
+   copyright notice and this permission notice appear in all copies.
 
+   THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+   REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+   AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+   INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+   LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+   OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+   PERFORMANCE OF THIS SOFTWARE. *)
+
+open Htbl_utils
 module Atomic = Multicore_magic.Transparent_atomic
 module Atomic_array = Multicore_magic.Atomic_array
 
@@ -58,18 +59,6 @@ type ('k, 'v) state = {
     second generation heap.  It is probably not worth it to pad it further. *)
 
 type ('k, 'v) t = ('k, 'v) state Atomic.t
-
-(* *)
-
-let lo_buckets = 1 lsl 3
-
-and hi_buckets =
-  (* floor_pow_2 *)
-  let mask = ceil_pow_2_minus_1 Sys.max_array_length in
-  mask lxor (mask lsr 1)
-
-let min_buckets_default = 1 lsl 4
-and max_buckets_default = Int.min hi_buckets (1 lsl 30 (* Limit of [hash] *))
 
 let create (type k) ?hashed_type ?min_buckets ?max_buckets () =
   let min_buckets =

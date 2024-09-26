@@ -31,30 +31,86 @@ module Dscheck_htbl (Htbl : Htbl_intf.HTBL) = struct
     Dscheck.Trace_tracker.print_traces stdout
 
   let _two_add () =
+    Atomic.trace (fun () ->
+        Random.init 0;
+        let htbl = create ~min_buckets:8 () in
+        try_add htbl 1 |> ignore;
+        let added1, added2, added3, added4 =
+          (ref false, ref false, ref false, ref false)
+        in
+
+        Atomic.spawn (fun () ->
+            added1 := try_add htbl 1;
+            added2 := try_add htbl 21);
+        Atomic.spawn (fun () ->
+            added4 := try_add htbl 22;
+            added3 := try_add htbl 1);
+
+        Atomic.final (fun () ->
+            Atomic.check (fun () ->
+                (not !added1) && !added2 && (not !added3) && !added4
+                && mem htbl 1 && mem htbl 21 && mem htbl 22)))
+
+  let _two_add_resize () =
     (* Trying to trigger resize *)
     let random_offset = Random.int 1000 in
-    for i = 0 to 4 do
+    for i = 0 to 5 do
       Atomic.trace ~interleavings:stdout ~record_traces:true (fun () ->
           Random.init (random_offset + i);
-          let htbl = create ~min_buckets:8 () in
-          for i = 0 to 6 do
-            try_add htbl i |> ignore
-          done;
-          let added1, added2, added3, added4 =
-            (ref false, ref false, ref false, ref false)
-          in
+          let htbl = create ~min_buckets:2 () in
+          try_add htbl 1 |> ignore;
+          try_add htbl 2 |> ignore;
 
-          Atomic.spawn (fun () ->
-              added1 := try_add htbl 1;
-              added2 := try_add htbl 21);
-          Atomic.spawn (fun () ->
-              added4 := try_add htbl 22;
-              added3 := try_add htbl 1);
+          let added1, added2 = (ref false, ref false) in
+
+          Atomic.spawn (fun () -> added1 := try_add htbl 21);
+          Atomic.spawn (fun () -> added2 := try_add htbl 22);
 
           Atomic.final (fun () ->
               Atomic.check (fun () ->
-                  (not !added1) && !added2 && (not !added3) && !added4
-                  && mem htbl 1 && mem htbl 21 && mem htbl 22)));
+                  !added1 && !added2 && mem htbl 21 && mem htbl 22)));
+      Dscheck.Trace_tracker.print_traces stdout
+    done
+
+  let _two_add_resize2 () =
+    (* Trying to trigger resize *)
+    let random_offset = Random.int 1000 in
+    for i = 0 to 5 do
+      Atomic.trace ~interleavings:stdout ~record_traces:true (fun () ->
+          Random.init (random_offset + i);
+          let htbl = create ~min_buckets:2 () in
+          try_add htbl 1 |> ignore;
+          try_add htbl 2 |> ignore;
+
+          let added1, added2 = (ref false, ref false) in
+
+          Atomic.spawn (fun () -> added1 := try_add htbl 1);
+          Atomic.spawn (fun () -> added2 := try_add htbl 2);
+
+          Atomic.final (fun () ->
+              Atomic.check (fun () ->
+                  (not !added1) && (not !added2) && mem htbl 1 && mem htbl 2)));
+      Dscheck.Trace_tracker.print_traces stdout
+    done
+
+  let _two_add_resize3 () =
+    (* Trying to trigger resize *)
+    let random_offset = Random.int 1000 in
+    for i = 0 to 5 do
+      Atomic.trace ~interleavings:stdout ~record_traces:true (fun () ->
+          Random.init (random_offset + i);
+          let htbl = create ~min_buckets:2 () in
+          try_add htbl 1 |> ignore;
+          try_add htbl 2 |> ignore;
+
+          let added1, added2 = (ref false, ref false) in
+
+          Atomic.spawn (fun () -> added1 := try_add htbl 1);
+          Atomic.spawn (fun () -> added2 := try_add htbl 22);
+
+          Atomic.final (fun () ->
+              Atomic.check (fun () ->
+                  (not !added1) && !added2 && mem htbl 1 && mem htbl 22)));
       Dscheck.Trace_tracker.print_traces stdout
     done
 
@@ -185,7 +241,10 @@ module Dscheck_htbl (Htbl : Htbl_intf.HTBL) = struct
       ( "basic_" ^ name,
         [
           test_case "2-mem" `Slow _two_mem;
-          (* test_case "2-add" `Slow _two_add; *)
+          test_case "2-add" `Slow _two_add;
+          test_case "2-add-resize" `Slow _two_add_resize;
+          test_case "2-add-resize2" `Slow _two_add_resize2;
+          test_case "2-add-resize3" `Slow _two_add_resize3;
           test_case "2-remove" `Slow _two_remove;
           test_case "2-add-remove-same" `Slow _two_add_remove_same;
           test_case "2-add-remove-alt" `Slow _two_add_remove_alt;

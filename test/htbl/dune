@@ -24,7 +24,7 @@
     (and
      (= %{arch_sixtyfour} false)
      (= %{architecture} arm)))))
- (modules htbl htbl_unsafe htbl_intf dscheck_htbl)
+ (modules htbl htbl_unsafe htbl_intf htbl_utils dscheck_htbl)
  (flags
   (:standard -open Multicore_magic_dscheck)))
 

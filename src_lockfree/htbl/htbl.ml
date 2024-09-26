@@ -11,20 +11,7 @@
    LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
    OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
    PERFORMANCE OF THIS SOFTWARE. *)
-
-let[@inline never] impossible () = failwith "impossible"
-
-let ceil_pow_2_minus_1 n =
-  let n = Nativeint.of_int n in
-  let n = Nativeint.logor n (Nativeint.shift_right_logical n 1) in
-  let n = Nativeint.logor n (Nativeint.shift_right_logical n 2) in
-  let n = Nativeint.logor n (Nativeint.shift_right_logical n 4) in
-  let n = Nativeint.logor n (Nativeint.shift_right_logical n 8) in
-  let n = Nativeint.logor n (Nativeint.shift_right_logical n 16) in
-  Nativeint.to_int
-    (if Sys.int_size > 32 then
-       Nativeint.logor n (Nativeint.shift_right_logical n 32)
-     else n)
+open Htbl_utils
 
 module Atomic_array = struct
   type 'a t = 'a Atomic.t array
@@ -83,18 +70,6 @@ type ('k, 'v) state = {
     second generation heap.  It is probably not worth it to pad it further. *)
 
 type ('k, 'v) t = ('k, 'v) state Atomic.t
-
-(* *)
-
-let lo_buckets = 1 lsl 3
-
-and hi_buckets =
-  (* floor_pow_2 *)
-  let mask = ceil_pow_2_minus_1 Sys.max_array_length in
-  mask lxor (mask lsr 1)
-
-let min_buckets_default = 1 lsl 4
-and max_buckets_default = Int.min hi_buckets (1 lsl 30 (* Limit of [hash] *))
 
 let create (type k) ?hashed_type ?min_buckets ?max_buckets () =
   let min_buckets =
@@ -307,6 +282,7 @@ let[@inline never] try_resize t r new_capacity ~clear =
   let resize_avoid_aba =
     if clear then B Nil else B (Resize { spine = Sys.opaque_identity Nil })
   in
+  Format.printf "new_capacity %d\n" new_capacity;
   let buckets = Atomic_array.make new_capacity resize_avoid_aba in
   let non_linearizable_size =
     if clear then
