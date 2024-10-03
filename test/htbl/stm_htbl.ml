@@ -32,6 +32,7 @@ module STM_htbl (Htbl : Htbls.Htbl_tests) = struct
       | Try_remove of int
       | To_keys
       | Remove_all
+      | Length
 
     let show_cmd c =
       match c with
@@ -40,6 +41,7 @@ module STM_htbl (Htbl : Htbls.Htbl_tests) = struct
       | Try_remove x -> "Try_remove " ^ string_of_int x
       | To_keys -> "To_keys"
       | Remove_all -> "Remove_all"
+      | Length -> "Length"
 
     module State = Set.Make (Int)
 
@@ -53,6 +55,7 @@ module STM_htbl (Htbl : Htbls.Htbl_tests) = struct
         Gen.int_bound 10 |> Gen.map (fun x -> Try_remove x);
         Gen.return To_keys;
         Gen.return Remove_all;
+        Gen.return Length;
       ]
       |> Gen.oneof |> make ~print:show_cmd
 
@@ -67,6 +70,7 @@ module STM_htbl (Htbl : Htbls.Htbl_tests) = struct
       | Try_remove x -> State.remove x s
       | To_keys -> s
       | Remove_all -> State.empty
+      | Length -> s
 
     let precond _ _ = true
 
@@ -82,6 +86,7 @@ module STM_htbl (Htbl : Htbls.Htbl_tests) = struct
       | Try_remove x -> Res (bool, Htbl.try_remove d x)
       | To_keys -> Res (seq int, Htbl.to_seq d |> Seq.map fst)
       | Remove_all -> Res (seq int, Htbl.remove_all d |> Seq.map fst)
+      | Length -> Res (int, Htbl.length d)
 
     let postcond c (s : state) res =
       match (c, res) with
@@ -90,6 +95,7 @@ module STM_htbl (Htbl : Htbls.Htbl_tests) = struct
       | Try_remove x, Res ((Bool, _), res) -> res = State.mem x s
       | To_keys, Res ((Seq Int, _), res) -> State.equal (State.of_seq res) s
       | Remove_all, Res ((Seq Int, _), res) -> State.equal (State.of_seq res) s
+      | Length, Res ((Int, _), res) -> res = State.cardinal s
       | _, _ -> false
   end
 

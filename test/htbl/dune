@@ -13,6 +13,11 @@
   (copy ../../src_lockfree/htbl/htbl_intf.ml htbl_intf.ml))
  (package saturn_lockfree))
 
+(rule
+ (action
+  (copy ../../src_lockfree/size.ml size.ml))
+ (package saturn_lockfree))
+
 (test
  (package saturn_lockfree)
  (name dscheck_htbl)
@@ -24,7 +29,7 @@
     (and
      (= %{arch_sixtyfour} false)
      (= %{architecture} arm)))))
- (modules htbl htbl_unsafe htbl_intf htbl_utils dscheck_htbl)
+ (modules htbl htbl_unsafe htbl_intf htbl_utils dscheck_htbl size)
  (flags
   (:standard -open Multicore_magic_dscheck)))
 

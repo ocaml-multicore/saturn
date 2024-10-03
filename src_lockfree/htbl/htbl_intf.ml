@@ -48,6 +48,9 @@ module type HTBL = sig
 
     ℹ️ The returned value may not be the same as given to {!create}. *)
 
+  val length : ('k, 'v) t -> int
+  (** [length htbl] returns the number of bindings in the hash table [htbl].  *)
+
   (** {2 Looking up bindings} *)
 
   val find_exn : ('k, 'v) t -> 'k -> 'v
