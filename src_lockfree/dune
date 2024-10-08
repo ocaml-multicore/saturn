@@ -13,7 +13,7 @@ let () =
 (library
  (name saturn_lockfree)
  (public_name saturn_lockfree)
- (libraries backoff multicore-magic |}
+ (libraries backoff multicore-magic picos |}
   ^ maybe_threads
   ^ {| ))
 

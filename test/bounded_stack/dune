@@ -1,0 +1,5 @@
+(test
+ (package saturn_lockfree)
+ (name stm_bounded_stack)
+ (modules stm_bounded_stack)
+ (libraries saturn_lockfree qcheck-core qcheck-stm.stm stm_run))
