@@ -12,7 +12,7 @@
  (name saturn)
  (synopsis "Collection of parallelism-safe data structures for Multicore OCaml")
  (depends
-  (ocaml (>= 4.13))
+  (ocaml (>= 4.14))
   (domain_shims (and (>= 0.1.0) :with-test))
   (saturn_lockfree (= :version))
   (multicore-magic (and (>= 2.3.0) :with-test))
@@ -32,7 +32,7 @@
  (name saturn_lockfree)
  (synopsis "Collection of lock-free data structures for Multicore OCaml")
  (depends
-  (ocaml (>= 4.13))
+  (ocaml (>= 4.14))
   (domain_shims (and (>= 0.1.0) :with-test))
   (backoff (>= 0.1.0))
   (multicore-magic (>= 2.3.0))
