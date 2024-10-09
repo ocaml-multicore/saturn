@@ -1,0 +1,20 @@
+(rule
+ (action
+  (with-stdout-to
+   htbl.ml
+   (progn
+    (echo "# 1 \"htbl.head_safe.ml\"\n")
+    (cat htbl.head_safe.ml)
+    (echo "# 1 \"htbl.body.ml\"\n")
+    (cat htbl.body.ml)))))
+
+(rule
+ (action
+  (with-stdout-to
+   htbl_unsafe.ml
+   (progn
+    (echo "# 1 \"htbl.head_unsafe.ml\"\n")
+    (cat htbl.head_safe.ml)
+    (echo "# 1 \"htbl.body.ml\"\n")
+    (cat htbl.body.ml)))))
+

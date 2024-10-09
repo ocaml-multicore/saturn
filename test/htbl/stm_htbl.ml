@@ -103,9 +103,12 @@ module STM_htbl (Htbl : Htbls.Htbl_tests) = struct
 end
 
 let () =
-  let module Safe = STM_htbl (Htbls.Htbl) in
-  let exit_code = Safe.run () in
-  if exit_code <> 0 then exit exit_code
+  (* Both safe and unsafe version have the same body code. We randomly pick one for testing. *)
+  Random.self_init ();
+  let safe = Random.bool () in
+  if safe then
+    let module Safe = STM_htbl (Htbls.Htbl) in
+    Safe.run () |> exit
   else
     let module Unsafe = STM_htbl (Htbls.Htbl_unsafe) in
     Unsafe.run () |> exit

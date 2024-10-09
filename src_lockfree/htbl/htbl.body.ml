@@ -1,20 +1,4 @@
-(* Copyright (c) 2023 Vesa Karvonen
-
-   Permission to use, copy, modify, and/or distribute this software for any
-   purpose with or without fee is hereby granted, provided that the above
-   copyright notice and this permission notice appear in all copies.
-
-   THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
-   REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
-   AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
-   INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
-   LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
-   OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-   PERFORMANCE OF THIS SOFTWARE. *)
-
 open Htbl_utils
-module Atomic = Multicore_magic.Transparent_atomic
-module Atomic_array = Multicore_magic.Atomic_array
 
 type 'k hashed_type = (module Stdlib.Hashtbl.HashedType with type t = 'k)
 
@@ -42,9 +26,9 @@ type ('k, 'v, _) tdt =
     }
       -> ('k, 'v, [> `Resize ]) tdt
       (** During resizing and snapshotting target buckets will be initialized
-             with a physically unique [Resize] value and the source buckets will
-             then be gradually updated to [Resize] values and the target buckets
-             updated with data from the source buckets. *)
+          with a physically unique [Resize] value and the source buckets will
+          then be gradually updated to [Resize] values and the target buckets
+          updated with data from the source buckets. *)
 
 type ('k, 'v) bucket =
   | B :
@@ -66,7 +50,7 @@ type ('k, 'v) state = {
   max_buckets : int;
 }
 (** This record is [7 + 1] words and should be aligned on such a boundary on the
-       second generation heap.  It is probably not worth it to pad it further. *)
+    second generation heap.  It is probably not worth it to pad it further. *)
 
 type ('k, 'v) t = ('k, 'v) state Atomic.t
 
@@ -128,7 +112,6 @@ let rec take_at backoff size bs i =
        as spine) -> begin
       if size_modifier != Size.used_once then
         Size.update_once size size_modifier;
-
       if
         Atomic_array.unsafe_compare_and_set bs i (B spine)
           (B (Resize { spine }))
@@ -236,14 +219,19 @@ let merge size (rest : ('a, 'b, [ `Nil_with_size | `Cons_with_size ]) tdt) :
         Size.update_once size r.size_modifier;
       rest
   | Cons_with_size r -> begin
+      begin
+        match rest with
+        | Nil_with_size r' ->
+            if r'.size_modifier != Size.used_once then
+              Size.update_once size r'.size_modifier
+        | Cons_with_size r' -> begin
+            if r'.size_modifier != Size.used_once then
+              Size.update_once size r'.size_modifier
+          end
+      end;
       match rest with
-      | Nil_with_size r' ->
-          if r'.size_modifier != Size.used_once then
-            Size.update_once size r'.size_modifier;
-          Cons_with_size r
+      | Nil_with_size _ -> Cons_with_size r
       | Cons_with_size r' -> begin
-          if r'.size_modifier != Size.used_once then
-            Size.update_once size r'.size_modifier;
           Cons_with_size
             {
               r with
@@ -372,30 +360,29 @@ let rec assoc_node t key = function
   | Nil -> (Nil : (_, _, [< `Nil | `Cons ]) tdt)
   | Cons r as cons -> if t r.key key then cons else assoc_node t key r.rest
 
+let rec assoc r key = function
+  | B (Nil_with_size nil_r) ->
+      if nil_r.size_modifier != Size.used_once then
+        Size.update_once r.size nil_r.size_modifier;
+      Nil
+  | B (Cons_with_size cons_r) ->
+      if cons_r.size_modifier != Size.used_once then
+        Size.update_once r.size cons_r.size_modifier;
+      if r.equal cons_r.key key then
+        Cons { key = cons_r.key; value = cons_r.value; rest = cons_r.rest }
+      else assoc_node r.equal key cons_r.rest
+  | B (Resize resize_r) ->
+      (* A resize is in progress.  The spine of the resize still holds what was
+         in the bucket before resize reached that bucket. *)
+      assoc r key (B resize_r.spine)
+
 let find_node t key =
   (* Reads can proceed in parallel with writes. *)
   let r = Atomic.get t in
   let h = r.hash key in
   let mask = Atomic_array.length r.buckets - 1 in
   let i = h land mask in
-  let rec loop = function
-    | B (Nil_with_size nil_r) ->
-        if nil_r.size_modifier != Size.used_once then
-          Size.update_once r.size nil_r.size_modifier;
-        Nil
-    | B (Cons_with_size cons_r) ->
-        if cons_r.size_modifier != Size.used_once then
-          Size.update_once r.size cons_r.size_modifier;
-        if r.equal cons_r.key key then
-          Cons { key = cons_r.key; value = cons_r.value; rest = cons_r.rest }
-        else assoc_node r.equal key cons_r.rest
-    | B (Resize resize_r) ->
-        (* A resize is in progress.  The spine of the resize still holds what was
-           in the bucket before resize reached that bucket. *)
-        loop (B resize_r.spine)
-  in
-
-  loop @@ Atomic_array.unsafe_fenceless_get r.buckets i
+  assoc r key @@ Atomic_array.unsafe_fenceless_get r.buckets i
 (* *)
 
 let find_exn t key =
@@ -450,10 +437,11 @@ let rec try_add t key value backoff =
             }
         in
         if Atomic_array.unsafe_compare_and_set r.buckets i (B before) (B after)
-        then (
+        then begin
           Size.update_once r.size cons_r.size_modifier;
           cons_r.size_modifier <- Size.used_once;
-          adjust_size t r mask true)
+          adjust_size t r mask true
+        end
         else try_add t key value (Backoff.once backoff)
   | B (Resize _) ->
       let _ = finish t (Atomic.get t) in
@@ -475,9 +463,10 @@ let rec remove_node t key backoff =
   let i = h land mask in
   match Atomic_array.unsafe_fenceless_get r.buckets i with
   | B (Nil_with_size nil_r) ->
-      if nil_r.size_modifier != Size.used_once then (
+      if nil_r.size_modifier != Size.used_once then begin
         Size.update_once r.size nil_r.size_modifier;
-        nil_r.size_modifier <- Size.used_once);
+        nil_r.size_modifier <- Size.used_once
+      end;
       Nil
   | B (Cons_with_size cons_r as before) -> begin
       if cons_r.size_modifier != Size.used_once then
@@ -497,10 +486,11 @@ let rec remove_node t key backoff =
             if
               Atomic_array.unsafe_compare_and_set r.buckets i (B before)
                 (B after)
-            then (
+            then begin
               Size.update_once r.size nil_r.size_modifier;
               nil_r.size_modifier <- Size.used_once;
-              adjust_size t r mask found_node)
+              adjust_size t r mask found_node
+            end
             else remove_node t key (Backoff.once backoff)
         | Cons next ->
             let (Cons_with_size cons_r as after) :
@@ -516,10 +506,11 @@ let rec remove_node t key backoff =
             if
               Atomic_array.unsafe_compare_and_set r.buckets i (B before)
                 (B after)
-            then (
+            then begin
               Size.update_once r.size cons_r.size_modifier;
               cons_r.size_modifier <- Size.used_once;
-              adjust_size t r mask found_node)
+              adjust_size t r mask found_node
+            end
             else remove_node t key (Backoff.once backoff)
       else
         match dissoc r.equal key cons_r.rest with
@@ -527,10 +518,11 @@ let rec remove_node t key backoff =
             if
               Atomic_array.unsafe_compare_and_set r.buckets i (B before)
                 (B (Cons_with_size { cons_r with rest; size_modifier }))
-            then (
+            then begin
               Size.update_once r.size cons_r.size_modifier;
               cons_r.size_modifier <- Size.used_once;
-              assoc_node r.equal key cons_r.rest |> adjust_size t r mask)
+              assoc_node r.equal key cons_r.rest |> adjust_size t r mask
+            end
             else remove_node t key (Backoff.once backoff)
         | exception Not_found -> Nil
     end

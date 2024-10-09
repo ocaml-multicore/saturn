@@ -16,7 +16,7 @@
   (domain_shims (and (>= 0.1.0) :with-test))
   (saturn_lockfree (= :version))
   (multicore-magic (and (>= 2.3.0) :with-test))
-  (multicore-bench (and (>= 0.1.2) :with-test))
+  (multicore-bench (and (>= 0.1.7) :with-test))
   (multicore-magic-dscheck (and (>= 2.3.0) :with-test))
   (backoff (and (>= 0.1.0) :with-test))
   (alcotest (and (>= 1.7.0) :with-test))
