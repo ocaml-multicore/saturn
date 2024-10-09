@@ -4,6 +4,14 @@ module Dscheck_htbl (Htbl : Htbl_intf.HTBL) = struct
   open Htbl
 
   let try_add htbl k = try_add htbl k k
+
+  module Int = struct
+    type t = int
+
+    let equal = Int.equal
+    let hash = Hashtbl.hash
+  end
+
   let create ?min_buckets () = create ?min_buckets ~hashed_type:(module Int) ()
 
   let _two_mem () =
