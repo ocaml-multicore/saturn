@@ -1,20 +1,4 @@
-(* Copyright (c) 2023 Vesa Karvonen
-
-   Permission to use, copy, modify, and/or distribute this software for any
-   purpose with or without fee is hereby granted, provided that the above
-   copyright notice and this permission notice appear in all copies.
-
-   THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
-   REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
-   AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
-   INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
-   LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
-   OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-   PERFORMANCE OF THIS SOFTWARE. *)
-
 open Htbl_utils
-module Atomic = Multicore_magic.Transparent_atomic
-module Atomic_array = Multicore_magic.Atomic_array
 
 type 'k hashed_type = (module Stdlib.Hashtbl.HashedType with type t = 'k)
 
@@ -42,9 +26,9 @@ type ('k, 'v, _) tdt =
     }
       -> ('k, 'v, [> `Resize ]) tdt
       (** During resizing and snapshotting target buckets will be initialized
-             with a physically unique [Resize] value and the source buckets will
-             then be gradually updated to [Resize] values and the target buckets
-             updated with data from the source buckets. *)
+          with a physically unique [Resize] value and the source buckets will
+          then be gradually updated to [Resize] values and the target buckets
+          updated with data from the source buckets. *)
 
 type ('k, 'v) bucket =
   | B :
@@ -66,7 +50,7 @@ type ('k, 'v) state = {
   max_buckets : int;
 }
 (** This record is [7 + 1] words and should be aligned on such a boundary on the
-       second generation heap.  It is probably not worth it to pad it further. *)
+    second generation heap.  It is probably not worth it to pad it further. *)
 
 type ('k, 'v) t = ('k, 'v) state Atomic.t
 
@@ -372,30 +356,29 @@ let rec assoc_node t key = function
   | Nil -> (Nil : (_, _, [< `Nil | `Cons ]) tdt)
   | Cons r as cons -> if t r.key key then cons else assoc_node t key r.rest
 
+let rec assoc r key = function
+  | B (Nil_with_size nil_r) ->
+      if nil_r.size_modifier != Size.used_once then
+        Size.update_once r.size nil_r.size_modifier;
+      Nil
+  | B (Cons_with_size cons_r) ->
+      if cons_r.size_modifier != Size.used_once then
+        Size.update_once r.size cons_r.size_modifier;
+      if r.equal cons_r.key key then
+        Cons { key = cons_r.key; value = cons_r.value; rest = cons_r.rest }
+      else assoc_node r.equal key cons_r.rest
+  | B (Resize resize_r) ->
+      (* A resize is in progress.  The spine of the resize still holds what was
+         in the bucket before resize reached that bucket. *)
+      assoc r key (B resize_r.spine)
+
 let find_node t key =
   (* Reads can proceed in parallel with writes. *)
   let r = Atomic.get t in
   let h = r.hash key in
   let mask = Atomic_array.length r.buckets - 1 in
   let i = h land mask in
-  let rec loop = function
-    | B (Nil_with_size nil_r) ->
-        if nil_r.size_modifier != Size.used_once then
-          Size.update_once r.size nil_r.size_modifier;
-        Nil
-    | B (Cons_with_size cons_r) ->
-        if cons_r.size_modifier != Size.used_once then
-          Size.update_once r.size cons_r.size_modifier;
-        if r.equal cons_r.key key then
-          Cons { key = cons_r.key; value = cons_r.value; rest = cons_r.rest }
-        else assoc_node r.equal key cons_r.rest
-    | B (Resize resize_r) ->
-        (* A resize is in progress.  The spine of the resize still holds what was
-           in the bucket before resize reached that bucket. *)
-        loop (B resize_r.spine)
-  in
-
-  loop @@ Atomic_array.unsafe_fenceless_get r.buckets i
+  assoc r key @@ Atomic_array.unsafe_fenceless_get r.buckets i
 (* *)
 
 let find_exn t key =

@@ -1,0 +1,15 @@
+(rule
+ (action
+  (with-stdout-to
+   htbl.ml
+   (progn
+    (cat htbl.head_safe.ml)
+    (cat htbl.body.ml)))))
+
+(rule
+ (action
+  (with-stdout-to
+   htbl_unsafe.ml
+   (progn
+    (cat htbl.head_unsafe.ml)
+    (cat htbl.body.ml)))))

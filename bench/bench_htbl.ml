@@ -1,5 +1,12 @@
 open Multicore_bench
 
+module Key = struct
+  type t = int
+
+  let equal = Int.equal
+  let hash = Fun.id
+end
+
 let run_one ~budgetf ~n_domains ?(n_ops = 20 * Util.iter_factor)
     ?(n_keys = 10000) ~percent_mem ?(percent_add = (100 - percent_mem + 1) / 2)
     ?(prepopulate = true) (module Htbl : Htbl_intf.HTBL) =
@@ -11,7 +18,7 @@ let run_one ~budgetf ~n_domains ?(n_ops = 20 * Util.iter_factor)
   assert (0 <= limit_mem && limit_mem <= 100);
   assert (limit_mem <= limit_add && limit_add <= 100);
 
-  let t = Htbl.create ~hashed_type:(module Int) () in
+  let t = Htbl.create ~hashed_type:(module Key) () in
   if prepopulate then
     for _ = 1 to n_keys do
       let value = Random.bits () in

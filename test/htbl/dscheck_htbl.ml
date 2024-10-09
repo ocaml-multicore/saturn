@@ -255,9 +255,14 @@ module Dscheck_htbl (Htbl : Htbl_intf.HTBL) = struct
 end
 
 let () =
-  let module Safe = Dscheck_htbl (Htbl) in
-  let safe_test = Safe.tests "safe" in
-  let module Unsafe = Dscheck_htbl (Htbl_unsafe) in
-  let unsafe_test = Unsafe.tests "unsafe" in
-  let open Alcotest in
-  run "DSCheck Hshtbl" (safe_test @ unsafe_test)
+  (* Both safe and unsafe version have the same body code. We randomly pick one for testing. *)
+  Random.self_init ();
+  let safe = Random.bool () in
+  if safe then
+    let module Safe = Dscheck_htbl (Htbl) in
+    let open Alcotest in
+    run "DSCheck Hshtbl" (Safe.tests "safe")
+  else
+    let module Unsafe = Dscheck_htbl (Htbl_unsafe) in
+    let open Alcotest in
+    run "DSCheck Hshtbl" (Unsafe.tests "unsafe")
