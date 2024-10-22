@@ -5,12 +5,19 @@ open STM
 module Stack = Saturn_lockfree.Bounded_stack
 
 module Spec = struct
-  type cmd = Try_push of int | Pop_opt | Peek_opt | Is_empty | Length
+  type cmd =
+    | Try_push of int
+    | Pop_opt
+    | Pop_all
+    | Peek_opt
+    | Is_empty
+    | Length
 
   let show_cmd c =
     match c with
     | Try_push i -> "Try_push " ^ string_of_int i
     | Pop_opt -> "Pop_opt"
+    | Pop_all -> "Pop_all"
     | Peek_opt -> "Peek_opt"
     | Is_empty -> "Is_empty"
     | Length -> "Length"
@@ -25,6 +32,7 @@ module Spec = struct
          [
            Gen.map (fun i -> Try_push i) int_gen;
            Gen.return Pop_opt;
+           Gen.return Pop_all;
            Gen.return Is_empty;
            Gen.return Length;
            Gen.return Peek_opt;
@@ -40,6 +48,7 @@ module Spec = struct
     match c with
     | Try_push i -> if List.length s >= capacity then s else i :: s
     | Pop_opt -> ( match s with [] -> s | _ :: s' -> s')
+    | Pop_all -> []
     | Peek_opt -> s
     | Is_empty -> s
     | Length -> s
@@ -50,6 +59,7 @@ module Spec = struct
     match c with
     | Try_push i -> Res (bool, Stack.try_push d i)
     | Pop_opt -> Res (option int, Stack.pop_opt d)
+    | Pop_all -> Res (list int, Stack.pop_all d)
     | Peek_opt -> Res (option int, Stack.peek_opt d)
     | Is_empty -> Res (bool, Stack.is_empty d)
     | Length -> Res (int, Stack.length d)
@@ -59,6 +69,7 @@ module Spec = struct
     | Try_push _, Res ((Bool, _), res) -> List.length s < capacity = res
     | Pop_opt, Res ((Option Int, _), res) -> (
         match s with [] -> res = None | j :: _ -> res = Some j)
+    | Pop_all, Res ((List Int, _), res) -> res = s
     | Peek_opt, Res ((Option Int, _), res) -> (
         match s with [] -> res = None | j :: _ -> res = Some j)
     | Is_empty, Res ((Bool, _), res) -> res = (s = [])

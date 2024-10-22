@@ -140,3 +140,18 @@ let try_push t value = try_push t Backoff.default value
 
 let length t =
   match Atomic.get t.head with Nil -> 0 | Cons cons -> cons.capacity
+
+let rec pop_all t backoff =
+  match Atomic.get t.head with
+  | Nil -> []
+  | old_head ->
+      if Atomic.compare_and_set t.head old_head Nil then (
+        signal_all t.prod_waiters;
+        let rec aux acc = function
+          | Nil -> List.rev acc
+          | Cons cons -> aux (cons.value :: acc) cons.tail
+        in
+        aux [] old_head)
+      else pop_all t (Backoff.once backoff)
+
+let pop_all t = pop_all t Backoff.default
