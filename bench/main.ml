@@ -6,6 +6,7 @@ let benchmarks =
     ("Saturn_lockfree Size", Bench_size.run_suite);
     ("Saturn_lockfree Skiplist", Bench_skiplist.run_suite);
     ("Saturn_lockfree Stack", Bench_stack.run_suite);
+    ("Saturn_lockfree Bounded_Stack", Bench_bounded_stack.run_suite);
     ("Saturn_lockfree Work_stealing_deque", Bench_ws_deque.run_suite);
   ]
 
