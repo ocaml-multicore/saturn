@@ -35,6 +35,7 @@
   (ocaml (>= 4.13))
   (domain_shims (and (>= 0.1.0) :with-test))
   (backoff (>= 0.1.0))
+  (picos (>= 0.5.0))
   (multicore-magic (>= 2.3.0))
   (multicore-magic-dscheck (and (>= 2.3.0) :with-test))
   (alcotest (and (>= 1.7.0) :with-test))

@@ -12,6 +12,7 @@ depends: [
   "ocaml" {>= "4.13"}
   "domain_shims" {>= "0.1.0" & with-test}
   "backoff" {>= "0.1.0"}
+  "picos" {>= "0.5.0"}
   "multicore-magic" {>= "2.3.0"}
   "multicore-magic-dscheck" {>= "2.3.0" & with-test}
   "alcotest" {>= "1.7.0" & with-test}
