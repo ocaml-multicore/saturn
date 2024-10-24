@@ -1,3 +1,21 @@
+(rule
+ (action
+  (copy ../../src_lockfree/bounded_stack.ml bounded_stack.ml))
+ (package saturn_lockfree))
+
+(test
+ (package saturn_lockfree)
+ (name bounded_stack_dscheck)
+ (libraries picos atomic dscheck alcotest backoff multicore-magic)
+ (build_if
+  (and
+   (>= %{ocaml_version} 5)
+   (not
+    (and
+     (= %{arch_sixtyfour} false)
+     (= %{architecture} arm)))))
+ (modules bounded_stack bounded_stack_dscheck))
+
 (test
  (package saturn_lockfree)
  (name stm_bounded_stack)

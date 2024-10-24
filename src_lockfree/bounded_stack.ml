@@ -10,10 +10,9 @@ type 'a t = {
 }
 
 let create ?(capacity = Int.max_int) () =
-  let head = Atomic.make Nil |> Multicore_magic.copy_as_padded in
-  let cons_waiters = Atomic.make [] |> Multicore_magic.copy_as_padded in
-  let prod_waiters = Atomic.make [] |> Multicore_magic.copy_as_padded in
-
+  let head = Atomic.make_contended Nil in
+  let cons_waiters = Atomic.make_contended [] in
+  let prod_waiters = Atomic.make_contended [] in
   { head; cons_waiters; prod_waiters; capacity = max capacity 1 }
   |> Multicore_magic.copy_as_padded
 
