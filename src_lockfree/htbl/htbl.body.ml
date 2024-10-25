@@ -369,42 +369,71 @@ let[@inline] get t =
 
 (* *)
 
-let rec assoc_node t key = function
-  | Nil -> (Nil : (_, _, [< `Nil | `Cons ]) tdt)
-  | Cons r as cons -> if t r.key key then cons else assoc_node t key r.rest
+let rec exists t key = function
+  | Nil -> false
+  | Cons r ->
+      let result = t r.key key in
+      if result then result else exists t key r.rest
 
-let rec assoc r key = function
-  | B (Nil_with_size nil_r) ->
-      if nil_r.size_modifier != Size.used_once then
-        Size.update_once r.size nil_r.size_modifier;
-      Nil
-  | B Nil -> Nil
+let rec mem r key bucket =
+  begin
+    match bucket with
+    | B (Nil_with_size { size_modifier } | Cons_with_size { size_modifier; _ })
+      ->
+        if size_modifier != Size.used_once then
+          Size.update_once r.size size_modifier
+    | _ -> ()
+  end;
+
+  match bucket with
+  | B (Nil_with_size _ | Nil) -> false
   | B (Cons_with_size cons_r) ->
-      if cons_r.size_modifier != Size.used_once then
-        Size.update_once r.size cons_r.size_modifier;
-      if r.equal cons_r.key key then
-        Cons { key = cons_r.key; value = cons_r.value; rest = cons_r.rest }
-      else assoc_node r.equal key cons_r.rest
+      let result = r.equal cons_r.key key in
+      if result then result else exists r.equal key cons_r.rest
   | B (Resize resize_r) ->
       (* A resize is in progress.  The spine of the resize still holds what was
          in the bucket before resize reached that bucket. *)
-      assoc r key (B resize_r.spine)
+      mem r key (B resize_r.spine)
 
-let find_node t key =
+let mem t key =
   (* Reads can proceed in parallel with writes. *)
   let r = Atomic.get t in
   let h = r.hash key in
   let mask = Atomic_array.length r.buckets - 1 in
   let i = h land mask in
-  assoc r key @@ Atomic_array.unsafe_fenceless_get r.buckets i
+  mem r key @@ Atomic_array.unsafe_fenceless_get r.buckets i
+
 (* *)
+let rec assoc t key = function
+  | Nil -> raise_notrace Not_found
+  | Cons r -> if t r.key key then r.value else assoc t key r.rest
+
+let rec find_exn r key bucket =
+  begin
+    match bucket with
+    | B (Nil_with_size { size_modifier } | Cons_with_size { size_modifier; _ })
+      ->
+        if size_modifier != Size.used_once then
+          Size.update_once r.size size_modifier
+    | _ -> ()
+  end;
+
+  match bucket with
+  | B (Nil_with_size _ | Nil) -> raise_notrace Not_found
+  | B (Cons_with_size cons_r) ->
+      if r.equal cons_r.key key then cons_r.value
+      else assoc r.equal key cons_r.rest
+  | B (Resize resize_r) ->
+      (* A resize is in progress.  The spine of the resize still holds what was
+         in the bucket before resize reached that bucket. *)
+      find_exn r key (B resize_r.spine)
 
 let find_exn t key =
-  match find_node t key with
-  | Nil -> raise_notrace Not_found
-  | Cons r -> r.value
-
-let mem t key = find_node t key != Nil
+  let r = Atomic.get t in
+  let h = r.hash key in
+  let mask = Atomic_array.length r.buckets - 1 in
+  let i = h land mask in
+  find_exn r key @@ Atomic_array.unsafe_fenceless_get r.buckets i
 
 (* *)
 
@@ -439,7 +468,7 @@ let rec try_add t key value backoff =
       else try_add t key value (Backoff.once backoff)
   | Cons_with_size cons_r as before ->
       if r.equal cons_r.key key then false
-      else if assoc_node r.equal key cons_r.rest != Nil then false
+      else if exists r.equal key cons_r.rest then false
       else
         let after =
           Cons_with_size
@@ -463,79 +492,205 @@ let[@inline] try_add t key value = try_add t key value Backoff.default
 
 (* *)
 
-let[@tail_mod_cons] rec dissoc t key = function
-  | Nil -> raise_notrace Not_found
-  | Cons r ->
-      if t key r.key then r.rest else Cons { r with rest = dissoc t key r.rest }
+type ('v, _, _) op =
+  | Compare : ('v, 'v, bool) op
+  | Exists : ('v, _, bool) op
+  | Return : ('v, _, 'v) op
 
-let rec remove_node t key backoff =
+let rec try_reassoc :
+    type v c r. (_, v) t -> _ -> c -> v -> (v, c, r) op -> _ -> r =
+ fun t key present future op backoff ->
   let r = Atomic.get t in
   let h = r.hash key in
   let mask = Atomic_array.length r.buckets - 1 in
   let i = h land mask in
-  let (B old_bucket) = Atomic_array.unsafe_fenceless_get r.buckets i in
+  let not_found (type v c r) (op : (v, c, r) op) : r =
+    match op with
+    | Compare -> false
+    | Exists -> false
+    | Return -> raise_notrace Not_found
+  in
+
+  let old_bucket : (_, v) bucket =
+    Atomic_array.unsafe_fenceless_get r.buckets i
+  in
   begin
     (* Make sure size_modifier has been updated. *)
     match old_bucket with
-    | Nil_with_size { size_modifier } | Cons_with_size { size_modifier; _ } ->
+    | B (Nil_with_size { size_modifier } | Cons_with_size { size_modifier; _ })
+      ->
         if size_modifier != Size.used_once then begin
           Size.update_once r.size size_modifier
         end
     | _ -> ()
   end;
+
   match old_bucket with
-  | Nil_with_size _ | Nil -> Nil
-  | Cons_with_size cons_r as before -> begin
+  | B (Nil | Nil_with_size _) -> not_found op
+  | B (Cons_with_size cons_r as before) -> begin
+      if r.equal cons_r.key key then
+        if
+          match op with
+          | Exists | Return -> true
+          | Compare -> cons_r.value == present
+        then
+          let after = Cons_with_size { cons_r with value = future } in
+          if
+            Atomic_array.unsafe_compare_and_set r.buckets i (B before) (B after)
+          then
+            match op with
+            | Compare -> true
+            | Exists -> true
+            | Return -> cons_r.value
+          else try_reassoc t key present future op (Backoff.once backoff)
+        else not_found op
+      else
+        let[@tail_mod_cons] rec reassoc :
+            type v c r.
+            _ -> _ -> c -> v -> (v, c, r) op -> (_, v, 't) tdt -> (_, v, 't) tdt
+            =
+         fun t key present future op -> function
+          | Nil -> raise_notrace Not_found
+          | Cons r ->
+              if t key r.key then
+                match op with
+                | Exists | Return -> Cons { r with value = future }
+                | Compare ->
+                    if r.value == present then Cons { r with value = future }
+                    else raise_notrace Not_found
+              else Cons { r with rest = reassoc t key present future op r.rest }
+        in
+        match reassoc r.equal key present future op cons_r.rest with
+        | rest ->
+            let after = Cons_with_size { cons_r with rest } in
+            if
+              Atomic_array.unsafe_compare_and_set r.buckets i (B before)
+                (B after)
+            then
+              match op with
+              | Compare -> true
+              | Exists -> true
+              | Return -> assoc r.equal key cons_r.rest
+            else try_reassoc t key present future op (Backoff.once backoff)
+        | exception Not_found -> not_found op
+    end
+  | B (Resize _) ->
+      let _ = finish t (Atomic.get t) in
+      try_reassoc t key present future op Backoff.default
+
+let[@inline] try_set t key future =
+  try_reassoc t key future future Exists Backoff.default
+
+let[@inline] try_compare_and_set t key present future =
+  try_reassoc t key present future Compare Backoff.default
+
+let[@inline] set_exn t key value =
+  try_reassoc t key key value Return Backoff.default
+
+(* *)
+let rec try_dissoc : type v c r. (_, v) t -> _ -> c -> (v, c, r) op -> _ -> r =
+ fun t key present op backoff ->
+  let r = Atomic.get t in
+  let h = r.hash key in
+  let mask = Atomic_array.length r.buckets - 1 in
+  let i = h land mask in
+  let not_found (type v c r) (op : (v, c, r) op) : r =
+    match op with
+    | Compare -> false
+    | Exists -> false
+    | Return -> raise_notrace Not_found
+  in
+
+  let old_bucket : (_, v) bucket =
+    Atomic_array.unsafe_fenceless_get r.buckets i
+  in
+  begin
+    (* Make sure size_modifier has been updated. *)
+    match old_bucket with
+    | B (Nil_with_size { size_modifier } | Cons_with_size { size_modifier; _ })
+      ->
+        if size_modifier != Size.used_once then begin
+          Size.update_once r.size size_modifier
+        end
+    | _ -> ()
+  end;
+
+  match old_bucket with
+  | B (Nil_with_size _ | Nil) -> not_found op
+  | B (Cons_with_size cons_r as before) -> begin
       let size_modifier = Size.new_once r.size Size.decr in
       if r.equal cons_r.key key then
-        let found_node =
-          Cons { key = cons_r.key; value = cons_r.value; rest = Nil }
-        in
-        match cons_r.rest with
-        | Nil ->
-            let after = Nil_with_size { size_modifier } in
-            if
-              Atomic_array.unsafe_compare_and_set r.buckets i (B before)
-                (B after)
-            then adjust_size t r after mask found_node
-            else remove_node t key (Backoff.once backoff)
-        | Cons next ->
-            let after =
-              Cons_with_size
-                {
-                  size_modifier;
-                  key = next.key;
-                  value = next.value;
-                  rest = next.rest;
-                }
+        if
+          match op with
+          | Exists | Return -> true
+          | Compare -> cons_r.value == present
+        then
+          let after =
+            match cons_r.rest with
+            | Nil -> Nil_with_size { size_modifier }
+            | Cons next ->
+                Cons_with_size
+                  {
+                    size_modifier;
+                    key = next.key;
+                    value = next.value;
+                    rest = next.rest;
+                  }
+          in
+          if
+            Atomic_array.unsafe_compare_and_set r.buckets i (B before) (B after)
+          then
+            let res : r =
+              match op with
+              | Compare -> true
+              | Exists -> true
+              | Return -> cons_r.value
             in
-            if
-              Atomic_array.unsafe_compare_and_set r.buckets i (B before)
-                (B after)
-            then adjust_size t r after mask found_node
-            else remove_node t key (Backoff.once backoff)
+            adjust_size t r after mask res
+          else try_dissoc t key present op (Backoff.once backoff)
+        else not_found op
       else
-        match dissoc r.equal key cons_r.rest with
+        let[@tail_mod_cons] rec dissoc :
+            type v c r.
+            _ -> _ -> c -> (v, c, r) op -> (_, v, 't) tdt -> (_, v, 't) tdt =
+         fun t key present op -> function
+          | Nil -> raise_notrace Not_found
+          | Cons r ->
+              if t key r.key then
+                match op with
+                | Exists | Return -> r.rest
+                | Compare ->
+                    if r.value == present then r.rest
+                    else raise_notrace Not_found
+              else Cons { r with rest = dissoc t key present op r.rest }
+        in
+        match dissoc r.equal key present op cons_r.rest with
         | (Nil | Cons _) as rest ->
             let after = Cons_with_size { cons_r with rest; size_modifier } in
             if
               Atomic_array.unsafe_compare_and_set r.buckets i (B before)
                 (B after)
             then
-              assoc_node r.equal key cons_r.rest |> adjust_size t r after mask
-            else remove_node t key (Backoff.once backoff)
-        | exception Not_found -> Nil
+              let res : r =
+                match op with
+                | Compare -> true
+                | Exists -> true
+                | Return -> assoc r.equal key cons_r.rest
+              in
+              adjust_size t r after mask res
+            else try_dissoc t key present op (Backoff.once backoff)
+        | exception Not_found -> not_found op
     end
-  | Resize _ ->
+  | B (Resize _) ->
       let _ = finish t (Atomic.get t) in
-      remove_node t key Backoff.default
+      try_dissoc t key present op Backoff.default
 
-let try_remove t key = remove_node t key Backoff.default != Nil
+let[@inline] try_remove t key = try_dissoc t key key Exists Backoff.default
 
-let remove_exn t key =
-  match remove_node t key Backoff.default with
-  | Nil -> raise_notrace Not_found
-  | Cons r -> r.value
+let[@inline] try_compare_and_remove t key present =
+  try_dissoc t key present Compare Backoff.default
+
+let[@inline] remove_exn t key = try_dissoc t key key Return Backoff.default
 
 (* *)
 
@@ -577,55 +732,57 @@ let remove_all t = snapshot t ~clear:true Backoff.default
 
 (* *)
 
-let rec try_find_random_non_empty_bucket size buckets seed i =
-  let (B old_bucket) = Atomic_array.unsafe_fenceless_get buckets i in
-  begin
-    match old_bucket with
-    | Nil_with_size { size_modifier }
-    | Cons_with_size { size_modifier; _ }
-    | Resize { spine = Nil_with_size { size_modifier } }
-    | Resize { spine = Cons_with_size { size_modifier; _ } } ->
-        if size_modifier != Size.used_once then
-          Size.update_once size size_modifier
-    | _ -> ()
-  end;
-
-  match old_bucket with
-  | Nil_with_size _
-  | Resize { spine = Nil_with_size _ }
-  | Nil
-  | Resize { spine = Nil } ->
-      let mask = Atomic_array.length buckets - 1 in
-      let i = (i + 1) land mask in
-      if i <> seed land mask then
-        try_find_random_non_empty_bucket size buckets seed i
-      else Nil
-  | Cons_with_size cons_r | Resize { spine = Cons_with_size cons_r } ->
-      Cons { key = cons_r.key; value = cons_r.value; rest = cons_r.rest }
-
-let try_find_random_non_empty_bucket t =
-  let r = Atomic.get t in
-  let seed = Int64.to_int (Random.bits64 ()) in
-  try_find_random_non_empty_bucket r.size r.buckets seed
-    (seed land (Atomic_array.length r.buckets - 1))
-
-let rec length spine n =
-  match spine with Nil -> n | Cons r -> length r.rest (n + 1)
-
-let length spine = length spine 0
-
-let rec nth spine i =
-  match spine with
-  | Nil -> impossible ()
-  | Cons r -> if i <= 0 then r.key else nth r.rest (i - 1)
-
 let find_random_exn t =
+  let try_find_random_non_empty_bucket t =
+    let r = Atomic.get t in
+    let buckets = r.buckets in
+    let seed = Int64.to_int (Random.bits64 ()) in
+    let rec try_find_random_non_empty_bucket buckets seed i =
+      let (B old_bucket) = Atomic_array.unsafe_fenceless_get buckets i in
+      begin
+        match old_bucket with
+        | Nil_with_size { size_modifier } | Cons_with_size { size_modifier; _ }
+          ->
+            if size_modifier != Size.used_once then
+              Size.update_once r.size size_modifier
+        | Resize
+            {
+              spine =
+                ( Nil_with_size { size_modifier }
+                | Cons_with_size { size_modifier; _ } );
+            } ->
+            if size_modifier != Size.used_once then
+              Size.update_once r.size size_modifier
+        | _ -> ()
+      end;
+
+      match old_bucket with
+      | Nil_with_size _ | Nil | Resize { spine = Nil_with_size _ | Nil } ->
+          let mask = Atomic_array.length buckets - 1 in
+          let i = (i + 1) land mask in
+          if i <> seed land mask then
+            try_find_random_non_empty_bucket buckets seed i
+          else Nil
+      | Cons_with_size cons_r | Resize { spine = Cons_with_size cons_r } ->
+          Cons { key = cons_r.key; value = cons_r.value; rest = cons_r.rest }
+    in
+    try_find_random_non_empty_bucket buckets seed
+      (seed land (Atomic_array.length buckets - 1))
+  in
   match try_find_random_non_empty_bucket t with
   | (Cons cons_r as spine : (_, _, [< `Nil | `Cons ]) tdt) ->
       (* We found a non-empty bucket - the fast way. *)
       if cons_r.rest == Nil then cons_r.key
       else
-        let n = length spine in
+        let rec length spine n =
+          match spine with Nil -> n | Cons r -> length r.rest (n + 1)
+        in
+        let n = length cons_r.rest 1 in
+        let rec nth spine i =
+          match spine with
+          | Nil -> impossible ()
+          | Cons r -> if i <= 0 then r.key else nth r.rest (i - 1)
+        in
         nth spine (Random.int n)
   | Nil ->
       (* We couldn't find a non-empty bucket - the slow way. *)

@@ -1,6 +1,12 @@
 module type HTBL = sig
   (** Lock-free hash table.
 
+    The operations provided by this hash table are designed to work as building
+    blocks of non-blocking algorithms.  Specifically, the operation signatures
+    and semantics are designed to allow building
+    {{:https://dl.acm.org/doi/10.1145/62546.62593} consensus protocols over
+    arbitrary numbers of processes}.
+
     🏎️ Single key reads with this hash table are actually wait-free rather than
     just lock-free.  Internal resizing automatically uses all the threads that
     are trying to write to the hash table. *)
@@ -49,38 +55,52 @@ module type HTBL = sig
     ℹ️ The returned value may not be the same as given to {!create}. *)
 
   val length : ('k, 'v) t -> int
-  (** [length htbl] returns the number of bindings in the hash table [htbl].  *)
+  (** [length htbl] returns the number of bindings in the hash table [htbl]. *)
 
   (** {2 Looking up bindings} *)
 
   val find_exn : ('k, 'v) t -> 'k -> 'v
   (** [find_exn htbl key] returns the current binding of [key] in the hash table
-    [htbl] or raises {!Not_found} if no such binding exists. *)
+    [htbl] or raises {!Not_found} if no such binding exists.
+
+    @raise Not_found in case no binding of [key] exists in the hash table
+      [htbl]. *)
 
   val mem : ('k, 'v) t -> 'k -> bool
   (** [mem htbl key] determines whether the hash table [htbl] has a binding for
     the [key]. *)
 
-  val to_seq : ('k, 'v) t -> ('k * 'v) Seq.t
-  (** [to_seq htbl] takes a snapshot of the bindings in the hash table and returns
-    them as an association sequence.
-
-    🐌 This is a linear time operation. *)
-
-  val find_random_exn : ('k, 'v) t -> 'k
-  (** [find_random_exn htbl] tries to find a random binding from the hash table
-    and returns the key of the binding or raises {!Not_found} in case the hash
-    table is empty.
-
-    🐌 This is an expected constant time operation with worst case linear time
-    complexity. *)
-
   (** {2 Adding bindings} *)
 
   val try_add : ('k, 'v) t -> 'k -> 'v -> bool
   (** [try_add htbl key value] tries to add a new binding of [key] to [value] to
-    the hash table [htbl]. Returns [true] on success and [false] in case the
+    the hash table [htbl].  Returns [true] on success and [false] in case the
     hash table already contained a binding for [key]. *)
+
+  (** {2 Updating bindings} *)
+
+  val try_set : ('k, 'v) t -> 'k -> 'v -> bool
+  (** [try_set htbl key value] tries to update an existing binding of [key] to
+    [value] in the hash table [htbl].  Returns [true] on success and [false] in
+    case the hash table did not contain a binding for [key]. *)
+
+  val try_compare_and_set : ('k, 'v) t -> 'k -> 'v -> 'v -> bool
+  (** [try_compare_and_set htbl key before after] tries to update an existing
+    binding of [key] from the [before] value to the [after] value in the hash
+    table [htbl].  Returns [true] on success and [false] in case the hash table
+    did not contain a binding of [key] to the [before] value.
+
+    ℹ️ The values are compared using physical equality, i.e. the [==]
+    operator. *)
+
+  val set_exn : ('k, 'v) t -> 'k -> 'v -> 'v
+  (** [set_exn htbl key after] tries to update an existing binding of [key] from
+    some [before] value to the [after] value in the hash table [htbl].  Returns
+    the [before] value on success or raises {!Not_found} if no such binding
+    exists.
+
+    @raise Not_found in case no binding of [key] exists in the hash table
+      [htbl]. *)
 
   (** {2 Removing bindings} *)
 
@@ -89,39 +109,73 @@ module type HTBL = sig
     [htbl].  Returns [true] on success and [false] in case the hash table did
     not contain a binding for [key]. *)
 
+  val try_compare_and_remove : ('k, 'v) t -> 'k -> 'v -> bool
+  (** [try_compare_and_remove htbl key before] tries to remove a binding of [key]
+    to the [before] value from the hash table [htbl].  Returns [true] on success
+    and [false] in case the hash table did not contain a binding of [key] to the
+    [before] value.
+
+    ℹ️ The values are compared using physical equality, i.e. the [==]
+    operator. *)
+
   val remove_exn : ('k, 'v) t -> 'k -> 'v
-  (** [remove_exn htbl key] tries to remove a binding of [key] from the hash table
-    [htbl] and return it or raise {!Not_found} if no such binding exists. *)
+  (** [remove_exn htbl key] tries to remove a binding of [key] to some [before]
+    value from the hash table [htbl].  Returns the [before] value on success or
+    raises {!Not_found} if no such binding exists.
+
+    @raise Not_found in case no binding of [key] exists in the hash table
+      [htbl]. *)
+
+  (** {2 Examining contents} *)
+
+  val to_seq : ('k, 'v) t -> ('k * 'v) Seq.t
+  (** [to_seq htbl] takes a snapshot of the bindings in the hash table [htbl] and
+    returns them as an association sequence.
+
+    🐌 This is a linear time operation. *)
 
   val remove_all : ('k, 'v) t -> ('k * 'v) Seq.t
-  (** [remove_all htbl] takes a snapshot of the bindings in the hash table,
+  (** [remove_all htbl] takes a snapshot of the bindings in the hash table [htbl],
     removes the bindings from the hash table, and returns the snapshot as an
     association sequence.
 
     🐌 This is a linear time operation. *)
 
+  val find_random_exn : ('k, 'v) t -> 'k
+  (** [find_random_exn htbl] tries to find a random binding from the hash table
+    [htbl] and returns the key of the binding or raises {!Not_found} in case the
+    hash table is empty.
+
+    🐌 This is an expected constant time operation with worst case linear time
+    complexity.
+
+    @raise Not_found in case the hash table [htbl] is empty. *)
+
   (** {1 Examples}
 
     An example top-level session:
     {[
-      # let t : (int, string) Saturn.Htbl.t =
-          Saturn.Htbl.create
+      # module Htbl = Saturn_lockfree.Htbl
+      module Htbl = Saturn_lockfree.Htbl
+
+      # let t : (int, string) Htbl.t =
+          Htbl.create
             ~hashed_type:(module Int) ()
-      val t : (int, string) Saturn.Htbl.t = <abstr>
+      val t : (int, string) Htbl.t = <abstr>
 
-      # Saturn.Htbl.try_add t 42 "The answer"
+      # Htbl.try_add t 42 "The answer"
       - : bool = true
 
-      # Saturn.Htbl.try_add t 101 "Basics"
+      # Htbl.try_add t 101 "Basics"
       - : bool = true
 
-      # Saturn.Htbl.find_exn t 42
+      # Htbl.find_exn t 42
       - : string = "The answer"
 
-      # Saturn.Htbl.try_add t 101 "The basics"
+      # Htbl.try_add t 101 "The basics"
       - : bool = false
 
-      # Saturn.Htbl.remove_all t |> List.of_seq
+      # Htbl.remove_all t |> List.of_seq
       - : (int * string) list = [(101, "Basics"); (42, "The answer")]
     ]} *)
 end
