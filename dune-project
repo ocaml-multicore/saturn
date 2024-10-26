@@ -9,14 +9,12 @@
 (documentation "https://ocaml-multicore.github.io/saturn/")
 (using mdx 0.4)
 
-
 (package
  (name saturn)
  (synopsis "Collection of concurent-safe data structures for Multicore OCaml")
  (depends
   (ocaml (>= 4.14))
   (backoff (>= 0.1.0))
-  (picos (>= 0.5.0))
   (multicore-magic (>= 2.3.0))
   (alcotest (and (>= 1.7.0) :with-test))
   (domain_shims (and (>= 0.1.0) :with-test))
