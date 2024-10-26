@@ -6,7 +6,7 @@
 (test
  (package saturn_lockfree)
  (name bounded_stack_dscheck)
- (libraries picos atomic dscheck alcotest backoff multicore-magic)
+ (libraries atomic dscheck alcotest backoff multicore-magic)
  (build_if
   (and
    (>= %{ocaml_version} 5)
