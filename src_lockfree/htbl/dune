@@ -17,3 +17,12 @@
     (cat htbl.head_safe.ml)
     (echo "# 1 \"htbl.body.ml\"\n")
     (cat htbl.body.ml)))))
+
+(mdx
+ (package saturn_lockfree)
+ (enabled_if
+  (and
+   (<> %{os_type} Win32)
+   (>= %{ocaml_version} 5.1.0)))
+ (libraries saturn_lockfree)
+ (files htbl_intf.mli))

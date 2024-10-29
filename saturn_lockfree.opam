@@ -14,6 +14,7 @@ depends: [
   "backoff" {>= "0.1.0"}
   "multicore-magic" {>= "2.3.0"}
   "multicore-magic-dscheck" {>= "2.3.0" & with-test}
+  "mdx" {>= "0.4" & with-test}
   "alcotest" {>= "1.7.0" & with-test}
   "qcheck" {>= "0.21.3" & with-test}
   "qcheck-core" {>= "0.21.3" & with-test}

@@ -13,6 +13,7 @@ let () =
 (library
  (name saturn_lockfree)
  (public_name saturn_lockfree)
+ (modules_without_implementation htbl_intf)
  (libraries backoff multicore-magic |}
   ^ maybe_threads
   ^ {| ))
