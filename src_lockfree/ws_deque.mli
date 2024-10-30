@@ -13,45 +13,41 @@
     Thus, it is not the best choice when tail latency matters.
 *)
 
-module type S = sig
-  type 'a t
-  (** Type of work-stealing queue *)
+type 'a t
+(** Type of work-stealing queue *)
 
-  val create : unit -> 'a t
-  (** [create ()] returns a new empty work-stealing queue. *)
+val create : unit -> 'a t
+(** [create ()] returns a new empty work-stealing queue. *)
 
-  (** {1 Queue owner functions} *)
+(** {1 Queue owner functions} *)
 
-  val push : 'a t -> 'a -> unit
-  (** [push t v] adds [v] to the front of the queue [q].
+val push : 'a t -> 'a -> unit
+(** [push t v] adds [v] to the front of the queue [q].
       It should only be invoked by the domain which owns the queue [q]. *)
 
-  val pop : 'a t -> 'a
-  (** [pop q] removes and returns the first element in queue
+val pop : 'a t -> 'a
+(** [pop q] removes and returns the first element in queue
       [q].It should only be invoked by the domain which owns the queue
       [q].
 
       @raise Exit if the queue is empty.
       *)
 
-  val pop_opt : 'a t -> 'a option
-  (** [pop_opt q] removes and returns the first element in queue [q], or
+val pop_opt : 'a t -> 'a option
+(** [pop_opt q] removes and returns the first element in queue [q], or
     returns [None] if the queue is empty.  *)
 
-  (** {1 Stealers function} *)
+(** {1 Stealers function} *)
 
-  val steal : 'a t -> 'a
-  (** [steal q] removes and returns the last element from queue
+val steal : 'a t -> 'a
+(** [steal q] removes and returns the last element from queue
       [q]. It should only be invoked by domain which doesn't own the
       queue [q].
 
       @raise Exit if the queue is empty.
   *)
 
-  val steal_opt : 'a t -> 'a option
-  (** [steal_opt q] removes and returns the last element from queue
+val steal_opt : 'a t -> 'a option
+(** [steal_opt q] removes and returns the last element from queue
       [q], or returns [None] if the queue is empty. It should only be
       invoked by domain which doesn't own the queue [q]. *)
-end
-
-module M : S

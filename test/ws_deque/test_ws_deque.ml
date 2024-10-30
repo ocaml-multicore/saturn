@@ -1,4 +1,4 @@
-open Saturn_lockfree.Work_stealing_deque.M
+open Saturn_lockfree.Work_stealing_deque
 (** Tests *)
 
 let test_empty () =
