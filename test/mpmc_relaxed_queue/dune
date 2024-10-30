@@ -1,5 +1,0 @@
-(test
- (package saturn)
- (name test_mpmc_relaxed_queue)
- (libraries saturn unix alcotest domain_shims)
- (modules test_mpmc_relaxed_queue))
