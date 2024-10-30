@@ -46,6 +46,9 @@ module type HTBL = sig
   (** [length htbl] returns the number of bindings in the hash table [htbl]. *)
 
   (** {2 Looking up bindings} *)
+  val find_opt : ('k, 'v) t -> 'k -> 'v option
+  (** [find_opt htbl key] returns [Some] of the current binding of [key] in the 
+      hash table [htbl] or [None] if it does not exist. *)
 
   val find_exn : ('k, 'v) t -> 'k -> 'v
   (** [find_exn htbl key] returns the current binding of [key] in the hash table

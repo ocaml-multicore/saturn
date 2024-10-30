@@ -404,11 +404,30 @@ let mem t key =
   mem r key @@ Atomic_array.unsafe_fenceless_get r.buckets i
 
 (* *)
-let rec assoc t key = function
-  | Nil -> raise_notrace Not_found
-  | Cons r -> if t r.key key then r.value else assoc t key r.rest
 
-let rec find_exn r key bucket =
+type ('k, 'v, _) poly =
+  | Value : ('k, 'v, 'v) poly
+  | Option : ('k, 'v, 'v option) poly
+
+let rec find_as :
+    type k v r. (k, v) state -> k -> (k, v) bucket -> (k, v, r) poly -> r =
+ fun r key bucket poly ->
+  let rec assoc :
+      type k v r.
+      (k -> k -> bool) ->
+      k ->
+      (k, v, [ `Nil | `Cons ]) tdt ->
+      (k, v, r) poly ->
+      r =
+   fun eq key node poly ->
+    match node with
+    | Nil -> (
+        match poly with Value -> raise_notrace Not_found | Option -> None)
+    | Cons r ->
+        if eq r.key key then
+          match poly with Value -> r.value | Option -> Some r.value
+        else assoc eq key r.rest poly
+  in
   begin
     match bucket with
     | B (Nil_with_size { size_modifier } | Cons_with_size { size_modifier; _ })
@@ -419,21 +438,30 @@ let rec find_exn r key bucket =
   end;
 
   match bucket with
-  | B (Nil_with_size _ | Nil) -> raise_notrace Not_found
+  | B (Nil_with_size _ | Nil) -> (
+      match poly with Value -> raise_notrace Not_found | Option -> None)
   | B (Cons_with_size cons_r) ->
-      if r.equal cons_r.key key then cons_r.value
-      else assoc r.equal key cons_r.rest
+      if r.equal cons_r.key key then
+        match poly with Value -> cons_r.value | Option -> Some cons_r.value
+      else assoc r.equal key cons_r.rest poly
   | B (Resize resize_r) ->
       (* A resize is in progress.  The spine of the resize still holds what was
          in the bucket before resize reached that bucket. *)
-      find_exn r key (B resize_r.spine)
+      find_as r key (B resize_r.spine) poly
 
 let find_exn t key =
   let r = Atomic.get t in
   let h = r.hash key in
   let mask = Atomic_array.length r.buckets - 1 in
   let i = h land mask in
-  find_exn r key @@ Atomic_array.unsafe_fenceless_get r.buckets i
+  find_as r key (Atomic_array.unsafe_fenceless_get r.buckets i) Value
+
+let find_opt t key =
+  let r = Atomic.get t in
+  let h = r.hash key in
+  let mask = Atomic_array.length r.buckets - 1 in
+  let i = h land mask in
+  find_as r key (Atomic_array.unsafe_fenceless_get r.buckets i) Option
 
 (* *)
 
@@ -496,6 +524,10 @@ type ('v, _, _) op =
   | Compare : ('v, 'v, bool) op
   | Exists : ('v, _, bool) op
   | Return : ('v, _, 'v) op
+
+let rec assoc eq key = function
+  | Nil -> raise_notrace Not_found
+  | Cons r -> if eq r.key key then r.value else assoc eq key r.rest
 
 let rec try_reassoc :
     type v c r. (_, v) t -> _ -> c -> v -> (v, c, r) op -> _ -> r =
