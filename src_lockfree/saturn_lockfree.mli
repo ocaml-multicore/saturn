@@ -37,7 +37,6 @@ module Work_stealing_deque = Ws_deque
 module Single_prod_single_cons_queue = Spsc_queue
 module Single_prod_single_cons_queue_unsafe = Spsc_queue_unsafe
 module Single_consumer_queue = Mpsc_queue
-module Relaxed_queue = Mpmc_relaxed_queue
 module Skiplist = Skiplist
 module Size = Size
 module Htbl = Htbl

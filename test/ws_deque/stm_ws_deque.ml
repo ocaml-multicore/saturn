@@ -15,7 +15,7 @@ module Spec = struct
     | Steal -> "Steal"
 
   type state = int list
-  type sut = int Ws_deque.M.t
+  type sut = int Ws_deque.t
 
   let arb_cmd _s =
     let int_gen = Gen.nat in
@@ -30,7 +30,7 @@ module Spec = struct
 
   let stealer_cmd _s = QCheck.make ~print:show_cmd (Gen.return Steal)
   let init_state = []
-  let init_sut () = Ws_deque.M.create ()
+  let init_sut () = Ws_deque.create ()
   let cleanup _ = ()
 
   let next_state c s =
@@ -46,9 +46,9 @@ module Spec = struct
 
   let run c d =
     match c with
-    | Push i -> Res (unit, Ws_deque.M.push d i)
-    | Pop -> Res (result int exn, protect Ws_deque.M.pop d)
-    | Steal -> Res (result int exn, protect Ws_deque.M.steal d)
+    | Push i -> Res (unit, Ws_deque.push d i)
+    | Pop -> Res (result int exn, protect Ws_deque.pop d)
+    | Steal -> Res (result int exn, protect Ws_deque.steal d)
 
   let postcond c (s : state) res =
     match (c, res) with
