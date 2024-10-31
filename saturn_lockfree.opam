@@ -9,11 +9,12 @@ doc: "https://ocaml-multicore.github.io/saturn/"
 bug-reports: "https://github.com/ocaml-multicore/saturn/issues"
 depends: [
   "dune" {>= "3.14"}
-  "ocaml" {>= "4.13"}
+  "ocaml" {>= "4.14"}
   "domain_shims" {>= "0.1.0" & with-test}
   "backoff" {>= "0.1.0"}
   "multicore-magic" {>= "2.3.0"}
   "multicore-magic-dscheck" {>= "2.3.0" & with-test}
+  "mdx" {>= "0.4" & with-test}
   "alcotest" {>= "1.7.0" & with-test}
   "qcheck" {>= "0.21.3" & with-test}
   "qcheck-core" {>= "0.21.3" & with-test}
