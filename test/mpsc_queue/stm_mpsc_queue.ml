@@ -3,7 +3,7 @@
 open QCheck
 open STM
 open Util
-module Mpsc_queue = Saturn_lockfree.Single_consumer_queue
+module Mpsc_queue = Saturn.Single_consumer_queue
 
 module Spec = struct
   type cmd = Push of int | Pop | Peek | Push_head of int | Is_empty | Close
@@ -114,5 +114,4 @@ let () =
       Dom.neg_agree_test_par ~count ~name:(name ^ " parallel, negative");
     ]
   in
-  Stm_run.run ~name:"Saturn_lockfree.Mpsc_queue" ~make_domain (module Spec)
-  |> exit
+  Stm_run.run ~name:"Saturn.Mpsc_queue" ~make_domain (module Spec) |> exit

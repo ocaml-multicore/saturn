@@ -1,10 +1,10 @@
 (rule
  (action
   (copy
-   ../../../src_lockfree/michael_scott_queue/michael_scott_queue_intf.ml
+   ../../../src/michael_scott_queue/michael_scott_queue_intf.ml
    michael_scott_queue_intf.ml))
- (package saturn_lockfree))
+ (package saturn))
 
 (library
  (name ms_queues)
- (libraries saturn_lockfree))
+ (libraries saturn))

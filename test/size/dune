@@ -1,15 +1,15 @@
 (library
- (package saturn_lockfree)
+ (package saturn)
  (name linked_set)
  (modules linked_set))
 
 (rule
  (action
-  (copy ../../src_lockfree/size.ml size.ml))
- (package saturn_lockfree))
+  (copy ../../src/size.ml size.ml))
+ (package saturn))
 
 (test
- (package saturn_lockfree)
+ (package saturn)
  (name dscheck_size)
  (modules dscheck_size size)
  (build_if
@@ -19,7 +19,7 @@
   (:standard -open Multicore_magic_dscheck)))
 
 (test
- (package saturn_lockfree)
+ (package saturn)
  (name stm_size)
  (modules stm_size)
- (libraries saturn_lockfree linked_set qcheck-core qcheck-stm.stm stm_run))
+ (libraries saturn linked_set qcheck-core qcheck-stm.stm stm_run))

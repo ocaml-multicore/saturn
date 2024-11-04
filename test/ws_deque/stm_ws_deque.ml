@@ -3,7 +3,7 @@
 open QCheck
 open STM
 open Util
-module Ws_deque = Saturn_lockfree.Work_stealing_deque
+module Ws_deque = Saturn.Work_stealing_deque
 
 module Spec = struct
   type cmd = Push of int | Pop | Steal
@@ -83,5 +83,4 @@ let () =
       Dom.neg_agree_test_par ~count ~name:(name ^ " parallel, negative");
     ]
   in
-  Stm_run.run ~name:"Saturn_lockfree.Ws_deque" ~make_domain (module Spec)
-  |> exit
+  Stm_run.run ~name:"Saturn.Ws_deque" ~make_domain (module Spec) |> exit

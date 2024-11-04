@@ -1,4 +1,4 @@
-open Saturn_lockfree.Stack
+open Saturn.Stack
 
 let tests_sequential =
   QCheck.

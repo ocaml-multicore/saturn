@@ -19,10 +19,10 @@
     (cat htbl.body.ml)))))
 
 (mdx
- (package saturn_lockfree)
+ (package saturn)
  (enabled_if
   (and
    (<> %{os_type} Win32)
    (>= %{ocaml_version} 5.1.0)))
- (libraries saturn_lockfree)
+ (libraries saturn)
  (files htbl_intf.mli))

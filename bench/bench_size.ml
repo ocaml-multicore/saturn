@@ -1,5 +1,5 @@
 open Multicore_bench
-module Size = Saturn_lockfree.Size
+module Size = Saturn.Size
 
 let run_one ~budgetf ~n_domains ?(n_ops = 250 * n_domains * Util.iter_factor) ()
     =

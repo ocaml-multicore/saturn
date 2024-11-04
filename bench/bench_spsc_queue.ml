@@ -5,7 +5,7 @@ let run_one ~unsafe ~budgetf ?(size_exponent = 3)
   let init _ = () in
   let work, before =
     if unsafe then
-      let module Queue = Saturn_lockfree.Single_prod_single_cons_queue_unsafe in
+      let module Queue = Saturn.Single_prod_single_cons_queue_unsafe in
       let t = Queue.create ~size_exponent in
 
       let before () =
@@ -41,7 +41,7 @@ let run_one ~unsafe ~budgetf ?(size_exponent = 3)
       in
       (work, before)
     else
-      let module Queue = Saturn_lockfree.Single_prod_single_cons_queue in
+      let module Queue = Saturn.Single_prod_single_cons_queue in
       let t = Queue.create ~size_exponent in
 
       let before () =

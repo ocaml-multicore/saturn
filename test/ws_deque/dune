@@ -1,15 +1,15 @@
 (rule
  (action
-  (copy ../../src_lockfree/ArrayExtra.ml ArrayExtra.ml))
- (package saturn_lockfree))
+  (copy ../../src/ArrayExtra.ml ArrayExtra.ml))
+ (package saturn))
 
 (rule
  (action
-  (copy ../../src_lockfree/ws_deque.ml ws_deque.ml))
- (package saturn_lockfree))
+  (copy ../../src/ws_deque.ml ws_deque.ml))
+ (package saturn))
 
 (test
- (package saturn_lockfree)
+ (package saturn)
  (name ws_deque_dscheck)
  (libraries atomic dscheck alcotest backoff)
  (build_if
@@ -17,17 +17,17 @@
  (modules ArrayExtra ws_deque ws_deque_dscheck))
 
 (test
- (package saturn_lockfree)
+ (package saturn)
  (name test_ws_deque)
- (libraries saturn_lockfree domain_shims)
+ (libraries saturn domain_shims)
  (modules test_ws_deque))
 
 (test
- (package saturn_lockfree)
+ (package saturn)
  (name qcheck_ws_deque)
  (libraries
   barrier
-  saturn_lockfree
+  saturn
   qcheck
   qcheck-core
   qcheck-alcotest
@@ -41,11 +41,11 @@
  (modules qcheck_ws_deque))
 
 (test
- (package saturn_lockfree)
+ (package saturn)
  (name stm_ws_deque)
  (modules stm_ws_deque)
  (libraries
-  saturn_lockfree
+  saturn
   qcheck-core
   qcheck-multicoretests-util
   qcheck-stm.stm

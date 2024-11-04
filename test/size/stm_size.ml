@@ -1,4 +1,4 @@
-module Linked_set = Linked_set.Make (Atomic) (Saturn_lockfree.Size)
+module Linked_set = Linked_set.Make (Atomic) (Saturn.Size)
 
 module Spec = struct
   type cmd = Mem of int | Add of int | Remove of int | Length
@@ -59,6 +59,5 @@ module Spec = struct
 end
 
 let () =
-  Stm_run.run ~count:1000 ~verbose:true ~name:"Saturn_lockfree.Size"
-    (module Spec)
+  Stm_run.run ~count:1000 ~verbose:true ~name:"Saturn.Size" (module Spec)
   |> exit

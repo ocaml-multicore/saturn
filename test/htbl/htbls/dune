@@ -1,8 +1,8 @@
 (rule
  (action
-  (copy ../../../src_lockfree/htbl/htbl_intf.mli htbl_intf.ml))
- (package saturn_lockfree))
+  (copy ../../../src/htbl/htbl_intf.mli htbl_intf.ml))
+ (package saturn))
 
 (library
  (name htbls)
- (libraries saturn_lockfree))
+ (libraries saturn))

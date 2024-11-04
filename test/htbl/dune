@@ -1,25 +1,25 @@
 (rule
  (action
-  (copy ../../src_lockfree/htbl/htbl.ml htbl.ml))
- (package saturn_lockfree))
+  (copy ../../src/htbl/htbl.ml htbl.ml))
+ (package saturn))
 
 (rule
  (action
-  (copy ../../src_lockfree/htbl/htbl_unsafe.ml htbl_unsafe.ml))
- (package saturn_lockfree))
+  (copy ../../src/htbl/htbl_unsafe.ml htbl_unsafe.ml))
+ (package saturn))
 
 (rule
  (action
-  (copy ../../src_lockfree/htbl/htbl_intf.mli htbl_intf.ml))
- (package saturn_lockfree))
+  (copy ../../src/htbl/htbl_intf.mli htbl_intf.ml))
+ (package saturn))
 
 (rule
  (action
-  (copy ../../src_lockfree/size.ml size.ml))
- (package saturn_lockfree))
+  (copy ../../src/size.ml size.ml))
+ (package saturn))
 
 (test
- (package saturn_lockfree)
+ (package saturn)
  (name dscheck_htbl)
  (libraries alcotest atomic backoff dscheck multicore-magic-dscheck)
  (build_if
@@ -34,9 +34,9 @@
   (:standard -open Multicore_magic_dscheck)))
 
 (test
- (package saturn_lockfree)
+ (package saturn)
  (name stm_htbl)
  (modules stm_htbl)
- (libraries htbls saturn_lockfree qcheck-core qcheck-stm.stm stm_run)
+ (libraries htbls saturn qcheck-core qcheck-stm.stm stm_run)
  (enabled_if
   (= %{arch_sixtyfour} true)))

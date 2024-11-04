@@ -5,13 +5,13 @@ module type SPSC_tests = sig
 end
 
 module Spsc_queue : SPSC_tests = struct
-  include Saturn_lockfree.Single_prod_single_cons_queue
+  include Saturn.Single_prod_single_cons_queue
 
   let name = "Spsc_queue"
 end
 
 module Spsc_queue_unsafe : SPSC_tests = struct
-  include Saturn_lockfree.Single_prod_single_cons_queue_unsafe
+  include Saturn.Single_prod_single_cons_queue_unsafe
 
   let name = "Spsc_queue_unsafe"
 end

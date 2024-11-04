@@ -1,12 +1,12 @@
 (rule
  (action
   (progn
-   (copy ../../src_lockfree/skiplist.ml skiplist.ml)
-   (copy ../../src_lockfree/size.ml size.ml)))
- (package saturn_lockfree))
+   (copy ../../src/skiplist.ml skiplist.ml)
+   (copy ../../src/size.ml size.ml)))
+ (package saturn))
 
 (test
- (package saturn_lockfree)
+ (package saturn)
  (name dscheck_skiplist)
  (modules skiplist size dscheck_skiplist)
  (build_if
@@ -16,11 +16,11 @@
   (:standard -open Multicore_magic_dscheck)))
 
 (test
- (package saturn_lockfree)
+ (package saturn)
  (name qcheck_skiplist)
  (modules qcheck_skiplist)
  (libraries
-  saturn_lockfree
+  saturn
   barrier
   qcheck
   qcheck-core
@@ -29,7 +29,7 @@
   domain_shims))
 
 (test
- (package saturn_lockfree)
+ (package saturn)
  (name stm_skiplist)
  (modules stm_skiplist)
- (libraries saturn_lockfree qcheck-core qcheck-stm.stm stm_run))
+ (libraries saturn qcheck-core qcheck-stm.stm stm_run))

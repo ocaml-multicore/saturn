@@ -9,8 +9,8 @@ let () =
 
 (rule
  (action
-  (copy ../src_lockfree/htbl/htbl_intf.mli htbl_intf.ml))
- (package saturn_lockfree))
+  (copy ../src/htbl/htbl_intf.mli htbl_intf.ml))
+ (package saturn))
 
 (test
  (package saturn)

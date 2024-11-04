@@ -1,10 +1,10 @@
 (rule
  (action
-  (copy ../../src_lockfree/mpsc_queue.ml mpsc_queue.ml))
- (package saturn_lockfree))
+  (copy ../../src/mpsc_queue.ml mpsc_queue.ml))
+ (package saturn))
 
 (test
- (package saturn_lockfree)
+ (package saturn)
  (name mpsc_queue_dscheck)
  (libraries atomic dscheck alcotest)
  (build_if
@@ -12,10 +12,10 @@
  (modules mpsc_queue mpsc_queue_dscheck))
 
 (test
- (package saturn_lockfree)
+ (package saturn)
  (name qcheck_mpsc_queue)
  (libraries
-  saturn_lockfree
+  saturn
   barrier
   qcheck
   qcheck-core
@@ -25,11 +25,11 @@
  (modules qcheck_mpsc_queue))
 
 (test
- (package saturn_lockfree)
+ (package saturn)
  (name stm_mpsc_queue)
  (modules stm_mpsc_queue)
  (libraries
-  saturn_lockfree
+  saturn
   qcheck-core
   qcheck-multicoretests-util
   qcheck-stm.stm

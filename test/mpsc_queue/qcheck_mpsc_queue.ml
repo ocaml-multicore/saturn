@@ -1,4 +1,4 @@
-module Mpsc_queue = Saturn_lockfree.Single_consumer_queue
+module Mpsc_queue = Saturn.Single_consumer_queue
 
 (* Mpsc_queue is a multiple producers, single consumer queue. *)
 (* Producers can use the functions

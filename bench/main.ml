@@ -1,12 +1,12 @@
 let benchmarks =
   [
-    ("Saturn_lockfree Queue", Bench_queue.run_suite);
-    ("Saturn_lockfree Single_prod_single_cons_queue", Bench_spsc_queue.run_suite);
-    ("Saturn_lockfree Size", Bench_size.run_suite);
-    ("Saturn_lockfree Skiplist", Bench_skiplist.run_suite);
-    ("Saturn_lockfree Htbl", Bench_htbl.run_suite);
-    ("Saturn_lockfree Stack", Bench_stack.run_suite);
-    ("Saturn_lockfree Work_stealing_deque", Bench_ws_deque.run_suite);
+    ("Saturn Queue", Bench_queue.run_suite);
+    ("Saturn Single_prod_single_cons_queue", Bench_spsc_queue.run_suite);
+    ("Saturn Size", Bench_size.run_suite);
+    ("Saturn Skiplist", Bench_skiplist.run_suite);
+    ("Saturn Htbl", Bench_htbl.run_suite);
+    ("Saturn Stack", Bench_stack.run_suite);
+    ("Saturn Work_stealing_deque", Bench_ws_deque.run_suite);
   ]
 
 let () = Multicore_bench.Cmd.run ~benchmarks ()
