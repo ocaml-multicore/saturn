@@ -36,11 +36,11 @@ let () =
   (copy atomic.without_contended.ml atomic.ml))) 
 
 (mdx
- (package saturn_lockfree)
+ (package saturn)
  (enabled_if
   (and
    (<> %{os_type} Win32)
    (>= %{ocaml_version} 5.0.0)))
- (libraries saturn_lockfree)
+ (libraries saturn)
  (files bounded_stack.mli))
 |}
