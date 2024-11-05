@@ -1,0 +1,23 @@
+(rule
+ (action
+  (copy ../../src/bounded_stack.ml bounded_stack.ml))
+ (package saturn))
+
+(test
+ (package saturn)
+ (name bounded_stack_dscheck)
+ (libraries atomic dscheck alcotest backoff multicore-magic)
+ (build_if
+  (and
+   (>= %{ocaml_version} 5)
+   (not
+    (and
+     (= %{arch_sixtyfour} false)
+     (= %{architecture} arm)))))
+ (modules bounded_stack bounded_stack_dscheck))
+
+(test
+ (package saturn)
+ (name stm_bounded_stack)
+ (modules stm_bounded_stack)
+ (libraries saturn qcheck-core qcheck-stm.stm stm_run))

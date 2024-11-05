@@ -25,7 +25,22 @@ let () =
 
 (rule
  (enabled_if
+  (< %{ocaml_version} 4.14.0))
+ (action
+  (copy seq.ocaml4.13.ml seq.ml)))
+
+(rule
+ (enabled_if
   (< %{ocaml_version} 5.2.0))
  (action
   (copy atomic.without_contended.ml atomic.ml))) 
+
+(mdx
+ (package saturn)
+ (enabled_if
+  (and
+   (<> %{os_type} Win32)
+   (>= %{ocaml_version} 5.0.0)))
+ (libraries saturn)
+ (files bounded_stack.mli))
 |}
