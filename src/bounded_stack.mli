@@ -3,7 +3,7 @@
   This module implements a lock-free bounded stack based on Treiber's stack 
   algorithm. Adding a capacity to this algorithm adds a general overhead to the
    operations, and thus, it is recommended to use the unbounded stack 
-   {!Saturn_lockfree.Stack} if neither the capacity nor the {!length} function 
+   {!Saturn.Stack} if neither the capacity nor the {!length} function 
     is needed.
 *)
 
@@ -77,7 +77,7 @@ val pop_all : 'a t -> 'a list
 order. 
 
   {[
-    # open Saturn_lockfree.Bounded_stack
+    # open Saturn.Bounded_stack
     # let t : int t = create ()
     val t : int t = <abstr>
     # try_push t 1
@@ -176,7 +176,7 @@ the [seq] is too long to fit in the stack.  *)
 (** {1 Examples}
     An example top-level session:
     {[
-      # open Saturn_lockfree.Bounded_stack
+      # open Saturn.Bounded_stack
       # let t : int t = create ()
       val t : int t = <abstr>
       # try_push t 42
@@ -192,11 +192,11 @@ the [seq] is too long to fit in the stack.  *)
       # pop_opt t
       - : int option = None
       # pop_exn t
-      Exception: Saturn_lockfree__Bounded_stack.Empty.]}
+      Exception: Saturn__Bounded_stack.Empty.]}
 
     A multicore example: 
     {@ocaml non-deterministic[
-      # open Saturn_lockfree.Bounded_stack
+      # open Saturn.Bounded_stack
       # let t :int t = create ()
       val t : int t = <abstr>
       # let barrier =  Atomic.make 2

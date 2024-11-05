@@ -64,4 +64,4 @@ module Spec = struct
     | _, _ -> false
 end
 
-let () = Stm_run.run ~name:"Lockfree.Skiplist" (module Spec) |> exit
+let () = Stm_run.run ~name:"Saturn.Skiplist" (module Spec) |> exit

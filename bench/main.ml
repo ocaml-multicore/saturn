@@ -7,7 +7,7 @@ let benchmarks =
     ("Saturn Htbl", Bench_htbl.run_suite);
     ("Saturn Stack", Bench_stack.run_suite);
     ("Saturn Work_stealing_deque", Bench_ws_deque.run_suite);
-    ("Saturn_lockfree Bounded_Stack", Bench_bounded_stack.run_suite);
+    ("Saturn Bounded_Stack", Bench_bounded_stack.run_suite);
   ]
 
 let () = Multicore_bench.Cmd.run ~benchmarks ()

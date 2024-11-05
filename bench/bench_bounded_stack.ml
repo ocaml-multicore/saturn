@@ -1,5 +1,5 @@
 open Multicore_bench
-module Stack = Saturn_lockfree.Bounded_stack
+module Stack = Saturn.Bounded_stack
 
 let run_one_domain ~budgetf ?(n_msgs = 50 * Util.iter_factor) () =
   let t = Stack.create () in

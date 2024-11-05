@@ -2,7 +2,7 @@
 
 open QCheck
 open STM
-module Stack = Saturn_lockfree.Bounded_stack
+module Stack = Saturn.Bounded_stack
 
 module Spec = struct
   type cmd =
@@ -124,4 +124,4 @@ module Spec = struct
     | _, _ -> false
 end
 
-let () = Stm_run.run ~name:"Saturn_lockfree.Bounded_stack" (module Spec) |> exit
+let () = Stm_run.run ~name:"Saturn.Bounded_stack" (module Spec) |> exit
