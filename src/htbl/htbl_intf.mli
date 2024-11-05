@@ -146,8 +146,8 @@ module type HTBL = sig
 
     An example top-level session:
     {[
-      # module Htbl = Saturn_lockfree.Htbl
-      module Htbl = Saturn_lockfree.Htbl
+      # module Htbl = Saturn.Htbl
+      module Htbl = Saturn.Htbl
 
       # let t : (int, string) Htbl.t =
           Htbl.create

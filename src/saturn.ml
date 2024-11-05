@@ -26,18 +26,14 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 ########
 *)
 
-module Queue = Saturn_lockfree.Queue
-module Queue_unsafe = Saturn_lockfree.Queue_unsafe
-module Stack = Saturn_lockfree.Stack
-module Work_stealing_deque = Saturn_lockfree.Work_stealing_deque
-
-module Single_prod_single_cons_queue =
-  Saturn_lockfree.Single_prod_single_cons_queue
-
-module Single_prod_single_cons_queue_unsafe =
-  Saturn_lockfree.Single_prod_single_cons_queue_unsafe
-
-module Single_consumer_queue = Saturn_lockfree.Single_consumer_queue
-module Skiplist = Saturn_lockfree.Skiplist
-module Htbl = Saturn_lockfree.Htbl
-module Htbl_unsafe = Saturn_lockfree.Htbl_unsafe
+module Queue = Michael_scott_queue
+module Queue_unsafe = Michael_scott_queue_unsafe
+module Stack = Treiber_stack
+module Work_stealing_deque = Ws_deque
+module Single_prod_single_cons_queue = Spsc_queue
+module Single_prod_single_cons_queue_unsafe = Spsc_queue_unsafe
+module Single_consumer_queue = Mpsc_queue
+module Size = Size
+module Skiplist = Skiplist
+module Htbl = Htbl
+module Htbl_unsafe = Htbl_unsafe

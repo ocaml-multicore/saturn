@@ -7,11 +7,13 @@ let () =
   Jbuild_plugin.V1.send
   @@ {|
 
+ (include_subdirs unqualified)
+
 (library
  (name saturn)
  (public_name saturn)
- (libraries
-  (re_export saturn_lockfree) |}
+ (modules_without_implementation htbl_intf)
+ (libraries backoff multicore-magic |}
   ^ maybe_threads
   ^ {| ))
 
@@ -20,4 +22,10 @@ let () =
   (< %{ocaml_version} 5.0.0))
  (action
   (copy domain.ocaml4.ml domain.ml)))
+
+(rule
+ (enabled_if
+  (< %{ocaml_version} 5.2.0))
+ (action
+  (copy atomic.without_contended.ml atomic.ml))) 
 |}

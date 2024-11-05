@@ -1,22 +1,20 @@
 (rule
  (action
-  (copy ../../src_lockfree/spsc_queue/spsc_queue.ml spsc_queue.ml))
- (package saturn_lockfree))
+  (copy ../../src/spsc_queue/spsc_queue.ml spsc_queue.ml))
+ (package saturn))
 
 (rule
  (action
-  (copy
-   ../../src_lockfree/spsc_queue/spsc_queue_unsafe.ml
-   spsc_queue_unsafe.ml))
- (package saturn_lockfree))
+  (copy ../../src/spsc_queue/spsc_queue_unsafe.ml spsc_queue_unsafe.ml))
+ (package saturn))
 
 (rule
  (action
-  (copy ../../src_lockfree/spsc_queue/spsc_queue_intf.ml spsc_queue_intf.ml))
- (package saturn_lockfree))
+  (copy ../../src/spsc_queue/spsc_queue_intf.ml spsc_queue_intf.ml))
+ (package saturn))
 
 (test
- (package saturn_lockfree)
+ (package saturn)
  (name spsc_queue_dscheck)
  (libraries alcotest atomic dscheck multicore-magic-dscheck)
  (build_if
@@ -26,13 +24,13 @@
   (:standard -open Multicore_magic_dscheck)))
 
 (test
- (package saturn_lockfree)
+ (package saturn)
  (name test_spsc_queue)
  (libraries spsc_queues domain_shims)
  (modules test_spsc_queue))
 
 (test
- (package saturn_lockfree)
+ (package saturn)
  (name qcheck_spsc_queue)
  (libraries
   spsc_queues
@@ -45,7 +43,7 @@
  (modules qcheck_spsc_queue))
 
 (test
- (package saturn_lockfree)
+ (package saturn)
  (name stm_spsc_queue)
  (modules stm_spsc_queue)
  (libraries

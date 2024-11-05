@@ -2,7 +2,7 @@
 
 open QCheck
 open STM
-module Treiber_stack = Saturn_lockfree.Stack
+module Treiber_stack = Saturn.Stack
 
 module Spec = struct
   type cmd = Push of int | Pop | Is_empty
@@ -55,4 +55,4 @@ module Spec = struct
     | _, _ -> false
 end
 
-let () = Stm_run.run ~name:"Saturn_lockfree.Treiber_stack" (module Spec) |> exit
+let () = Stm_run.run ~name:"Saturn.Treiber_stack" (module Spec) |> exit

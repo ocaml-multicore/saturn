@@ -1,5 +1,5 @@
 open Multicore_bench
-module Ws_deque = Saturn_lockfree.Work_stealing_deque
+module Ws_deque = Saturn.Work_stealing_deque
 
 let run_as_scheduler ~budgetf ?(n_domains = 1) () =
   let spawns =

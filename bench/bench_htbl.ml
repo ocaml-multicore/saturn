@@ -74,6 +74,6 @@ let run_suite ~budgetf =
   in
   List.fold_right2
     (fun safe unsafe acc -> safe :: unsafe :: acc)
-    (run ~unsafe:false (module Saturn_lockfree.Htbl))
-    (run ~unsafe:true (module Saturn_lockfree.Htbl_unsafe))
+    (run ~unsafe:false (module Saturn.Htbl))
+    (run ~unsafe:true (module Saturn.Htbl_unsafe))
     []
