@@ -109,14 +109,14 @@ module Spec = struct
     | Try_push _, Res ((Bool, _), res) -> List.length s < capacity = res
     | Try_push_all l, Res ((Bool, _), res) ->
         List.length s + List.length l <= capacity = res
+    | (Pop_opt | Peek_opt), Res ((Option Int, _), res) -> (
+        match s with [] -> res = None | j :: _ -> res = Some j)
     | Try_compare_and_pop i, Res ((Bool, _), res) -> (
         match s with [] -> res = false | hd :: _ -> res = (hd = i))
     | Try_compare_and_set (i, _), Res ((Bool, _), res) -> (
         match s with [] -> res = false | hd :: _ -> res = (hd = i))
     | Set_exn _, Res ((Result (Int, Exn), _), res) -> (
         match s with [] -> res = Error Stack.Empty | x :: _ -> res = Ok x)
-    | (Pop_opt | Peek_opt), Res ((Option Int, _), res) -> (
-        match s with [] -> res = None | j :: _ -> res = Some j)
     | Pop_all, Res ((List Int, _), res) -> res = s
     | To_seq, Res ((Seq Int, _), res) -> List.of_seq res = s
     | Is_empty, Res ((Bool, _), res) -> res = (s = [])

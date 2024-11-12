@@ -26,6 +26,10 @@ val length : 'a t -> int
 val is_empty : 'a t -> bool
 (** [is_empty stack] returns [true] if the [stack] is empty, otherwise [false]. *)
 
+val is_full : 'a t -> bool
+(** [is_full stack] returns [true] if the [stack] has reached capacity, 
+  otherwise [false]. *)
+
 (** {2 Consumer functions} *)
 
 exception Empty
