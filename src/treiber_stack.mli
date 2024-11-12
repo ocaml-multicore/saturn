@@ -22,16 +22,7 @@ val is_empty : 'a t -> bool
 exception Empty
 (** Raised when {!pop_exn}, {!peek_exn}, {!drop_exn}, or {!set_exn} is 
   applied to an empty stack.
-
-  This exception is meant to avoid allocations required by an option type.
-  As such, it does not register backtrace information and it is recommended to 
-  use the following pattern to catch it.
-
-  {@ocaml skip[
-  match pop_exn s with
-    | value -> () (* ... *) 
-    | exception Empty -> () (* ... *)
-  ]} *)
+*)
 
 val peek_exn : 'a t -> 'a
 (** [peek_exn stack] returns the top element of the [stack] without removing it.
