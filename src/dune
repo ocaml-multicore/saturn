@@ -12,7 +12,7 @@ let () =
 (library
  (name saturn)
  (public_name saturn)
- (modules_without_implementation htbl_intf)
+ (modules_without_implementation htbl_intf cue_intf)
  (libraries backoff multicore-magic |}
   ^ maybe_threads
   ^ {| ))
