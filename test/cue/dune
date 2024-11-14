@@ -1,0 +1,7 @@
+(test
+ (package saturn)
+ (name stm_cue)
+ (modules stm_cue)
+ (libraries cues saturn qcheck-core qcheck-stm.stm stm_run)
+ (enabled_if
+  (= %{arch_sixtyfour} true)))
