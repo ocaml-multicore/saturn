@@ -60,7 +60,7 @@ let create ?(capacity = Int.max_int) () =
   let head = Atomic.make_contended node and tail = Atomic.make_contended node in
   { head; capacity; tail }
 
-let of_list ?(capacity = Int.max_int) list : 'a t =
+let of_list_exn ?(capacity = Int.max_int) list : 'a t =
   let len = List.length list in
   if len > capacity then raise Full
   else

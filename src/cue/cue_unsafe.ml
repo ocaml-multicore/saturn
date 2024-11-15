@@ -66,7 +66,7 @@ let create ?(capacity = Int.max_int) () =
   and tail = Atomic.make node |> Multicore_magic.copy_as_padded in
   { head; capacity; tail } |> Multicore_magic.copy_as_padded
 
-let of_list ?(capacity = Int.max_int) list : 'a t =
+let of_list_exn ?(capacity = Int.max_int) list : 'a t =
   let len = List.length list in
   if len > capacity then raise Full
   else

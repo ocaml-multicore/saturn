@@ -1,3 +1,33 @@
+(rule
+ (action
+  (copy ../../src/cue/cue.ml cue.ml))
+ (package saturn))
+
+(rule
+ (action
+  (copy ../../src/cue/cue_unsafe.ml cue_unsafe.ml))
+ (package saturn))
+
+(rule
+ (action
+  (copy ../../src/cue/cue_intf.mli cue_intf.ml))
+ (package saturn))
+
+(test
+ (package saturn)
+ (name dscheck_cue)
+ (libraries alcotest atomic backoff dscheck multicore-magic-dscheck)
+ (build_if
+  (and
+   (>= %{ocaml_version} 5)
+   (not
+    (and
+     (= %{arch_sixtyfour} false)
+     (= %{architecture} arm)))))
+ (modules cue cue_unsafe cue_intf dscheck_cue)
+ (flags
+  (:standard -open Multicore_magic_dscheck)))
+
 (test
  (package saturn)
  (name stm_cue)

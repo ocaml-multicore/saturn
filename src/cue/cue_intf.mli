@@ -32,10 +32,22 @@ module type CUE = sig
 capacity of [capacity]. The default [capacity] value is [Int.max_int].
 *)
 
-  val of_list : ?capacity:int -> 'a list -> 'a t
+  val of_list_exn : ?capacity:int -> 'a list -> 'a t
   (** [of_list list] creates a new queue from a list.
   
-  @raises Full is the lenght of [list] is greater tant [capacity]. *)
+  @raises Full is the lenght of [list] is greater tant [capacity]. 
+    
+  {[
+    # let t : int t = of_list_exn [1;2;3;4]
+    val t : int t = <abstr>
+    # pop_opt t
+    - : int option = Some 1
+    # pop_opt t 
+    - : int option = Some 2
+    # length t
+    - : int = 2
+  ]}
+  *)
 
   val length : 'a t -> int
   (** [length queue] returns the number of elements currently in the [queue]. *)
@@ -97,32 +109,6 @@ capacity of [capacity]. The default [capacity] value is [Int.max_int].
   (** [try_push queue element] tries to add [element] at the end of the [queue].
     Returns [true] if the element was successfully added, or [false] if the
     queue is full. *)
-
-  (*
-  val push_all_exn : 'a t -> 'a list -> unit
-  (** [push_all_exn queue elements] adds all [elements] at the end of the [queue].
-    
-  @raises Full if the [stack] is full. *)
-
-  val try_push_all : 'a t -> 'a list -> bool
-  (** [try_push_all stack elements] tries to add all [elements] to the top of the 
-    [stack]. Returns [true] if the elements were successfully added, or [false] if 
-    the stack is full. 
-    
-  {[
-    # let t : int t = create ()
-    val t : int t = <abstr>
-    # try_push_all t [1; 2; 3; 4]
-    - : bool = true
-    # pop_opt t
-    - : int option = Some 4
-    # pop_opt t 
-    - : int option = Some 3
-    # pop_all t
-    - : int list = [2; 1]
-  ]}
-    *)
-*)
 
   (*
 
