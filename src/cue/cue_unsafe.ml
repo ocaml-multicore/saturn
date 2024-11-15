@@ -13,23 +13,8 @@
    PERFORMANCE OF THIS SOFTWARE. *)
 
 module Atomic = Multicore_magic.Transparent_atomic
-
-type ('a, _) node =
-  | Null : ('a, [> `Null ]) node
-  | Node : {
-      mutable _next : 'a link;
-      mutable value : 'a;
-      mutable capacity : int;
-      mutable counter : int;
-    }
-      -> ('a, [> `Node ]) node
-
-and 'a link = Link : ('a, [< `Null | `Node ]) node -> 'a link [@@unboxed]
-
-external link_as_node : 'a link -> ('a, [ `Node ]) node = "%identity"
-
-external next_as_atomic : ('a, [< `Node ]) node -> 'a link Atomic.t
-  = "%identity"
+module Node = Cue_unsafe_node
+open Node
 
 let[@inline] get_capacity (Node r : (_, [< `Node ]) node) = r.capacity
 
@@ -60,7 +45,7 @@ exception Empty
 
 let create ?(capacity = Int.max_int) () =
   let value = Obj.magic () in
-  let node = Node { _next = Link Null; value; capacity; counter = 0 } in
+  let node = make_node ~value ~capacity ~counter:0 Null in
   let head = Atomic.make node |> Multicore_magic.copy_as_padded
   and tail = Atomic.make node |> Multicore_magic.copy_as_padded in
   { head; capacity; tail } |> Multicore_magic.copy_as_padded
@@ -73,33 +58,22 @@ let of_list_exn ?(capacity = Int.max_int) list : 'a t =
     | [] -> create ~capacity ()
     | hd :: tl ->
         let tail =
-          Node
-            {
-              value = hd;
-              counter = len;
-              capacity = capacity - len - 1;
-              _next = Link Null;
-            }
+          make_node ~value:hd ~capacity:(capacity - len - 1) ~counter:len Null
         in
         let _, _, next =
           List.fold_left
             (fun (counter, capacity, next) value ->
               ( counter - 1,
                 capacity + 1,
-                Node { value; counter; capacity; _next = Link next } ))
+                make_node ~value ~capacity ~counter next ))
             (len - 1, capacity - len, tail)
             tl
         in
         let head =
           Atomic.make_contended
-          @@ Node
-               {
-                 value = Obj.magic ();
-                 capacity;
-                 counter = 0;
-                 _next = Link next;
-               }
+            (make_node ~value:(Obj.magic ()) ~capacity ~counter:0 next)
         in
+
         { head; capacity; tail = Atomic.make tail }
 
 let capacity_of t = t.capacity
@@ -245,9 +219,9 @@ let[@inline] pop_exn t = pop_exn t Backoff.default
 let[@inline] pop_opt t = pop_opt t Backoff.default
 
 let[@inline] push_exn t value =
-  let new_node = Node { _next = Link Null; value; capacity = 0; counter = 0 } in
+  let new_node = make_node ~value ~capacity:0 ~counter:0 Null in
   push_exn t new_node (Atomic.get t.tail)
 
 let[@inline] try_push t value =
-  let new_node = Node { _next = Link Null; value; capacity = 0; counter = 0 } in
+  let new_node = make_node ~value ~capacity:0 ~counter:0 Null in
   try_push t new_node (Atomic.get t.tail)
