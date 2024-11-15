@@ -29,8 +29,7 @@ module type CUE = sig
 
   val create : ?capacity:int -> unit -> 'a t
   (** [create ~capacity ()] creates a new empty bounded queue with a maximum 
-capacity of [capacity]. The default [capacity] value is [Int.max_int].
-*)
+  capacity of [capacity]. The default [capacity] value is [Int.max_int].*)
 
   val of_list_exn : ?capacity:int -> 'a list -> 'a t
   (** [of_list list] creates a new queue from a list.
@@ -87,14 +86,6 @@ capacity of [capacity]. The default [capacity] value is [Int.max_int].
   (** [drop_exn queue] removes the top element of the [queue]. 
   @raises Empty if the [queue] is empty. *)
 
-  (*
-  val try_compare_and_pop : 'a t -> 'a -> bool
-  (** [try_compare_and_pop stack before] tries to remove the top element of the 
-  [stack] if it is equal to [before]. Returns [true] on success and [false] in 
-  case the stack is empty or if the top element is not equal to [before].
-    ℹ️ The values are compared using physical equality, i.e., the [==] operator. *)
-*)
-
   (** {2 Producer functions} *)
 
   exception Full
@@ -109,46 +100,4 @@ capacity of [capacity]. The default [capacity] value is [Int.max_int].
   (** [try_push queue element] tries to add [element] at the end of the [queue].
     Returns [true] if the element was successfully added, or [false] if the
     queue is full. *)
-
-  (*
-
-  (** {3 Updating bindings} *)
-
-  val try_set : 'a t -> 'a -> bool
-  (** [try_set stack value] tries to update the top element of the [stack] to
-    [value]. Returns [true] on success and [false] if the [stack] is empty.
-    *)
-
-  val try_compare_and_set : 'a t -> 'a -> 'a -> bool
-  (** [try_compare_and_set stack before after] tries to update the top element of 
-the [stack] from the [before] value to the [after] value. Returns [true] on 
-success and [false] if the [stack] is empty or the top element is not equal 
-to [before].
-    ℹ️ The values are compared using physical equality, i.e., the [==]
-    operator. *)
-
-  val set_exn : 'a t -> 'a -> 'a
-  (** [set_exn stack after] tries to update the top element of [stack] from some 
-[before] value to the [after] value. Returns the [before] value on success.
-    @raises Empty if the [stack] is empty. *)
-
-  (** {2 With Sequences }*)
-  val to_seq : 'a t -> 'a Seq.t
-  (** [to_seq stack] takes a snapshot of [stack] and returns its value from top to 
-bottom.
-  🐌 This is a linear time operation. *)
-
-  val of_seq : ?capacity:int -> 'a Seq.t -> 'a t
-  (** [of_seq seq] creates a stack from a [seq]. It must be finite. *)
-
-  val add_seq_exn : 'a t -> 'a Seq.t -> unit
-  (** [add_seq_exn stack seq] adds all elements of [seq] to the top of the 
-[stack]. [seq] must be finite. 
-@raises Full if the [seq] is too long to fit in the stack. *)
-
-  val try_add_seq : 'a t -> 'a Seq.t -> bool
-  (** [try_add_seq stack seq] tries to add all elements of [seq] to the top of the
-[stack]. Returns [true] if the elements were successfully added, or [false] if 
-the [seq] is too long to fit in the stack.  *)
-*)
 end

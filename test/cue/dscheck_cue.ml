@@ -284,7 +284,7 @@ end
 let () =
   let module Safe = Dscheck_cue (Cue) in
   let safe_test = Safe.tests "safe" in
-  (* let module Unsafe = Dscheck_cue (Cue_unsafe) in
-     let unsafe_test = Unsafe.tests "unsafe" in *)
+  let module Unsafe = Dscheck_cue (Cue_unsafe) in
+  let unsafe_test = Unsafe.tests "unsafe" in
   let open Alcotest in
-  run "dscheck_cue" safe_test
+  run "dscheck_cue" (safe_test @ unsafe_test)
