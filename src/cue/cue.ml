@@ -12,13 +12,10 @@
    LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
    OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
    PERFORMANCE OF THIS SOFTWARE. *)
-
-module Atomic = Multicore_magic.Transparent_atomic
-
 type ('a, _) node =
   | Null : ('a, [> `Null ]) node
   | Node : {
-      mutable _next : 'a link;
+      next : 'a link Atomic.t;
       mutable value : 'a;
       mutable capacity : int;
       mutable counter : int;
@@ -27,10 +24,8 @@ type ('a, _) node =
 
 and 'a link = Link : ('a, [< `Null | `Node ]) node -> 'a link [@@unboxed]
 
-external link_as_node : 'a link -> ('a, [ `Node ]) node = "%identity"
-
-external next_as_atomic : ('a, [< `Node ]) node -> 'a link Atomic.t
-  = "%identity"
+exception Full
+exception Empty
 
 let[@inline] get_capacity (Node r : (_, [< `Node ]) node) = r.capacity
 
@@ -42,13 +37,14 @@ let[@inline] get_counter (Node r : (_, [< `Node ]) node) = r.counter
 let[@inline] set_counter (Node r : (_, [< `Node ]) node) value =
   r.counter <- value
 
-let[@inline] get_next node = Atomic.get (next_as_atomic node)
+let[@inline] get_next (Node node : (_, [< `Node ]) node) = Atomic.get node.next
 
-let[@inline] fenceless_get_next node =
-  Atomic.fenceless_get (next_as_atomic node)
+let[@inline] compare_and_set_next (Node node : (_, [< `Node ]) node) before
+    after =
+  Atomic.compare_and_set node.next before after
 
-let[@inline] compare_and_set_next node before after =
-  Atomic.compare_and_set (next_as_atomic node) before after
+let[@inline] link_as_node (Link n) : (_, [< `Node ]) node =
+  match n with Null -> assert false | Node _ as node -> node
 
 type 'a t = {
   head : ('a, [ `Node ]) node Atomic.t;
@@ -58,25 +54,66 @@ type 'a t = {
 
 let create ?(capacity = Int.max_int) () =
   let value = Obj.magic () in
-  let node = Node { _next = Link Null; value; capacity; counter = 0 } in
-  let head = Atomic.make node |> Multicore_magic.copy_as_padded
-  and tail = Atomic.make node |> Multicore_magic.copy_as_padded in
-  { head; capacity; tail } |> Multicore_magic.copy_as_padded
+  let node =
+    Node { next = Atomic.make (Link Null); value; capacity; counter = 0 }
+  in
+  let head = Atomic.make_contended node and tail = Atomic.make_contended node in
+  { head; capacity; tail }
+
+let of_list ?(capacity = Int.max_int) list : 'a t =
+  let len = List.length list in
+  if len > capacity then raise Full
+  else
+    match list |> List.rev with
+    | [] -> create ~capacity ()
+    | hd :: tl ->
+        let tail =
+          Node
+            {
+              value = hd;
+              counter = len;
+              capacity = capacity - len - 1;
+              next = Atomic.make (Link Null);
+            }
+        in
+        let _, _, next =
+          List.fold_left
+            (fun (counter, capacity, next) value ->
+              ( counter - 1,
+                capacity + 1,
+                Node
+                  { value; counter; capacity; next = Atomic.make (Link next) }
+              ))
+            (len - 1, capacity - len, tail)
+            tl
+        in
+        let head =
+          Atomic.make_contended
+          @@ Node
+               {
+                 value = Obj.magic ();
+                 capacity;
+                 counter = 0;
+                 next = Atomic.make (Link next);
+               }
+        in
+        { head; capacity; tail = Atomic.make tail }
 
 let capacity_of t = t.capacity
 
 let is_empty t =
-  let head = Atomic.get t.head in
-  fenceless_get_next head == Link Null
+  let (Node head) = Atomic.get t.head in
+  Atomic.get head.next == Link Null
 
 let rec snapshot t =
-  let head = Atomic.get t.head in
-  let tail = Atomic.fenceless_get t.tail in
-  match fenceless_get_next tail with
+  let old_head = Atomic.get t.head in
+  let (Node tail as old_tail) = Atomic.get t.tail in
+  match Atomic.get tail.next with
   | Link (Node _ as node) ->
-      Atomic.compare_and_set t.tail tail node |> ignore;
+      Atomic.compare_and_set t.tail old_tail node |> ignore;
       snapshot t
-  | Link Null -> if Atomic.get t.head != head then snapshot t else (head, tail)
+  | Link Null ->
+      if Atomic.get t.head != old_head then snapshot t else (old_head, old_tail)
 
 let length t =
   let head, tail = snapshot t in
@@ -84,28 +121,44 @@ let length t =
 
 (* *)
 
-let rec peek_opt t =
-  let head = Atomic.get t.head in
-  match fenceless_get_next head with
-  | Link Null -> None
-  | Link (Node r) ->
-      let value = r.value in
-      if Atomic.get t.head != head then peek_opt t else Some value
+type ('a, _) poly = Option : ('a, 'a option) poly | Value : ('a, 'a) poly
 
+let rec peek_as : type a r. a t -> (a, r) poly -> r =
+ fun t poly ->
+  let (Node head as old_head) = Atomic.get t.head in
+  match Atomic.get head.next with
+  | Link Null -> ( match poly with Value -> raise Empty | Option -> None)
+  | Link (Node r) -> (
+      let value = r.value in
+      if Atomic.get t.head != old_head then peek_as t poly
+      else match poly with Value -> value | Option -> Some value)
+
+let[@inline] peek_opt t = peek_as t Option
+let[@inline] peek_exn t = peek_as t Value
 (* *)
 
-let rec pop_opt t backoff =
-  let old_head = Atomic.get t.head in
-  match fenceless_get_next old_head with
-  | Link Null -> None
+type ('a, _) poly2 =
+  | Option : ('a, 'a option) poly2
+  | Value : ('a, 'a) poly2
+  | Unit : ('a, unit) poly2
+
+let rec pop_as : type a r. a t -> Backoff.t -> (a, r) poly2 -> r =
+ fun t backoff poly ->
+  let (Node head as old_head) = Atomic.get t.head in
+  match Atomic.get head.next with
+  | Link Null -> (
+      match poly with Option -> None | Value | Unit -> raise Empty)
   | Link (Node node as new_head) ->
       if Atomic.compare_and_set t.head old_head new_head then begin
         let value = node.value in
         node.value <- Obj.magic ();
-        Some value
+        match poly with Option -> Some value | Value -> value | Unit -> ()
       end
-      else pop_opt t (Backoff.once backoff)
+      else pop_as t (Backoff.once backoff) poly
 
+let[@inline] pop_opt t = pop_as t Backoff.default Option
+let[@inline] pop_exn t = pop_as t Backoff.default Value
+let[@inline] drop_exn t = pop_as t Backoff.default Unit
 (* *)
 
 let rec fix_tail tail new_tail =
@@ -142,8 +195,10 @@ let rec try_push t new_node old_tail =
 
 (* *)
 
-let[@inline] pop_opt t = pop_opt t Backoff.default
-
 let[@inline] try_push t value =
-  let new_node = Node { _next = Link Null; value; capacity = 0; counter = 0 } in
+  let new_node =
+    Node { next = Atomic.make (Link Null); value; capacity = 0; counter = 0 }
+  in
   try_push t new_node (Atomic.get t.tail)
+
+let[@inline] push_exn t value = if not (try_push t value) then raise Full

@@ -7,11 +7,11 @@ end
 module Cue : Cue_tests = struct
   include Saturn.Cue
 
-  let name = "htbl_safe"
+  let name = "cue_safe"
 end
 
-(* module Cue_unsafe : Cue_tests = struct
-     include Saturn.Cue_unsafe
+module Cue_unsafe : Cue_tests = struct
+  include Saturn.Cue_unsafe
 
-     let name = "htbl_unsafe"
-   end *)
+  let name = "cue_unsafe"
+end

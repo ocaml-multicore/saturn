@@ -33,11 +33,9 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 module Queue = Michael_scott_queue
 module Queue_unsafe = Michael_scott_queue_unsafe
 module Stack = Treiber_stack
-<<<<<<< HEAD
 module Bounded_stack = Bounded_stack
-=======
 module Cue = Cue
->>>>>>> 57f7acb (Bounded queue)
+module Cue_unsafe = Cue_unsafe
 module Work_stealing_deque = Ws_deque
 module Single_prod_single_cons_queue = Spsc_queue
 module Single_prod_single_cons_queue_unsafe = Spsc_queue_unsafe
