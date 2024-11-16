@@ -16,11 +16,11 @@
 module type CUE = sig
   (** Lock-free bounded Queue. 
 
-  This module implements a lock-free bounded queue based on Michael-Scott's queue 
-  algorithm. Adding a capacity to this algorithm adds a general overhead to the
-   operations, and thus, it is recommended to use the unbounded queue 
-   {!Saturn.Queue} if you don't need it.
-*)
+    This module implements a lock-free bounded queue based on Michael-Scott's queue 
+    algorithm. Adding a capacity to this algorithm adds a general overhead to the
+     operations, and thus, it is recommended to use the unbounded queue 
+     {!Saturn.Queue} if you don't need it.
+  *)
 
   (** {1 API} *)
 
@@ -29,31 +29,31 @@ module type CUE = sig
 
   val create : ?capacity:int -> unit -> 'a t
   (** [create ~capacity ()] creates a new empty bounded queue with a maximum 
-  capacity of [capacity]. The default [capacity] value is [Int.max_int].*)
+    capacity of [capacity]. The default [capacity] value is [Int.max_int].*)
 
   val of_list_exn : ?capacity:int -> 'a list -> 'a t
-  (** [of_list list] creates a new queue from a list.
-  
-  @raises Full is the lenght of [list] is greater tant [capacity]. 
+  (** [of_list_exn ~capacity list] creates a new queue from a list.
     
-  {[
-    # let t : int t = of_list_exn [1;2;3;4]
-    val t : int t = <abstr>
-    # pop_opt t
-    - : int option = Some 1
-    # pop_opt t 
-    - : int option = Some 2
-    # length t
-    - : int = 2
-  ]}
-  *)
+    @raises Full if the length of [list] is greater than [capacity]. 
+      
+    {[
+      # let t : int t = of_list_exn [1;2;3;4]
+      val t : int t = <abstr>
+      # pop_opt t
+      - : int option = Some 1
+      # pop_opt t 
+      - : int option = Some 2
+      # length t
+      - : int = 2
+    ]}
+    *)
 
   val length : 'a t -> int
   (** [length queue] returns the number of elements currently in the [queue]. *)
 
   val capacity_of : 'a t -> int
   (** [capacity_of queue] returns the maximum number of elements that the [queue]
-    can hold. *)
+      can hold. *)
 
   val is_empty : 'a t -> bool
   (** [is_empty queue] returns [true] if the [queue] is empty, otherwise [false]. *)
@@ -62,29 +62,29 @@ module type CUE = sig
 
   exception Empty
   (** Raised when {!pop_exn}, {!peek_exn}, or {!drop_exn} is applied to an empty
- stack. *)
+   stack. *)
 
   val peek_exn : 'a t -> 'a
   (** [peek_exn queue] returns the first element of the [queue] without removing it.
-    
-  @raises Empty if the [queue] is empty. *)
+      
+    @raises Empty if the [queue] is empty. *)
 
   val peek_opt : 'a t -> 'a option
   (** [peek_opt queue] returns [Some] of the first element of the [queue] without
-    removing it, or [None] if the [queue] is empty. *)
+      removing it, or [None] if the [queue] is empty. *)
 
   val pop_exn : 'a t -> 'a
   (** [pop_exn queue] removes and returns the first element of the [queue].
- 
-  @raises Empty if the [queue] is empty. *)
+   
+    @raises Empty if the [queue] is empty. *)
 
   val pop_opt : 'a t -> 'a option
   (** [pop_opt queue] removes and returns [Some] of the first element of the [queue],
-    or [None] if the [queue] is empty. *)
+      or [None] if the [queue] is empty. *)
 
   val drop_exn : 'a t -> unit
   (** [drop_exn queue] removes the top element of the [queue]. 
-  @raises Empty if the [queue] is empty. *)
+    @raises Empty if the [queue] is empty. *)
 
   (** {2 Producer functions} *)
 
@@ -93,11 +93,11 @@ module type CUE = sig
 
   val push_exn : 'a t -> 'a -> unit
   (** [push_exn queue element] adds [element] at the end of the [queue].
-    
-  @raises Full if the [queue] is full. *)
+      
+    @raises Full if the [queue] is full. *)
 
   val try_push : 'a t -> 'a -> bool
   (** [try_push queue element] tries to add [element] at the end of the [queue].
-    Returns [true] if the element was successfully added, or [false] if the
-    queue is full. *)
+      Returns [true] if the element was successfully added, or [false] if the
+      queue is full. *)
 end
