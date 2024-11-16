@@ -12,6 +12,11 @@ let () =
   (copy ../src/htbl/htbl_intf.mli htbl_intf.ml))
  (package saturn))
 
+(rule
+ (action
+  (copy ../src/michael_scott_queue/michael_scott_queue_intf.ml michael_scott_queue_intf.ml))
+ (package saturn))
+
 (test
  (package saturn)
  (name main)
