@@ -13,6 +13,7 @@ module STM_cue (Cue : Cues.Cue_tests) = struct
       | Drop_exn
       | Length
       | Is_empty
+      | Is_full
 
     let show_cmd c =
       match c with
@@ -22,6 +23,7 @@ module STM_cue (Cue : Cues.Cue_tests) = struct
       | Drop_exn -> "Drop_exn"
       | Length -> "Length"
       | Is_empty -> "Is_empty"
+      | Is_full -> "Is_full"
 
     type state = int * int * int list
     type sut = int Cue.t
@@ -37,6 +39,7 @@ module STM_cue (Cue : Cues.Cue_tests) = struct
              Gen.return Drop_exn;
              Gen.return Length;
              Gen.return Is_empty;
+             Gen.return Is_full;
            ])
 
     let init_state = (100, 0, [])
@@ -53,6 +56,7 @@ module STM_cue (Cue : Cues.Cue_tests) = struct
           | _ :: content' -> (capacity, size - 1, List.rev content'))
       | Peek_opt -> s
       | Is_empty -> s
+      | Is_full -> s
       | Length -> s
 
     let precond _ _ = true
@@ -69,6 +73,7 @@ module STM_cue (Cue : Cues.Cue_tests) = struct
       | Peek_opt -> Res (option int, Cue.peek_opt d)
       | Drop_exn -> Res (result unit exn, protect Cue.drop_exn d)
       | Is_empty -> Res (bool, Cue.is_empty d)
+      | Is_full -> Res (bool, Cue.is_full d)
       | Length -> Res (int, Cue.length d)
 
     let postcond c ((capacity, size, content) : state) res =
@@ -83,6 +88,7 @@ module STM_cue (Cue : Cues.Cue_tests) = struct
           | [] -> res = Error Cue.Empty
           | _ -> res = Ok ())
       | Is_empty, Res ((Bool, _), res) -> res = (content = [])
+      | Is_full, Res ((Bool, _), res) -> res = (size = capacity)
       | Length, Res ((Int, _), res) -> res = size
       | _, _ -> false
   end

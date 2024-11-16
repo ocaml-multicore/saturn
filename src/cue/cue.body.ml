@@ -70,6 +70,21 @@ let is_empty t =
   let head = Atomic.get t.head in
   fenceless_get_next head == Link Null
 
+let is_full t =
+  let tail = Atomic.get t.tail in
+  let capacity = get_capacity tail in
+  if capacity = 0 then begin
+    let old_head = Atomic.get t.head in
+    let length = get_counter tail - get_counter old_head in
+    let capacity = t.capacity - length in
+    if 0 < capacity then begin
+      set_capacity tail capacity;
+      false
+    end
+    else true
+  end
+  else false
+
 let rec snapshot t =
   let head = Atomic.get t.head in
   let tail = fenceless_get t.tail in

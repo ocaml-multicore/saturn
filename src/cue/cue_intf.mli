@@ -58,6 +58,9 @@ module type CUE = sig
   val is_empty : 'a t -> bool
   (** [is_empty queue] returns [true] if the [queue] is empty, otherwise [false]. *)
 
+  val is_full : 'a t -> bool
+  (** [is_full queue] returns [true] if the [queue] is full, otherwise [false]. *)
+
   (** {2 Consumer functions} *)
 
   exception Empty

@@ -27,9 +27,13 @@ let push_pop () =
       let popped = ref [] in
       Atomic.spawn (fun () ->
           for _ = 1 to items_total do
-            match Cue.pop_opt cue with
-            | None -> ()
-            | Some v -> popped := v :: !popped
+            begin
+              match Cue.pop_opt cue with
+              | None -> ()
+              | Some v -> popped := v :: !popped
+            end;
+            (* Ensure is_empty does not interfere with other functions *)
+            Cue.is_empty cue |> ignore
           done);
 
       (* checks*)
@@ -38,6 +42,95 @@ let push_pop () =
               let remaining = drain cue in
               let pushed = List.init items_total (fun x -> x + 1) in
               List.sort Int.compare (!popped @ remaining) = pushed)))
+
+let is_empty () =
+  Atomic.trace (fun () ->
+      let cue = Cue.create () in
+
+      (* producer *)
+      Atomic.spawn (fun () -> Cue.try_push cue 1 |> ignore);
+
+      (* consumer *)
+      let res = ref false in
+      Atomic.spawn (fun () ->
+          match Cue.pop_opt cue with
+          | None -> res := true
+          | Some _ -> res := Cue.is_empty cue);
+
+      (* checks*)
+      Atomic.final (fun () -> Atomic.check (fun () -> !res)))
+
+let push_length_is_full () =
+  Atomic.trace (fun () ->
+      let cue = Cue.create () in
+      let items_total = 4 in
+
+      Cue.try_push cue 0 |> ignore;
+
+      (* producer *)
+      Atomic.spawn (fun () ->
+          for i = 1 to items_total do
+            Cue.try_push cue i |> ignore
+          done);
+
+      (* consumer *)
+      let length_res = ref [] in
+      let is_full_res = ref false in
+      Atomic.spawn (fun () ->
+          for _ = 1 to items_total do
+            length_res := Cue.length cue :: !length_res;
+            is_full_res := Cue.is_full cue || !is_full_res
+          done);
+
+      (* checks*)
+      Atomic.final (fun () ->
+          Atomic.check (fun () -> not !is_full_res);
+
+          Atomic.check (fun () ->
+              let pushed = drain cue in
+              pushed = List.init (items_total + 1) Fun.id);
+
+          Atomic.check (fun () ->
+              !length_res |> List.rev = List.sort compare !length_res
+              && List.for_all
+                   (fun x -> x >= 1 && x <= items_total + 1)
+                   !length_res)))
+
+let push_length_is_full_with_capacity () =
+  Atomic.trace (fun () ->
+      let capacity = 3 in
+      let cue = Cue.create ~capacity () in
+      let items_total = 5 in
+
+      Cue.try_push cue 0 |> ignore;
+
+      (* producer *)
+      Atomic.spawn (fun () ->
+          for i = 1 to items_total - 1 do
+            Cue.try_push cue i |> ignore
+          done);
+
+      (* consumer *)
+      let length_res = ref [] in
+      let test = ref true in
+      Atomic.spawn (fun () ->
+          for _ = 1 to items_total do
+            let len = Cue.length cue in
+            length_res := len :: !length_res;
+            test := if len < capacity then !test else !test && Cue.is_full cue
+          done);
+
+      (* checks*)
+      Atomic.final (fun () ->
+          Atomic.check (fun () -> !test);
+
+          Atomic.check (fun () ->
+              let pushed = drain cue in
+              pushed = List.init capacity Fun.id);
+
+          Atomic.check (fun () ->
+              !length_res |> List.rev = List.sort compare !length_res
+              && List.for_all (fun x -> x >= 1 && x <= capacity) !length_res)))
 
 let push_drop () =
   Atomic.trace (fun () ->
@@ -269,6 +362,10 @@ let tests =
     ( "basic",
       [
         test_case "1-producer-1-consumer" `Slow push_pop;
+        test_case "push-length-is_full" `Slow push_length_is_full;
+        test_case "push-length-is_full-capacity" `Slow
+          push_length_is_full_with_capacity;
+        test_case "2-domains-is_empty" `Slow is_empty;
         test_case "1-producer-1-consumer-capacity" `Slow push_pop_with_capacity;
         test_case "1-push-1-drop" `Slow push_drop;
         test_case "2-producers" `Slow push_push;
