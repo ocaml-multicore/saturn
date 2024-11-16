@@ -1,0 +1,19 @@
+(rule
+ (action
+  (with-stdout-to
+   cue.ml
+   (progn
+    (echo "# 1 \"cue.head_safe.ml\"\n")
+    (cat cue.head_safe.ml)
+    (echo "# 1 \"cue.body.ml\"\n")
+    (cat cue.body.ml)))))
+
+(rule
+ (action
+  (with-stdout-to
+   cue_unsafe.ml
+   (progn
+    (echo "# 1 \"cue.head_unsafe.ml\"\n")
+    (cat cue.head_safe.ml)
+    (echo "# 1 \"cue.body.ml\"\n")
+    (cat cue.body.ml)))))

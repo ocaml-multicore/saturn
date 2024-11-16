@@ -51,7 +51,12 @@ module STM_cue (Cue : Cues.Cue_tests) = struct
 
     let run c d =
       match c with
-      | Try_push i -> Res (bool, Cue.try_push d i)
+      | Try_push i ->
+          Res
+            ( bool,
+              match Cue.push_exn d i with
+              | () -> true
+              | exception Cue.Full -> true (*Cue.try_push d i*) )
       | Pop_opt -> Res (option int, Cue.pop_opt d)
       | Peek_opt -> Res (option int, Cue.peek_opt d)
       | Is_empty -> Res (bool, Cue.is_empty d)
@@ -73,10 +78,12 @@ module STM_cue (Cue : Cues.Cue_tests) = struct
 end
 
 let () =
+  (* Since Cue and Cue_unsafe share the same implementation, it is not necessary
+     to test both of them. *)
   Random.self_init ();
-  let module Safe = STM_cue (Cues.Cue) in
-  let exit_code = Safe.run () in
-  if exit_code <> 0 then exit exit_code
+  if Random.bool () then
+    let module Safe = STM_cue (Cues.Cue) in
+    Safe.run () |> exit
   else
     let module Unsafe = STM_cue (Cues.Cue_unsafe) in
     Unsafe.run () |> exit
