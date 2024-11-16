@@ -6,13 +6,20 @@ module Cue = Saturn.Cue
 
 module STM_cue (Cue : Cues.Cue_tests) = struct
   module Spec = struct
-    type cmd = Try_push of int | Pop_opt | Peek_opt | Length | Is_empty
+    type cmd =
+      | Try_push of int
+      | Pop_opt
+      | Peek_opt
+      | Drop_exn
+      | Length
+      | Is_empty
 
     let show_cmd c =
       match c with
       | Try_push i -> "Try_push " ^ string_of_int i
       | Pop_opt -> "Pop_opt"
       | Peek_opt -> "Peek_opt"
+      | Drop_exn -> "Drop_exn"
       | Length -> "Length"
       | Is_empty -> "Is_empty"
 
@@ -27,6 +34,7 @@ module STM_cue (Cue : Cues.Cue_tests) = struct
              Gen.map (fun i -> Try_push i) int_gen;
              Gen.return Pop_opt;
              Gen.return Peek_opt;
+             Gen.return Drop_exn;
              Gen.return Length;
              Gen.return Is_empty;
            ])
@@ -39,7 +47,7 @@ module STM_cue (Cue : Cues.Cue_tests) = struct
       match c with
       | Try_push i ->
           if size = capacity then s else (capacity, size + 1, i :: content)
-      | Pop_opt -> (
+      | Pop_opt | Drop_exn -> (
           match List.rev content with
           | [] -> s
           | _ :: content' -> (capacity, size - 1, List.rev content'))
@@ -59,6 +67,7 @@ module STM_cue (Cue : Cues.Cue_tests) = struct
               | exception Cue.Full -> true (*Cue.try_push d i*) )
       | Pop_opt -> Res (option int, Cue.pop_opt d)
       | Peek_opt -> Res (option int, Cue.peek_opt d)
+      | Drop_exn -> Res (result unit exn, protect Cue.drop_exn d)
       | Is_empty -> Res (bool, Cue.is_empty d)
       | Length -> Res (int, Cue.length d)
 
@@ -69,6 +78,10 @@ module STM_cue (Cue : Cues.Cue_tests) = struct
           match List.rev content with
           | [] -> res = None
           | j :: _ -> res = Some j)
+      | Drop_exn, Res ((Result (Unit, Exn), _), res) -> (
+          match List.rev content with
+          | [] -> res = Error Cue.Empty
+          | _ -> res = Ok ())
       | Is_empty, Res ((Bool, _), res) -> res = (content = [])
       | Length, Res ((Int, _), res) -> res = size
       | _, _ -> false
