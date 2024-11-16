@@ -17,6 +17,26 @@ let () =
   (copy ../src/michael_scott_queue/michael_scott_queue_intf.ml michael_scott_queue_intf.ml))
  (package saturn))
 
+ (rule
+ (action
+  (with-stdout-to
+   bench_cue.ml
+   (progn
+    (echo "# 1 \"bench_cue.head.ml\"\n")
+    (cat bench_cue.head.ml)
+    (echo "# 1 \"bench_cue.body.ml\"\n")
+    (cat bench_cue.body.ml)))))
+
+(rule
+ (action
+  (with-stdout-to
+   bench_cue_unsafe.ml
+   (progn
+    (echo "# 1 \"bench_cue_unsafe.head.ml\"\n")
+    (cat bench_cue_unsafe.head.ml)
+    (echo "# 1 \"bench_cue.body.ml\"\n")
+    (cat bench_cue.body.ml)))))
+
 (test
  (package saturn)
  (name main)
