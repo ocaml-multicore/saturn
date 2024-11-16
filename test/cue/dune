@@ -24,7 +24,7 @@
     (and
      (= %{arch_sixtyfour} false)
      (= %{architecture} arm)))))
- (modules cue cue_unsafe cue_intf cue_unsafe_node dscheck_cue)
+ (modules cue cue_unsafe cue_intf dscheck_cue)
  (flags
   (:standard -open Multicore_magic_dscheck)))
 

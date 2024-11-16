@@ -14,6 +14,6 @@
    cue_unsafe.ml
    (progn
     (echo "# 1 \"cue.head_unsafe.ml\"\n")
-    (cat cue.head_safe.ml)
+    (cat cue.head_unsafe.ml)
     (echo "# 1 \"cue.body.ml\"\n")
     (cat cue.body.ml)))))

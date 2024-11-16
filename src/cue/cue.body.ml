@@ -167,13 +167,9 @@ let[@inline] pop_exn t = pop_as t Backoff.default Value
 let[@inline] drop_exn t = pop_as t Backoff.default Unit
 
 let[@inline] try_push t value =
-  let new_node =
-    Node { next = Atomic.make (Link Null); value; capacity = 0; counter = 0 }
-  in
+  let new_node = make_node ~value ~capacity:0 ~counter:0 Null in
   push_as t new_node (Atomic.get t.tail) Bool
 
 let[@inline] push_exn t value =
-  let new_node =
-    Node { next = Atomic.make (Link Null); value; capacity = 0; counter = 0 }
-  in
+  let new_node = make_node ~value ~capacity:0 ~counter:0 Null in
   push_as t new_node (Atomic.get t.tail) Unit
