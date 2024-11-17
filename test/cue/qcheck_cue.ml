@@ -45,7 +45,7 @@ module Qcheck_cue (Cue : Cues.Cue_tests) = struct
                 with Cue.Full -> false)
               lpush
             |> List.filteri (fun i elt -> if i < capacity then not elt else elt)
-            |> List.is_empty);
+            |> ( = ) []);
         (* TEST 2 - push, pop until empty *)
         Test.make ~name:"push_pop_opt_until_empty" (list int) (fun lpush ->
             (* Building a random Cue *)
