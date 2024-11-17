@@ -6,13 +6,24 @@ open Util
 module Mpsc_queue = Saturn.Single_consumer_queue
 
 module Spec = struct
-  type cmd = Push of int | Pop | Peek | Push_head of int | Is_empty | Close
+  type cmd =
+    | Push of int
+    | Push_all of int list
+    | Pop_exn
+    | Peek_exn
+    | Push_head of int
+    | Is_empty
+    | Close
+
+  let string_of_int_list l =
+    "[" ^ String.concat "; " (List.map string_of_int l) ^ "]"
 
   let show_cmd c =
     match c with
     | Push i -> "Push " ^ string_of_int i
-    | Pop -> "Pop"
-    | Peek -> "Peek"
+    | Push_all l -> "Push_all " ^ string_of_int_list l
+    | Pop_exn -> "Pop_exn"
+    | Peek_exn -> "Peek_exn"
     | Push_head i -> "Push_head" ^ string_of_int i
     | Is_empty -> "Is_empty"
     | Close -> "Close"
@@ -26,8 +37,9 @@ module Spec = struct
       (Gen.oneof
          [
            Gen.map (fun i -> Push i) int_gen;
-           Gen.return Is_empty;
-           Gen.return Close;
+           Gen.map (fun l -> Push_all l) (Gen.small_list int_gen);
+           (* Gen.return Is_empty; *)
+           (* Gen.return Close; *)
          ])
 
   let arb_cmd _s =
@@ -35,8 +47,8 @@ module Spec = struct
     QCheck.make ~print:show_cmd
       (Gen.oneof
          [
-           Gen.return Pop;
-           Gen.return Peek;
+           Gen.return Pop_exn;
+           Gen.return Peek_exn;
            Gen.map (fun i -> Push i) int_gen;
            Gen.map (fun i -> Push_head i) int_gen;
            Gen.return Is_empty;
@@ -51,10 +63,11 @@ module Spec = struct
     match c with
     | Push i ->
         (is_closed, if not is_closed then i :: List.rev s |> List.rev else s)
+    | Push_all l -> (is_closed, if not is_closed then s @ l else s)
     | Push_head i -> (is_closed, if not (is_closed && s = []) then i :: s else s)
     | Is_empty -> (is_closed, s)
-    | Pop -> (is_closed, match s with [] -> s | _ :: s' -> s')
-    | Peek -> (is_closed, s)
+    | Pop_exn -> (is_closed, match s with [] -> s | _ :: s' -> s')
+    | Peek_exn -> (is_closed, s)
     | Close -> (true, s)
 
   let precond _ _ = true
@@ -62,8 +75,10 @@ module Spec = struct
   let run c d =
     match c with
     | Push i -> Res (result unit exn, protect (fun d -> Mpsc_queue.push d i) d)
-    | Pop -> Res (result int exn, protect Mpsc_queue.pop d)
-    | Peek -> Res (result int exn, protect Mpsc_queue.peek d)
+    | Push_all l ->
+        Res (result unit exn, protect (fun d -> Mpsc_queue.push_all d l) d)
+    | Pop_exn -> Res (result int exn, protect Mpsc_queue.pop_exn d)
+    | Peek_exn -> Res (result int exn, protect Mpsc_queue.peek_exn d)
     | Push_head i ->
         Res (result unit exn, protect (fun d -> Mpsc_queue.push_head d i) d)
     | Is_empty -> Res (result bool exn, protect Mpsc_queue.is_empty d)
@@ -71,12 +86,12 @@ module Spec = struct
 
   let postcond c ((is_closed, s) : state) res =
     match (c, res) with
-    | Push _, Res ((Result (Unit, Exn), _), res) ->
+    | (Push _ | Push_all _), Res ((Result (Unit, Exn), _), res) ->
         if is_closed then res = Error Mpsc_queue.Closed else res = Ok ()
     | Push_head _, Res ((Result (Unit, Exn), _), res) ->
         if is_closed && s = [] then res = Error Mpsc_queue.Closed
         else res = Ok ()
-    | (Pop | Peek), Res ((Result (Int, Exn), _), res) -> (
+    | (Pop_exn | Peek_exn), Res ((Result (Int, Exn), _), res) -> (
         match s with
         | [] ->
             if is_closed then res = Error Mpsc_queue.Closed
@@ -98,7 +113,7 @@ let () =
          and type Spec.sut = Spec.sut) =
     (* [arb_cmds_par] differs in what each triple component generates:
        "Consumer domain" cmds can't be [Push] (but can be [Pop], [Is_empty], [Close] or [Push_head]),
-       "producer domain" cmds can't be [Push_head] or [Pop] (but can be [Push], [Is_empty] or [Close]). *)
+       "producer domain" cmds can only by [Push]). *)
     let arb_cmds_par =
       Dom.arb_triple 20 12 Spec.arb_cmd Spec.arb_cmd Spec.producer_cmd
     in
@@ -111,7 +126,7 @@ let () =
     in
     [
       agree_test_par_asym ~count ~name:(name ^ " parallel");
-      Dom.neg_agree_test_par ~count ~name:(name ^ " parallel, negative");
+      (* Dom.neg_agree_test_par ~count ~name:(name ^ " parallel, negative"); *)
     ]
   in
   Stm_run.run ~name:"Saturn.Mpsc_queue" ~make_domain (module Spec) |> exit

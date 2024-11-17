@@ -7,6 +7,7 @@ let benchmarks =
     ("Saturn Single_prod_single_cons_queue", Bench_spsc_queue.Safe.run_suite);
     ( "Saturn Single_prod_single_cons_queue_unsafe",
       Bench_spsc_queue.Unsafe.run_suite );
+    ("Saturn Single_consumer_queue", Bench_mpsc.run_suite);
     ("Saturn Size", Bench_size.run_suite);
     ("Saturn Skiplist", Bench_skiplist.run_suite);
     ("Saturn Htbl", Bench_htbl.Safe.run_suite);

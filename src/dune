@@ -42,5 +42,5 @@ let () =
    (<> %{os_type} Win32)
    (>= %{ocaml_version} 5.0.0)))
  (libraries saturn)
- (files treiber_stack.mli bounded_stack.mli ws_deque.mli))
+ (files treiber_stack.mli bounded_stack.mli ws_deque.mli mpsc_queue.mli))
 |}
