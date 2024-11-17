@@ -2,7 +2,7 @@ let drain_remaining queue =
   let remaining = ref 0 in
   (try
      while true do
-       Ws_deque.pop queue |> ignore;
+       Ws_deque.pop_exn queue |> ignore;
        remaining := !remaining + 1
      done
    with _ -> ());
@@ -21,7 +21,7 @@ let owner_stealer () =
             Ws_deque.push queue 0
           done;
           for _ = 1 to total_items / 2 do
-            match Ws_deque.pop queue with
+            match Ws_deque.pop_exn queue with
             | exception _ -> ()
             | _ -> popped := !popped + 1
           done);
@@ -29,7 +29,7 @@ let owner_stealer () =
       (* stealer *)
       Atomic.spawn (fun () ->
           for _ = 1 to total_items / 2 do
-            match Ws_deque.steal queue with
+            match Ws_deque.steal_exn queue with
             | exception _ -> ()
             | _ -> popped := !popped + 1
           done);
@@ -50,7 +50,7 @@ let popper_stealer () =
       (* stealers *)
       let popped = ref 0 in
       let stealer () =
-        match Ws_deque.steal queue with
+        match Ws_deque.steal_exn queue with
         | exception _ -> ()
         | _ -> popped := !popped + 1
       in

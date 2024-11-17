@@ -33,7 +33,7 @@ let tests_one_producer =
           let deque = deque_of_list (l @ l') in
 
           let pop_list =
-            extract_n_of_deque deque Ws_deque.pop (List.length l')
+            extract_n_of_deque deque Ws_deque.pop_exn (List.length l')
           in
           pop_list = List.rev l'));
     (* TEST 2 - single producer no stealer :
@@ -49,7 +49,7 @@ let tests_one_producer =
           let deque = deque_of_list l in
 
           for _i = 0 to m - 1 do
-            try ignore (Ws_deque.pop deque) with Exit -> incr count
+            try ignore (Ws_deque.pop_exn deque) with Exit -> incr count
           done;
 
           !count = m - n));
@@ -77,7 +77,7 @@ let tests_one_producer_one_stealer =
           let stealer =
             Domain.spawn (fun () ->
                 let steal' deque =
-                  match Ws_deque.steal deque with
+                  match Ws_deque.steal_exn deque with
                   | value -> Some value
                   | exception Exit ->
                       Domain.cpu_relax ();
@@ -124,7 +124,7 @@ let tests_one_producer_one_stealer =
             Domain.spawn (fun () ->
                 Barrier.await barrier;
                 let steal' deque =
-                  match Ws_deque.steal deque with
+                  match Ws_deque.steal_exn deque with
                   | value -> Some value
                   | exception Exit ->
                       Domain.cpu_relax ();
@@ -175,7 +175,7 @@ let tests_one_producer_one_stealer =
           let barrier = Barrier.create 2 in
           Random.self_init ();
           let pop' deque =
-            match Ws_deque.pop deque with
+            match Ws_deque.pop_exn deque with
             | value -> Some value
             | exception Exit ->
                 Domain.cpu_relax ();
@@ -189,7 +189,7 @@ let tests_one_producer_one_stealer =
             Domain.spawn (fun () ->
                 Barrier.await barrier;
                 let steal' deque =
-                  match Ws_deque.steal deque with
+                  match Ws_deque.steal_exn deque with
                   | value -> Some value
                   | exception Exit ->
                       Domain.cpu_relax ();
@@ -242,7 +242,7 @@ let tests_one_producer_two_stealers =
 
             for i = 0 to nsteal - 1 do
               res.(i) <-
-                (match Ws_deque.steal deque with
+                (match Ws_deque.steal_exn deque with
                 | value -> Some value
                 | exception Exit ->
                     Domain.cpu_relax ();

@@ -47,8 +47,8 @@ module Spec = struct
   let run c d =
     match c with
     | Push i -> Res (unit, Ws_deque.push d i)
-    | Pop -> Res (result int exn, protect Ws_deque.pop d)
-    | Steal -> Res (result int exn, protect Ws_deque.steal d)
+    | Pop -> Res (result int exn, protect Ws_deque.pop_exn d)
+    | Steal -> Res (result int exn, protect Ws_deque.steal_exn d)
 
   let postcond c (s : state) res =
     match (c, res) with

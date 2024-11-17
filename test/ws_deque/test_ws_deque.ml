@@ -3,7 +3,7 @@ open Saturn.Work_stealing_deque
 
 let test_empty () =
   let q = create () in
-  match pop q with
+  match pop_exn q with
   | exception Exit -> print_string "test_exit: ok\n"
   | _ -> assert false
 
@@ -12,9 +12,9 @@ let test_push_and_pop () =
   push q 1;
   push q 10;
   push q 100;
-  assert (pop q = 100);
-  assert (pop q = 10);
-  assert (pop q = 1);
+  assert (pop_exn q = 100);
+  assert (pop_exn q = 10);
+  assert (pop_exn q = 1);
   print_string "test_push_and_pop: ok\n"
 
 let test_push_and_steal () =
@@ -25,7 +25,7 @@ let test_push_and_steal () =
   let domains =
     Array.init 3 (fun _ ->
         Domain.spawn (fun _ ->
-            let v = steal q in
+            let v = steal_exn q in
             assert (v = 1 || v = 10 || v = 100)))
   in
   Array.iter Domain.join domains;
@@ -64,7 +64,7 @@ let test_concurrent_workload () =
           pushed := x :: !pushed;
           decr n
         and pop () =
-          match pop q with
+          match pop_exn q with
           | exception Exit ->
               Domain.cpu_relax ();
               false
@@ -89,7 +89,7 @@ let test_concurrent_workload () =
     Array.init thieves (fun i ->
         Domain.spawn (fun () ->
             let steal () =
-              match steal q with
+              match steal_exn q with
               | exception Exit -> Domain.cpu_relax ()
               | x -> stolen.(i) <- x :: stolen.(i)
             in

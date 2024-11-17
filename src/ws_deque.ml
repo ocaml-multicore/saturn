@@ -124,7 +124,7 @@ let pop_as : type a r. a t -> (a, r) poly -> r =
     match poly with Option -> None | Value -> raise_notrace Exit
   end
 
-let pop q = pop_as q Value
+let pop_exn q = pop_as q Value
 let pop_opt q = pop_as q Option
 
 let rec steal_as : type a r. a t -> Backoff.t -> (a, r) poly -> r =
@@ -146,5 +146,5 @@ let rec steal_as : type a r. a t -> Backoff.t -> (a, r) poly -> r =
     else steal_as q (Backoff.once backoff) poly
   else match poly with Option -> None | Value -> raise_notrace Exit
 
-let steal q = steal_as q Backoff.default Value
+let steal_exn q = steal_as q Backoff.default Value
 let steal_opt q = steal_as q Backoff.default Option
