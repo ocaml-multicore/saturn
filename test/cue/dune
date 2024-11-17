@@ -35,3 +35,17 @@
  (libraries cues saturn qcheck-core qcheck-stm.stm stm_run)
  (enabled_if
   (= %{arch_sixtyfour} true)))
+
+(test
+ (package saturn)
+ (name qcheck_cue)
+ (libraries
+  cues
+  saturn
+  barrier
+  qcheck
+  qcheck-core
+  qcheck-alcotest
+  domain_shims
+  alcotest)
+ (modules qcheck_cue))
