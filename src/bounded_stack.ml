@@ -81,20 +81,14 @@ type _ mono = Unit : unit mono | Bool : bool mono
 
 let rec push_as : type r. 'a t -> Backoff.t -> 'a -> r mono -> r =
  fun t backoff value mono ->
-  match Atomic.get t.head with
-  | (_, []) as old_head ->
-      if Atomic.compare_and_set t.head old_head @@ (1, [ value ]) then
-        match mono with Bool -> true | Unit -> ()
-      else push_as t (Backoff.once backoff) value mono
-  | (len, values) as old_head ->
-      if len >= t.capacity then
-        match mono with Bool -> false | Unit -> raise Full
-      else
-        let new_head = (len + 1, value :: values) in
+  let ((len, values) as before) = Atomic.get t.head in
+  if len >= t.capacity then match mono with Bool -> false | Unit -> raise Full
+  else
+    let after = (len + 1, value :: values) in
 
-        if Atomic.compare_and_set t.head old_head new_head then
-          match mono with Bool -> true | Unit -> ()
-        else push_as t (Backoff.once backoff) value mono
+    if Atomic.compare_and_set t.head before after then
+      match mono with Bool -> true | Unit -> ()
+    else push_as t (Backoff.once backoff) value mono
 
 let push_exn t value = push_as t Backoff.default value Unit
 let try_push t value = push_as t Backoff.default value Bool
@@ -106,19 +100,14 @@ let rec push_all_as : type r. 'a t -> Backoff.t -> 'a list -> r mono -> r =
   else if len > t.capacity then
     match mono with Unit -> raise Full | Bool -> false
   else
-    match Atomic.get t.head with
-    | (_, []) as old_head ->
-        if Atomic.compare_and_set t.head old_head (List.length values, values)
-        then match mono with Bool -> true | Unit -> ()
-        else push_all_as t (Backoff.once backoff) values mono
-    | (curr_len, prev_values) as old_head ->
-        if curr_len + len > t.capacity then
-          match mono with Bool -> false | Unit -> raise Full
-        else if
-          Atomic.compare_and_set t.head old_head
-            (curr_len + len, values @ prev_values)
-        then match mono with Bool -> true | Unit -> ()
-        else push_all_as t (Backoff.once backoff) values mono
+    let ((curr_len, prev_values) as before) = Atomic.get t.head in
+    if curr_len + len > t.capacity then
+      match mono with Bool -> false | Unit -> raise Full
+    else
+      let after = (curr_len + len, values @ prev_values) in
+      if Atomic.compare_and_set t.head before after then
+        match mono with Bool -> true | Unit -> ()
+      else push_all_as t (Backoff.once backoff) values mono
 
 let try_push_all t values = push_all_as t Backoff.default (List.rev values) Bool
 let push_all_exn t values = push_all_as t Backoff.default (List.rev values) Unit
