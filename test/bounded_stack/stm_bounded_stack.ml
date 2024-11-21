@@ -18,6 +18,7 @@ module Spec = struct
     (* peek_exn uses the same function as peek_exn *)
     | To_seq
     | Is_empty
+    | Is_full
     | Length
 
   let string_of_int_list l =
@@ -33,6 +34,7 @@ module Spec = struct
     | Peek_opt -> "Peek_opt"
     | To_seq -> "To_seq"
     | Is_empty -> "Is_empty"
+    | Is_full -> "Is_full"
     | Length -> "Length"
 
   type state = int list
@@ -50,6 +52,7 @@ module Spec = struct
            Gen.return Peek_opt;
            Gen.return To_seq;
            Gen.return Is_empty;
+           Gen.return Is_full;
            Gen.return Length;
          ])
 
@@ -70,6 +73,7 @@ module Spec = struct
     | Peek_opt -> s
     | To_seq -> s
     | Is_empty -> s
+    | Is_full -> s
     | Length -> s
 
   let precond _ _ = true
@@ -83,6 +87,7 @@ module Spec = struct
     | Peek_opt -> Res (option int, Stack.peek_opt d)
     | To_seq -> Res (seq int, Stack.to_seq d)
     | Is_empty -> Res (bool, Stack.is_empty d)
+    | Is_full -> Res (bool, Stack.is_full d)
     | Length -> Res (int, Stack.length d)
 
   let postcond c (s : state) res =
@@ -95,6 +100,7 @@ module Spec = struct
     | Pop_all, Res ((List Int, _), res) -> res = s
     | To_seq, Res ((Seq Int, _), res) -> List.of_seq res = s
     | Is_empty, Res ((Bool, _), res) -> res = (s = [])
+    | Is_full, Res ((Bool, _), res) -> res = (List.length s = capacity)
     | Length, Res ((Int, _), res) -> res = List.length s
     | _, _ -> false
 end
