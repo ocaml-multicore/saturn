@@ -66,13 +66,10 @@ let push t value = push t value Backoff.default
 (**)
 
 let rec push_all_ t backoff values =
-  match Atomic.get t with
-  | [] ->
-      if Atomic.compare_and_set t [] values then ()
-      else push_all_ t (Backoff.once backoff) values
-  | _ as old_head ->
-      if Atomic.compare_and_set t old_head (values @ old_head) then ()
-      else push_all_ t (Backoff.once backoff) values
+  let before = Atomic.get t in
+  if Atomic.compare_and_set t before (List.rev_append (List.rev values) before)
+  then ()
+  else push_all_ t (Backoff.once backoff) values
 
 let push_all t values =
   match values with

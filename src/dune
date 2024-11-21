@@ -28,4 +28,13 @@ let () =
   (< %{ocaml_version} 5.2.0))
  (action
   (copy atomic.without_contended.ml atomic.ml))) 
+
+(mdx
+ (package saturn)
+ (enabled_if
+  (and
+   (<> %{os_type} Win32)
+   (>= %{ocaml_version} 5.0.0)))
+ (libraries saturn)
+ (files treiber_stack.mli))
 |}

@@ -52,7 +52,7 @@ val pop_all : 'a t -> 'a list
 order. 
 
   {[
-  # open Saturn_lockfree.Stack
+  # open Saturn.Stack
   # let t : int t = create ()
   val t : int t = <abstr>
   # push t 1
@@ -105,7 +105,7 @@ val add_seq : 'a t -> 'a Seq.t -> unit
 (** {1 Examples}
   An example top-level session:
   {[
-    # open Saturn_lockfree.Stack
+    # open Saturn.Stack
     # let t : int t = create ()
     val t : int t = <abstr>
     # push t 42
@@ -119,11 +119,11 @@ val add_seq : 'a t -> 'a Seq.t -> unit
     # pop_all t
     - : int list = [2; 1; 42]
     # pop_exn t
-    Exception: Saturn_lockfree__Treiber_stack.Empty.]}
+    Exception: Saturn__Treiber_stack.Empty.]}
 
   A multicore example: 
   {@ocaml non-deterministic[
-    # open Saturn_lockfree.Stack
+    # open Saturn.Stack
     # let t : int t = create ()
     val t : int t = <abstr>
     # let barrier =  Atomic.make 2
