@@ -104,7 +104,9 @@ let rec push_all_as : type r. 'a t -> Backoff.t -> 'a list -> r mono -> r =
     if curr_len + len > t.capacity then
       match mono with Bool -> false | Unit -> raise Full
     else
-      let after = (curr_len + len, values @ prev_values) in
+      let after =
+        (curr_len + len, List.rev_append (List.rev values) prev_values)
+      in
       if Atomic.compare_and_set t.head before after then
         match mono with Bool -> true | Unit -> ()
       else push_all_as t (Backoff.once backoff) values mono
