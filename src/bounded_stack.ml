@@ -99,20 +99,6 @@ let rec push_as : type r. 'a t -> Backoff.t -> 'a -> r mono -> r =
 let push_exn t value = push_as t Backoff.default value Unit
 let try_push t value = push_as t Backoff.default value Bool
 
-type ('a, _) poly3 = Value : ('a, 'a) poly3 | Bool : ('a, bool) poly3
-
-let rec set_as : type v r. v t -> v -> Backoff.t -> (v, r) poly3 -> r =
- fun t value backoff poly ->
-  match Atomic.get t.head with
-  | _, [] -> ( match poly with Value -> raise Empty | Bool -> false)
-  | (len, hd :: tl) as old_head ->
-      if Atomic.compare_and_set t.head old_head @@ (len, value :: tl) then
-        match poly with Value -> hd | Bool -> true
-      else set_as t value (Backoff.once backoff) poly
-
-let set_exn t value = set_as t value Backoff.default Value
-let try_set t value = set_as t value Backoff.default Bool
-
 let rec push_all_as : type r. 'a t -> Backoff.t -> 'a list -> r mono -> r =
  fun t backoff values mono ->
   let len = List.length values in
@@ -138,28 +124,3 @@ let try_push_all t values = push_all_as t Backoff.default (List.rev values) Bool
 let push_all_exn t values = push_all_as t Backoff.default (List.rev values) Unit
 let add_seq_exn t seq = push_all_as t Backoff.default (List.of_seq seq) Unit
 let try_add_seq t seq = push_all_as t Backoff.default (List.of_seq seq) Bool
-
-(* *)
-
-type op = Set | Pop
-
-let try_compare_and_ t old_value new_value op =
-  let rec aux backoff =
-    match Atomic.get t.head with
-    | _, [] -> false
-    | (len, hd :: tl) as old_head ->
-        if hd == old_value then
-          if
-            Atomic.compare_and_set t.head old_head
-            @@
-            match op with Set -> (len, new_value :: tl) | Pop -> (len - 1, tl)
-          then true
-          else aux (Backoff.once backoff)
-        else false
-  in
-  aux Backoff.default
-
-let try_compare_and_pop t value = try_compare_and_ t value value Pop
-
-let try_compare_and_set t old_value new_value =
-  try_compare_and_ t old_value new_value Set

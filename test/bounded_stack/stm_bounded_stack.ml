@@ -16,10 +16,6 @@ module Spec = struct
     | Pop_all
     | Peek_opt
     (* peek_exn uses the same function as peek_exn *)
-    | Try_compare_and_pop of int
-    | Try_compare_and_set of int * int
-    | Set_exn of int
-    (* try_set uses the same function as set_exn *)
     | To_seq
     | Is_empty
     | Length
@@ -35,11 +31,7 @@ module Spec = struct
     | Pop_opt -> "Pop_opt"
     | Pop_all -> "Pop_all"
     | Peek_opt -> "Peek_opt"
-    | Try_compare_and_pop i -> "Try_compare_and_pop " ^ string_of_int i
-    | Try_compare_and_set (i, j) ->
-        "Try_compare_and_set (" ^ string_of_int i ^ ", " ^ string_of_int j ^ ")"
     | To_seq -> "To_seq"
-    | Set_exn i -> "Try_set " ^ string_of_int i
     | Is_empty -> "Is_empty"
     | Length -> "Length"
 
@@ -56,9 +48,6 @@ module Spec = struct
            Gen.return Pop_opt;
            Gen.return Pop_all;
            Gen.return Peek_opt;
-           Gen.map (fun i -> Try_compare_and_pop i) int_gen;
-           Gen.map2 (fun i j -> Try_compare_and_set (i, j)) int_gen int_gen;
-           Gen.map (fun i -> Set_exn i) int_gen;
            Gen.return To_seq;
            Gen.return Is_empty;
            Gen.return Length;
@@ -79,11 +68,6 @@ module Spec = struct
     | Pop_opt -> ( match s with [] -> s | _ :: s' -> s')
     | Pop_all -> []
     | Peek_opt -> s
-    | Try_compare_and_pop i -> (
-        match s with [] -> [] | hd :: tl -> if hd = i then tl else s)
-    | Try_compare_and_set (i, j) -> (
-        match s with [] -> [] | hd :: tl -> if hd = i then j :: tl else s)
-    | Set_exn i -> ( match s with [] -> s | _ :: tl -> i :: tl)
     | To_seq -> s
     | Is_empty -> s
     | Length -> s
@@ -97,9 +81,6 @@ module Spec = struct
     | Pop_opt -> Res (option int, Stack.pop_opt d)
     | Pop_all -> Res (list int, Stack.pop_all d)
     | Peek_opt -> Res (option int, Stack.peek_opt d)
-    | Try_compare_and_pop i -> Res (bool, Stack.try_compare_and_pop d i)
-    | Try_compare_and_set (i, j) -> Res (bool, Stack.try_compare_and_set d i j)
-    | Set_exn i -> Res (result int exn, protect (fun d -> Stack.set_exn d i) d)
     | To_seq -> Res (seq int, Stack.to_seq d)
     | Is_empty -> Res (bool, Stack.is_empty d)
     | Length -> Res (int, Stack.length d)
@@ -111,12 +92,6 @@ module Spec = struct
         List.length s + List.length l <= capacity = res
     | (Pop_opt | Peek_opt), Res ((Option Int, _), res) -> (
         match s with [] -> res = None | j :: _ -> res = Some j)
-    | Try_compare_and_pop i, Res ((Bool, _), res) -> (
-        match s with [] -> res = false | hd :: _ -> res = (hd = i))
-    | Try_compare_and_set (i, _), Res ((Bool, _), res) -> (
-        match s with [] -> res = false | hd :: _ -> res = (hd = i))
-    | Set_exn _, Res ((Result (Int, Exn), _), res) -> (
-        match s with [] -> res = Error Stack.Empty | x :: _ -> res = Ok x)
     | Pop_all, Res ((List Int, _), res) -> res = s
     | To_seq, Res ((Seq Int, _), res) -> List.of_seq res = s
     | Is_empty, Res ((Bool, _), res) -> res = (s = [])
