@@ -18,7 +18,10 @@ capacity of [capacity]. The default [capacity] value is [Int.max_int].
 *)
 
 val of_list : ?capacity:int -> 'a list -> 'a t
-(** [of_list list] creates a new Treiber stack from a list. *)
+(** [of_list list] creates a new Treiber stack from a list.
+
+  @raises Full if the [list] is longer than the capacity of the stack.
+*)
 
 val length : 'a t -> int
 (** [length stack] returns the number of elements currently in the [stack]. *)
@@ -125,7 +128,10 @@ bottom.
   🐌 This is a linear time operation. *)
 
 val of_seq : ?capacity:int -> 'a Seq.t -> 'a t
-(** [of_seq seq] creates a stack from a [seq]. It must be finite. *)
+(** [of_seq seq] creates a stack from a [seq]. It must be finite. 
+
+  @raises Full if the [list] is longer than the capacity of the stack.
+*)
 
 val add_seq_exn : 'a t -> 'a Seq.t -> unit
 (** [add_seq_exn stack seq] adds all elements of [seq] to the top of the 
