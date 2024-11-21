@@ -9,7 +9,6 @@
 (documentation "https://ocaml-multicore.github.io/saturn/")
 (using mdx 0.4)
 
-
 (package
  (name saturn)
  (synopsis "Collection of concurent-safe data structures for Multicore OCaml")

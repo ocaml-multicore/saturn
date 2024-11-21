@@ -25,6 +25,12 @@ let () =
 
 (rule
  (enabled_if
+  (< %{ocaml_version} 4.14.0))
+ (action
+  (copy seq.ocaml4.13.ml seq.ml)))
+
+(rule
+ (enabled_if
   (< %{ocaml_version} 5.2.0))
  (action
   (copy atomic.without_contended.ml atomic.ml))) 
@@ -36,5 +42,5 @@ let () =
    (<> %{os_type} Win32)
    (>= %{ocaml_version} 5.0.0)))
  (libraries saturn)
- (files treiber_stack.mli))
+ (files treiber_stack.mli bounded_stack.mli))
 |}
