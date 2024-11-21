@@ -57,7 +57,7 @@ module Spec = struct
          ])
 
   let init_state = []
-  let capacity = 8
+  let capacity = 16
   let init_sut () = Stack.create ~capacity ()
   let cleanup _ = ()
 

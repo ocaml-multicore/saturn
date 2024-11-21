@@ -3,7 +3,7 @@ type 'a t = { head : (int * 'a list) Atomic.t; capacity : int }
 (* *)
 let create ?(capacity = Int.max_int) () =
   let head = Atomic.make_contended (0, []) in
-  { head; capacity = max capacity 1 } |> Multicore_magic.copy_as_padded
+  { head; capacity = max capacity 1 }
 
 let length t = fst (Atomic.get t.head)
 let is_full t = t.capacity = length t
