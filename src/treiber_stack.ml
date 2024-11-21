@@ -65,22 +65,6 @@ let push t value = push t value Backoff.default
 
 (**)
 
-type ('a, _) poly3 = Value : ('a, 'a) poly3 | Bool : ('a, bool) poly3
-
-let rec set_as : type v r. v t -> v -> Backoff.t -> (v, r) poly3 -> r =
- fun t value backoff poly ->
-  match Atomic.get t with
-  | [] -> ( match poly with Value -> raise Empty | Bool -> false)
-  | hd :: tail as old_head ->
-      if Atomic.compare_and_set t old_head @@ (value :: tail) then
-        match poly with Value -> hd | Bool -> true
-      else set_as t value (Backoff.once backoff) poly
-
-let set_exn t value = set_as t value Backoff.default Value
-let try_set t value = set_as t value Backoff.default Bool
-
-(**)
-
 let rec push_all_ t backoff values =
   match Atomic.get t with
   | [] ->
@@ -96,27 +80,3 @@ let push_all t values =
   | _ -> push_all_ t Backoff.default (List.rev values)
 
 let add_seq t seq = push_all_ t Backoff.default (List.of_seq seq |> List.rev)
-
-(* *)
-
-type op = Set | Pop
-
-let try_compare_and_ t old_value new_value op =
-  let rec aux backoff =
-    match Atomic.get t with
-    | [] -> false
-    | hd :: tl as old_head ->
-        if hd == old_value then
-          if
-            Atomic.compare_and_set t old_head
-            @@ match op with Set -> new_value :: tl | Pop -> tl
-          then true
-          else aux (Backoff.once backoff)
-        else false
-  in
-  aux Backoff.default
-
-let try_compare_and_pop t value = try_compare_and_ t value value Pop
-
-let try_compare_and_set t old_value new_value =
-  try_compare_and_ t old_value new_value Set

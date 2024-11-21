@@ -54,65 +54,6 @@ let push_drop () =
               let remaining = drain stack in
               !dropped + remaining = items_total)))
 
-let push_set () =
-  Atomic.trace (fun () ->
-      let stack = Stack.create () in
-      let items_total = 4 in
-
-      Atomic.spawn (fun () ->
-          for i = 1 to items_total do
-            Stack.push stack i
-          done);
-
-      let set_v = ref [] in
-      Atomic.spawn (fun () ->
-          for _ = 1 to items_total do
-            match Stack.set_exn stack 42 with
-            | v -> set_v := v :: !set_v
-            | exception Stack.Empty -> ()
-          done);
-
-      (* checks*)
-      Atomic.final (fun () ->
-          Atomic.check (fun () ->
-              let remaining = Stack.pop_all stack in
-              let all_value = List.sort Int.compare (!set_v @ remaining) in
-              let all_non_42 = List.filter (( <> ) 42) all_value in
-              all_non_42 = List.init items_total (fun x -> x + 1)
-              && List.length remaining = items_total)))
-
-let pop_set () =
-  Atomic.trace (fun () ->
-      let stack = Stack.create () in
-      let n_items = 4 in
-      List.iter (fun i -> Stack.push stack i) (List.init n_items Fun.id);
-
-      let popped = ref [] in
-      Atomic.spawn (fun () ->
-          for _ = 1 to n_items do
-            match Stack.pop_opt stack with
-            | None -> ()
-            | Some v -> popped := v :: !popped
-          done);
-
-      let set_v = ref [] in
-      Atomic.spawn (fun () ->
-          for _ = 1 to n_items do
-            match Stack.set_exn stack 42 with
-            | v -> set_v := v :: !set_v
-            | exception Stack.Empty -> ()
-          done);
-
-      (* checks*)
-      Atomic.final (fun () ->
-          Atomic.check (fun () ->
-              let remaining = Stack.pop_all stack in
-
-              List.length (List.filter (fun x -> x = 42) (!popped @ remaining))
-              = List.length (List.filter (fun x -> x <> 42) !set_v)
-              && List.filter (fun x -> x <> 42) (!popped @ remaining @ !set_v)
-                 |> List.sort Int.compare = List.init n_items Fun.id)))
-
 let push_push () =
   Atomic.trace (fun () ->
       let stack = Stack.create () in
@@ -172,93 +113,6 @@ let pop_pop () =
           (* they are in lifo order *)
           Atomic.check (fun () -> List.sort Int.compare l1 = l1);
           Atomic.check (fun () -> List.sort Int.compare l2 = l2)))
-
-let push_cap () =
-  Atomic.trace (fun () ->
-      let stack = Stack.create () in
-      let items_total = 4 in
-
-      (* producer *)
-      Atomic.spawn (fun () ->
-          for i = 1 to items_total do
-            Stack.push stack i
-          done);
-
-      (* consumer *)
-      let popped = ref false in
-      Atomic.spawn (fun () ->
-          for _ = 1 to items_total do
-            if Stack.try_compare_and_pop stack 1 then popped := true else ()
-          done);
-
-      (* checks*)
-      Atomic.final (fun () ->
-          Atomic.check (fun () ->
-              let remaining = Stack.pop_all stack in
-              let all_pushed = List.init items_total (fun x -> x + 1) in
-              if !popped then
-                List.rev remaining = List.filter (( <> ) 1) all_pushed
-              else List.rev remaining = all_pushed)))
-
-let pop_cap () =
-  Atomic.trace (fun () ->
-      let stack = Stack.create () in
-      let items_total = 4 in
-      let pushed = List.init items_total (fun x -> x + 1) in
-
-      List.iter (fun i -> Stack.push stack i) pushed;
-
-      (* producer *)
-      let popped = ref [] in
-      Atomic.spawn (fun () ->
-          for _ = 1 to items_total do
-            match Stack.pop_opt stack with
-            | None -> ()
-            | Some v -> popped := v :: !popped
-          done);
-
-      (* consumer *)
-      let capp = ref false in
-      Atomic.spawn (fun () ->
-          for _ = 1 to items_total do
-            if Stack.try_compare_and_pop stack 2 then capp := true else ()
-          done);
-
-      (* checks*)
-      Atomic.final (fun () ->
-          Atomic.check (fun () ->
-              let remaining = Stack.pop_all stack in
-              let all = !popped @ remaining |> List.sort Int.compare in
-              if !capp then List.filter (fun x -> x <> 2) pushed = all
-              else all = pushed)))
-
-let push_cas () =
-  Atomic.trace (fun () ->
-      let stack = Stack.create () in
-      let items_total = 4 in
-
-      (* producer *)
-      Atomic.spawn (fun () ->
-          for i = 1 to items_total do
-            Stack.push stack i
-          done);
-
-      (* consumer *)
-      let is_set = ref false in
-      Atomic.spawn (fun () ->
-          for _ = 1 to items_total do
-            if Stack.try_compare_and_set stack 1 42 then is_set := true else ()
-          done);
-
-      (* checks*)
-      Atomic.final (fun () ->
-          Atomic.check (fun () ->
-              let remaining = Stack.pop_all stack in
-              let all_pushed = List.init items_total (fun x -> x + 1) in
-              if !is_set then
-                List.rev remaining
-                = List.map (fun x -> if x = 1 then 42 else x) all_pushed
-              else List.rev remaining = all_pushed)))
 
 let pop_push_all () =
   Atomic.trace (fun () ->
@@ -394,16 +248,11 @@ let () =
         [
           test_case "1-producer-1-consumer" `Slow push_pop;
           test_case "1-push-1-drop" `Slow push_drop;
-          test_case "1-push-1-set" `Slow push_set;
-          test_case "1-pop-1-set" `Slow pop_set;
           test_case "2-producers" `Slow push_push;
           test_case "2-consumers" `Slow pop_pop;
           test_case "2-domains" `Slow two_domains;
           test_case "2-domains-more-pops" `Slow two_domains_more_pop;
           test_case "2-domains-pops_all" `Slow pop_all;
-          test_case "1-push-1-compare-and-pop" `Slow push_cap;
-          test_case "1-pop-1-compare-and-pop" `Slow pop_cap;
-          test_case "1-push-1-compare-and-set" `Slow push_cas;
           test_case "1-pop-1-push-all" `Slow pop_push_all;
         ] );
     ]

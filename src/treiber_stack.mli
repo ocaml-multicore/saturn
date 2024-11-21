@@ -47,13 +47,6 @@ val drop_exn : 'a t -> unit
 
   @raises Empty if the [stack] is empty. *)
 
-val try_compare_and_pop : 'a t -> 'a -> bool
-(** [try_compare_and_pop stack before] tries to remove the top element of the 
-  [stack] if it is equal to [before]. Returns [true] on success and [false] in 
-  case the stack is empty or if the top element is not equal to [before].
-
-  ℹ️ The values are compared using physical equality, i.e. the [==] operator. *)
-
 val pop_all : 'a t -> 'a list
 (** [pop_all stack] removes and returns all elements of the [stack] in LIFO 
 order. 
@@ -94,28 +87,6 @@ val push_all : 'a t -> 'a list -> unit
   - : int list = [2; 1]
   ]}
   *)
-
-(** {3 Updating bindings} *)
-
-val try_set : 'a t -> 'a -> bool
-(** [try_set stack value] tries to update the top element of the [stack] to
-  [value]. Returns [true] on success and [false] if the [stack] is empty.
-  *)
-
-val try_compare_and_set : 'a t -> 'a -> 'a -> bool
-(** [try_compare_and_set stack before after] tries to update the top element of 
-the [stack] from the [before] value to the [after] value. Returns [true] on 
-success and [false] if the [stack] is empty or the top element is not equal 
-to [before].
-
-  ℹ️ The values are compared using physical equality, i.e. the [==]
-  operator. *)
-
-val set_exn : 'a t -> 'a -> 'a
-(** [set_exn stack after] tries to update the top element of [stack] from some 
-[before] value to the [after] value. Returns the [before] value on success.
-
-  @raise Empty if the [stack] is empty. *)
 
 (** {2 With Sequences }*)
 val to_seq : 'a t -> 'a Seq.t
