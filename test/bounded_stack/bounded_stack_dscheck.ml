@@ -139,12 +139,10 @@ let push_push_with_capacity () =
 
 let pop_pop () =
   Atomic.trace (fun () ->
-      let stack = Stack.create () in
       let items_total = 4 in
 
-      for i = 1 to items_total do
-        Stack.try_push stack i |> ignore
-      done;
+      let pushed = List.init items_total (fun x -> x + 1) in
+      let stack = Stack.of_list_exn pushed in
 
       (* two consumers *)
       let lists = [ ref []; ref [] ] in

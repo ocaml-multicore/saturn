@@ -17,10 +17,22 @@ val create : ?capacity:int -> unit -> 'a t
 capacity of [capacity]. The default [capacity] value is [Int.max_int].
 *)
 
-val of_list : ?capacity:int -> 'a list -> 'a t
-(** [of_list list] creates a new Treiber stack from a list.
+val of_list_exn : ?capacity:int -> 'a list -> 'a t
+(** [of_list_exn list] creates a new Treiber stack from a list.
 
   @raises Full if the [list] is longer than the capacity of the stack.
+
+ {[
+      # open Saturn.Bounded_stack
+      # let t : int t = of_list_exn [1;2;3;4]
+      val t : int t = <abstr>
+      # pop_opt t
+      - : int option = Some 4
+      # pop_opt t 
+      - : int option = Some 3
+      # length t
+      - : int = 2
+ ]}
 *)
 
 val length : 'a t -> int
