@@ -4,7 +4,7 @@ open Saturn.Work_stealing_deque
 let test_empty () =
   let q = create () in
   match pop_exn q with
-  | exception Exit -> print_string "test_exit: ok\n"
+  | exception Empty -> print_string "test_exit: ok\n"
   | _ -> assert false
 
 let test_push_and_pop () =
@@ -65,7 +65,7 @@ let test_concurrent_workload () =
           decr n
         and pop () =
           match pop_exn q with
-          | exception Exit ->
+          | exception Empty ->
               Domain.cpu_relax ();
               false
           | x ->
@@ -90,7 +90,7 @@ let test_concurrent_workload () =
         Domain.spawn (fun () ->
             let steal () =
               match steal_exn q with
-              | exception Exit -> Domain.cpu_relax ()
+              | exception Empty -> Domain.cpu_relax ()
               | x -> stolen.(i) <- x :: stolen.(i)
             in
 

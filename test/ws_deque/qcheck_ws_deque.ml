@@ -37,9 +37,9 @@ let tests_one_producer =
           in
           pop_list = List.rev l'));
     (* TEST 2 - single producer no stealer :
-       forall q of size n, forall m > n,  poping m times raises Exit (m-n) times. *)
+       forall q of size n, forall m > n,  poping m times raises Empty (m-n) times. *)
     QCheck.(
-      Test.make ~name:"pop_on_empty_deque_raises_exit" ~count:1
+      Test.make ~name:"pop_on_empty_deque_raises_empty" ~count:1
         (pair (list int) small_nat)
         (fun (l, m) ->
           assume (m > 0);
@@ -49,7 +49,8 @@ let tests_one_producer =
           let deque = deque_of_list l in
 
           for _i = 0 to m - 1 do
-            try ignore (Ws_deque.pop_exn deque) with Exit -> incr count
+            try ignore (Ws_deque.pop_exn deque)
+            with Ws_deque.Empty -> incr count
           done;
 
           !count = m - n));
@@ -63,7 +64,7 @@ let tests_one_producer_one_stealer =
 
        This checks :
        - order is preserved (first push = first steal)
-       - Exit is raised only when the deque is empty *)
+       - Empty is raised only when the deque is empty *)
     QCheck.(
       Test.make ~name:"steals_are_in_order"
         (pair (list int) small_nat)
@@ -72,14 +73,14 @@ let tests_one_producer_one_stealer =
           let deque = deque_of_list l in
 
           (* Then the stealer domain steals [n] times. The output list
-             is composed of all stolen value. If an [Exit] is raised,
+             is composed of all stolen value. If an [Empty] is raised,
              it is register as a [None] value in the returned list.*)
           let stealer =
             Domain.spawn (fun () ->
                 let steal' deque =
                   match Ws_deque.steal_exn deque with
                   | value -> Some value
-                  | exception Exit ->
+                  | exception Ws_deque.Empty ->
                       Domain.cpu_relax ();
                       None
                 in
@@ -99,7 +100,7 @@ let tests_one_producer_one_stealer =
              nfirst expected_stolen)
           &&
           (* The [n - (List.length l)] last values of [steal_list]
-             should be [None] (i.e. the [steal] function had raised [Exit]). *)
+             should be [None] (i.e. the [steal] function had raised [Empty]). *)
           let exits = List.filteri (fun i _ -> i >= List.length l) steal_list in
           List.for_all (function None -> true | _ -> false) exits));
     (* TEST 2 with 1 producer, 1 stealer and parallel execution.
@@ -108,7 +109,7 @@ let tests_one_producer_one_stealer =
 
        This test checks :
        - order is preserved (first push = first steal)
-       - Exit is raised only when the deque is empty *)
+       - Empty is raised only when the deque is empty *)
     QCheck.(
       Test.make ~name:"parallel_pushes_and_steals"
         (pair (list small_int) (int_bound 200))
@@ -119,14 +120,14 @@ let tests_one_producer_one_stealer =
 
           (* The stealer domain steals n times. If a value [v] is stolen,
              it is registered as [Some v] in the returned list whereas any
-             [Exit] raised is registered as a [None].*)
+             [Empty] raised is registered as a [None].*)
           let stealer =
             Domain.spawn (fun () ->
                 Barrier.await barrier;
                 let steal' deque =
                   match Ws_deque.steal_exn deque with
                   | value -> Some value
-                  | exception Exit ->
+                  | exception Ws_deque.Empty ->
                       Domain.cpu_relax ();
                       None
                 in
@@ -177,13 +178,13 @@ let tests_one_producer_one_stealer =
           let pop' deque =
             match Ws_deque.pop_exn deque with
             | value -> Some value
-            | exception Exit ->
+            | exception Ws_deque.Empty ->
                 Domain.cpu_relax ();
                 None
           in
 
           (* The stealer domain steals [nsteal] times. If a value [v] is stolen,
-             it is registered as [Some v] in the returned list whereas any [Exit]
+             it is registered as [Some v] in the returned list whereas any [Empty]
              raised, it is registered as a [None].*)
           let stealer =
             Domain.spawn (fun () ->
@@ -191,7 +192,7 @@ let tests_one_producer_one_stealer =
                 let steal' deque =
                   match Ws_deque.steal_exn deque with
                   | value -> Some value
-                  | exception Exit ->
+                  | exception Ws_deque.Empty ->
                       Domain.cpu_relax ();
                       None
                 in
@@ -225,7 +226,7 @@ let tests_one_producer_two_stealers =
        This test checks :
        - order is preserved (first push = first steal)
        - no element is stolen by both stealers
-       - Exit is raised only when the deque is empty *)
+       - Empty is raised only when the deque is empty *)
     QCheck.(
       Test.make ~name:"parallel_steals"
         (pair (list small_int) (pair small_nat small_nat))
@@ -244,7 +245,7 @@ let tests_one_producer_two_stealers =
               res.(i) <-
                 (match Ws_deque.steal_exn deque with
                 | value -> Some value
-                | exception Exit ->
+                | exception Ws_deque.Empty ->
                     Domain.cpu_relax ();
                     None)
             done;

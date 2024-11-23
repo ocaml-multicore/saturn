@@ -54,7 +54,7 @@ module Spec = struct
     match (c, res) with
     | Push _, Res ((Unit, _), _) -> true
     | Pop, Res ((Result (Int, Exn), _), res) -> (
-        match s with [] -> res = Error Exit | j :: _ -> res = Ok j)
+        match s with [] -> res = Error Ws_deque.Empty | j :: _ -> res = Ok j)
     | Steal, Res ((Result (Int, Exn), _), res) -> (
         match List.rev s with [] -> Result.is_error res | j :: _ -> res = Ok j)
     | _, _ -> false
