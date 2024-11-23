@@ -28,6 +28,8 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 
 module Queue = Michael_scott_queue
 module Queue_unsafe = Michael_scott_queue_unsafe
+module Bounded_queue = Bounded_queue
+module Bounded_queue_unsafe = Bounded_queue_unsafe
 module Stack = Treiber_stack
 module Bounded_stack = Bounded_stack
 module Work_stealing_deque = Ws_deque

@@ -1,0 +1,57 @@
+(rule
+ (action
+  (copy ../../src/bounded_queue/bounded_queue.ml bounded_queue.ml))
+ (package saturn))
+
+(rule
+ (action
+  (copy
+   ../../src/bounded_queue/bounded_queue_unsafe.ml
+   bounded_queue_unsafe.ml))
+ (package saturn))
+
+(rule
+ (action
+  (copy ../../src/bounded_queue/bounded_queue_intf.mli bounded_queue_intf.ml))
+ (package saturn))
+
+(test
+ (package saturn)
+ (name dscheck_bounded_queue)
+ (libraries alcotest atomic backoff dscheck multicore-magic-dscheck)
+ (build_if
+  (and
+   (>= %{ocaml_version} 5)
+   (not
+    (and
+     (= %{arch_sixtyfour} false)
+     (= %{architecture} arm)))))
+ (modules
+  bounded_queue
+  bounded_queue_unsafe
+  bounded_queue_intf
+  dscheck_bounded_queue)
+ (flags
+  (:standard -open Multicore_magic_dscheck)))
+
+(test
+ (package saturn)
+ (name stm_bounded_queue)
+ (modules stm_bounded_queue)
+ (libraries bounded_queues saturn qcheck-core qcheck-stm.stm stm_run)
+ (enabled_if
+  (= %{arch_sixtyfour} true)))
+
+(test
+ (package saturn)
+ (name qcheck_bounded_queue)
+ (libraries
+  bounded_queues
+  saturn
+  barrier
+  qcheck
+  qcheck-core
+  qcheck-alcotest
+  domain_shims
+  alcotest)
+ (modules qcheck_bounded_queue))
