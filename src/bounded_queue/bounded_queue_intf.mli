@@ -37,6 +37,7 @@ module type BOUNDED_QUEUE = sig
     @raises Full if the length of [list] is greater than [capacity]. 
       
     {[
+      # open Saturn.Bounded_queue
       # let t : int t = of_list_exn [1;2;3;4]
       val t : int t = <abstr>
       # pop_opt t
@@ -104,3 +105,68 @@ module type BOUNDED_QUEUE = sig
       Returns [true] if the element was successfully added, or [false] if the
       queue is full. *)
 end
+
+(** {1 Examples}
+    An example top-level session:
+    {[
+      # open Saturn.Bounded_queue
+      # let t : int t = create ~capacity:3 ()
+      val t : int t = <abstr>
+      # try_push t 1
+      - : bool = true
+      # try_push t 2
+      - : bool = true
+      # push_exn t 3
+      - : unit = ()
+      # push_exn t 4
+      Exception: Saturn__Bounded_queue.Full.
+      # try_push t 4 
+      - : bool = false
+      # pop_exn t
+      - : int = 1
+      # peek_opt t
+      - : int option = Some 2
+      # drop_exn t
+      - : unit = ()
+      # pop_opt t
+      - : int option = Some 3
+      # pop_opt t
+      - : int option = None
+      # pop_exn t
+      Exception: Saturn__Bounded_queue.Empty.]}
+
+    A multicore example: 
+    {@ocaml non-deterministic[
+      # open Saturn.Bounded_queue
+      # let t :int t = create ~capacity:4 ()
+      val t : int t = <abstr>
+
+      # let barrier =  Atomic.make 2
+      val barrier : int Atomic.t = <abstr>
+
+      # let pusher () = 
+          Atomic.decr barrier;
+          while Atomic.get barrier != 0 do Domain.cpu_relax () done;
+          List.init 8 (fun i -> i)
+          |> List.map (fun i -> Domain.cpu_relax (); try_push t i)
+      val pusher : unit -> bool list = <fun>
+
+      # let popper () = 
+          Atomic.decr barrier;
+          while Atomic.get barrier != 0 do Domain.cpu_relax () done; 
+          List.init 8 (fun i -> Domain.cpu_relax (); pop_opt t)
+      val popper : unit -> int option list = <fun>
+
+      # let domain_pusher = Domain.spawn pusher
+      val domain_pusher : bool list Domain.t = <abstr>
+
+      # let domain_popper = Domain.spawn popper
+      val domain_popper : int option list Domain.t = <abstr>
+
+      # Domain.join domain_pusher
+      - : bool list = [true; true; true; true; true; false; true; true]
+      # Domain.join domain_popper
+      - : int option list = [None; None; Some 0; None; Some 1; Some 2; Some 3; Some 4]
+      ]}
+ 
+    *)

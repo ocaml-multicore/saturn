@@ -17,3 +17,12 @@
     (cat bounded_queue.head_unsafe.ml)
     (echo "# 1 \"bounded_queue.body.ml\"\n")
     (cat bounded_queue.body.ml)))))
+
+(mdx
+ (package saturn)
+ (enabled_if
+  (and
+   (<> %{os_type} Win32)
+   (>= %{ocaml_version} 5.0.0)))
+ (libraries saturn)
+ (files bounded_queue_intf.mli))
