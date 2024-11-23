@@ -19,6 +19,8 @@ type 'a t
 val create : unit -> 'a t
 (** [create ()] returns a new empty work-stealing queue. *)
 
+exception Empty
+
 (** {1 Queue owner functions} *)
 
 val push : 'a t -> 'a -> unit

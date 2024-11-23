@@ -41,9 +41,9 @@ type 'a t = {
 }
 
 let create () =
-  let top = Atomic.make 0 |> Multicore_magic.copy_as_padded in
+  let top = Atomic.make_contended 0 in
   let tab = Array.make min_capacity (Obj.magic ()) in
-  let bottom = Atomic.make 0 |> Multicore_magic.copy_as_padded in
+  let bottom = Atomic.make_contended 0 in
   let top_cache = ref 0 |> Multicore_magic.copy_as_padded in
   { top; bottom; top_cache; tab } |> Multicore_magic.copy_as_padded
 
@@ -83,6 +83,8 @@ let push q v =
 
 type ('a, _) poly = Option : ('a, 'a option) poly | Value : ('a, 'a) poly
 
+exception Empty
+
 let pop_as : type a r. a t -> (a, r) poly -> r =
  fun q poly ->
   let b = Atomic.fetch_and_add q.bottom (-1) - 1 in
@@ -115,13 +117,13 @@ let pop_as : type a r. a t -> (a, r) poly -> r =
       out := Obj.magic ();
       match poly with Option -> Some res | Value -> res
     end
-    else match poly with Option -> None | Value -> raise_notrace Exit
+    else match poly with Option -> None | Value -> raise Empty
   end
   else begin
     (* This write of [bottom] requires no fence.  The deque is empty and
        remains so until the next [push]. *)
     Atomic.fenceless_set q.bottom (b + 1);
-    match poly with Option -> None | Value -> raise_notrace Exit
+    match poly with Option -> None | Value -> raise Empty
   end
 
 let pop_exn q = pop_as q Value
@@ -144,7 +146,7 @@ let rec steal_as : type a r. a t -> Backoff.t -> (a, r) poly -> r =
       match poly with Option -> Some res | Value -> res
     end
     else steal_as q (Backoff.once backoff) poly
-  else match poly with Option -> None | Value -> raise_notrace Exit
+  else match poly with Option -> None | Value -> raise Empty
 
 let steal_exn q = steal_as q Backoff.default Value
 let steal_opt q = steal_as q Backoff.default Option
