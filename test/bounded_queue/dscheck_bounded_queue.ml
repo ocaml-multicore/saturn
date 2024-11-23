@@ -1,8 +1,9 @@
 [@@@warning "-32"]
 
 module Atomic = Dscheck.TracedAtomic
+module Cue = Bounded_queue
 
-(* Dscheck only tests the safe implementation of Cue. To make Cue_unsafe compatible with Dscheck, it needs to be modified to essentially become the safe version. *)
+(* Dscheck only tests the safe implementation of Bounded_queue. To make Bounded_queue_unsafe compatible with Dscheck, it needs to be modified to essentially become the safe version. *)
 
 let drain cue =
   let rec pop_until_empty acc =
@@ -378,4 +379,4 @@ let tests =
 
 let () =
   let open Alcotest in
-  run "dscheck_cue" tests
+  run "dscheck_bounded_queue" tests

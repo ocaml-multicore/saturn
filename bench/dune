@@ -19,7 +19,7 @@ let () =
 
 (rule
  (action
-  (copy ../src/cue/cue_intf.mli cue_intf.ml))
+  (copy ../src/bounded_queue/bounded_queue_intf.mli bounded_queue_intf.ml))
  (package saturn))
 
 (test

@@ -13,7 +13,7 @@
    OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
    PERFORMANCE OF THIS SOFTWARE. *)
 
-module type CUE = sig
+module type BOUNDED_QUEUE = sig
   (** Lock-free bounded Queue. 
 
     This module implements a lock-free bounded queue based on Michael-Scott's queue 

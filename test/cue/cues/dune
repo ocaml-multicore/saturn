@@ -1,8 +1,0 @@
-(rule
- (action
-  (copy ../../../src/cue/cue_intf.mli cue_intf.ml))
- (package saturn))
-
-(library
- (name cues)
- (libraries saturn))

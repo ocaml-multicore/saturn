@@ -4,16 +4,17 @@ module type BENCH = sig
   val run_suite : budgetf:float -> Metric.t list
 end
 
-module Make (Cue : Cue_intf.CUE) : BENCH = struct
+module Make (Bounded_queue : Bounded_queue_intf.BOUNDED_QUEUE) : BENCH = struct
   let run_one_domain ~budgetf ?(n_msgs = 50 * Util.iter_factor) () =
-    let t = Cue.create () in
+    let t = Bounded_queue.create () in
 
     let op push =
-      if push then Cue.try_push t 101 |> ignore else Cue.pop_opt t |> ignore
+      if push then Bounded_queue.try_push t 101 |> ignore
+      else Bounded_queue.pop_opt t |> ignore
     in
 
     let init _ =
-      assert (Cue.is_empty t);
+      assert (Bounded_queue.is_empty t);
       Util.generate_push_and_pop_sequence n_msgs
     in
     let work _ bits = Util.Bits.iter op bits in
@@ -26,13 +27,13 @@ module Make (Cue : Cue_intf.CUE) : BENCH = struct
       ?(n_msgs = 50 * Util.iter_factor) () =
     let n_domains = n_adders + n_takers in
 
-    let t = Cue.create () in
+    let t = Bounded_queue.create () in
 
     let n_msgs_to_take = Atomic.make 0 |> Multicore_magic.copy_as_padded in
     let n_msgs_to_add = Atomic.make 0 |> Multicore_magic.copy_as_padded in
 
     let init _ =
-      assert (Cue.is_empty t);
+      assert (Bounded_queue.is_empty t);
       Atomic.set n_msgs_to_take n_msgs;
       Atomic.set n_msgs_to_add n_msgs
     in
@@ -42,7 +43,7 @@ module Make (Cue : Cue_intf.CUE) : BENCH = struct
           let n = Util.alloc n_msgs_to_add in
           if 0 < n then begin
             for i = 1 to n do
-              Cue.try_push t i |> ignore
+              Bounded_queue.try_push t i |> ignore
             done;
             work ()
           end
@@ -54,7 +55,7 @@ module Make (Cue : Cue_intf.CUE) : BENCH = struct
           if n <> 0 then
             let rec loop n =
               if 0 < n then begin
-                match Cue.pop_opt t with
+                match Bounded_queue.pop_opt t with
                 | None ->
                     Domain.cpu_relax ();
                     loop n
@@ -86,5 +87,5 @@ module Make (Cue : Cue_intf.CUE) : BENCH = struct
          run_one ~budgetf ~n_adders ~n_takers ())
 end
 
-module Safe = Make (Saturn.Cue)
-module Unsafe = Make (Saturn.Cue_unsafe)
+module Safe = Make (Saturn.Bounded_queue)
+module Unsafe = Make (Saturn.Bounded_queue_unsafe)

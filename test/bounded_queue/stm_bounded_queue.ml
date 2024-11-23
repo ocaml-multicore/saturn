@@ -1,10 +1,11 @@
-(** Sequential and Parallel model-based tests of (bounded queue) cue. *)
+(** Sequential and Parallel model-based tests of (bounded queue) Bounded_queue. *)
 
 open QCheck
 open STM
-module Cue = Saturn.Cue
+module Bounded_queue = Saturn.Bounded_queue
 
-module STM_cue (Cue : Cues.Cue_tests) = struct
+module STM_Bounded_queue (Bounded_queue : Bounded_queues.Bounded_queue_tests) =
+struct
   module Spec = struct
     type cmd =
       | Try_push of int
@@ -26,7 +27,7 @@ module STM_cue (Cue : Cues.Cue_tests) = struct
       | Is_full -> "Is_full"
 
     type state = int * int * int list
-    type sut = int Cue.t
+    type sut = int Bounded_queue.t
 
     let arb_cmd _s =
       let int_gen = Gen.nat in
@@ -43,7 +44,7 @@ module STM_cue (Cue : Cues.Cue_tests) = struct
            ])
 
     let init_state = (100, 0, [])
-    let init_sut () = Cue.create ~capacity:100 ()
+    let init_sut () = Bounded_queue.create ~capacity:100 ()
     let cleanup _ = ()
 
     let next_state c ((capacity, size, content) as s) =
@@ -66,15 +67,16 @@ module STM_cue (Cue : Cues.Cue_tests) = struct
       | Try_push i ->
           Res
             ( bool,
-              match Cue.push_exn d i with
+              match Bounded_queue.push_exn d i with
               | () -> true
-              | exception Cue.Full -> true (*Cue.try_push d i*) )
-      | Pop_opt -> Res (option int, Cue.pop_opt d)
-      | Peek_opt -> Res (option int, Cue.peek_opt d)
-      | Drop_exn -> Res (result unit exn, protect Cue.drop_exn d)
-      | Is_empty -> Res (bool, Cue.is_empty d)
-      | Is_full -> Res (bool, Cue.is_full d)
-      | Length -> Res (int, Cue.length d)
+              | exception Bounded_queue.Full ->
+                  true (*Bounded_queue.try_push d i*) )
+      | Pop_opt -> Res (option int, Bounded_queue.pop_opt d)
+      | Peek_opt -> Res (option int, Bounded_queue.peek_opt d)
+      | Drop_exn -> Res (result unit exn, protect Bounded_queue.drop_exn d)
+      | Is_empty -> Res (bool, Bounded_queue.is_empty d)
+      | Is_full -> Res (bool, Bounded_queue.is_full d)
+      | Length -> Res (int, Bounded_queue.length d)
 
     let postcond c ((capacity, size, content) : state) res =
       match (c, res) with
@@ -85,7 +87,7 @@ module STM_cue (Cue : Cues.Cue_tests) = struct
           | j :: _ -> res = Some j)
       | Drop_exn, Res ((Result (Unit, Exn), _), res) -> (
           match List.rev content with
-          | [] -> res = Error Cue.Empty
+          | [] -> res = Error Bounded_queue.Empty
           | _ -> res = Ok ())
       | Is_empty, Res ((Bool, _), res) -> res = (content = [])
       | Is_full, Res ((Bool, _), res) -> res = (size = capacity)
@@ -93,16 +95,16 @@ module STM_cue (Cue : Cues.Cue_tests) = struct
       | _, _ -> false
   end
 
-  let run () = Stm_run.run ~name:"Saturn_lockfree.Cue" (module Spec) |> exit
+  let run () = Stm_run.run ~name:"Saturn.Bounded_queue" (module Spec) |> exit
 end
 
 let () =
-  (* Since Cue and Cue_unsafe share the same implementation, it is not necessary
+  (* Since Bounded_queue and Bounded_queue_unsafe share the same implementation, it is not necessary
      to test both of them. *)
   Random.self_init ();
   if Random.bool () then
-    let module Safe = STM_cue (Cues.Cue) in
+    let module Safe = STM_Bounded_queue (Bounded_queues.Bounded_queue) in
     Safe.run () |> exit
   else
-    let module Unsafe = STM_cue (Cues.Cue_unsafe) in
+    let module Unsafe = STM_Bounded_queue (Bounded_queues.Bounded_queue_unsafe) in
     Unsafe.run () |> exit

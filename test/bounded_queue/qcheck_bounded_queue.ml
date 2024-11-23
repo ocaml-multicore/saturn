@@ -1,77 +1,80 @@
-module Qcheck_cue (Cue : Cues.Cue_tests) = struct
+module Qcheck_bounded_queue (Bounded_queue : Bounded_queues.Bounded_queue_tests) =
+struct
   let tests_sequential =
     QCheck.
       [
         (* TEST 1: push *)
         Test.make ~name:"push" (list int) (fun lpush ->
             assume (lpush <> []);
-            (* Building a random Cue *)
-            let cue = Cue.create () in
-            List.iter (Cue.push_exn cue) lpush;
+            (* Building a random Bounded_queue *)
+            let queue = Bounded_queue.create () in
+            List.iter (Bounded_queue.push_exn queue) lpush;
 
             (* Testing property *)
-            (not (Cue.is_empty cue)) && Cue.length cue = List.length lpush);
+            (not (Bounded_queue.is_empty queue))
+            && Bounded_queue.length queue = List.length lpush);
         (* TEST 1: of_list *)
         Test.make ~name:"of_list_exn" (list int) (fun lpush ->
             assume (lpush <> []);
-            (* Building a random Cue *)
-            let cue = Cue.of_list_exn lpush in
+            (* Building a random Bounded_queue *)
+            let queue = Bounded_queue.of_list_exn lpush in
 
             (* Testing property *)
-            (not (Cue.is_empty cue)) && Cue.length cue = List.length lpush);
+            (not (Bounded_queue.is_empty queue))
+            && Bounded_queue.length queue = List.length lpush);
         (* TEST 1bis: push *)
         Test.make ~name:"of_list_exn_raise_full"
           (pair (list int) small_nat)
           (fun (lpush, capacity) ->
             assume (lpush <> []);
-            (* Building a random Cue *)
-            match Cue.of_list_exn ~capacity lpush with
-            | cue ->
+            (* Building a random Bounded_queue *)
+            match Bounded_queue.of_list_exn ~capacity lpush with
+            | queue ->
                 capacity >= List.length lpush
-                && (not (Cue.is_empty cue))
-                && Cue.length cue = List.length lpush
-            | exception Cue.Full -> capacity <= List.length lpush);
+                && (not (Bounded_queue.is_empty queue))
+                && Bounded_queue.length queue = List.length lpush
+            | exception Bounded_queue.Full -> capacity <= List.length lpush);
         (* TEST 1: push and full *)
         Test.make ~name:"push_capacity" (list int) (fun lpush ->
             assume (lpush <> []);
-            (* Building a random Cue *)
+            (* Building a random Bounded_queue *)
             let capacity = 10 in
-            let cue = Cue.create ~capacity () in
+            let queue = Bounded_queue.create ~capacity () in
             List.map
               (fun elt ->
                 try
-                  Cue.push_exn cue elt;
+                  Bounded_queue.push_exn queue elt;
                   true
-                with Cue.Full -> false)
+                with Bounded_queue.Full -> false)
               lpush
             |> List.filteri (fun i elt -> if i < capacity then not elt else elt)
             |> ( = ) []);
         (* TEST 2 - push, pop until empty *)
         Test.make ~name:"push_pop_opt_until_empty" (list int) (fun lpush ->
-            (* Building a random Cue *)
-            let cue = Cue.create () in
-            List.iter (Cue.push_exn cue) lpush;
+            (* Building a random Bounded_queue *)
+            let queue = Bounded_queue.create () in
+            List.iter (Bounded_queue.push_exn queue) lpush;
 
             (* Popping until [is_empty q] is true *)
             let count = ref 0 in
-            while not (Cue.is_empty cue) do
+            while not (Bounded_queue.is_empty queue) do
               incr count;
-              ignore (Cue.pop_opt cue)
+              ignore (Bounded_queue.pop_opt queue)
             done;
 
             (* Testing property *)
-            Cue.pop_opt cue = None && !count = List.length lpush);
+            Bounded_queue.pop_opt queue = None && !count = List.length lpush);
         (* TEST 3 - push, pop_opt, check FIFO  *)
         Test.make ~name:"fifo" (list int) (fun lpush ->
-            (* Building a random Cue *)
-            let cue = Cue.create () in
-            List.iter (Cue.push_exn cue) lpush;
+            (* Building a random Bounded_queue *)
+            let queue = Bounded_queue.create () in
+            List.iter (Bounded_queue.push_exn queue) lpush;
 
             let out = ref [] in
             let insert v = out := v :: !out in
 
             for _ = 1 to List.length lpush do
-              match Cue.pop_opt cue with
+              match Bounded_queue.pop_opt queue with
               | None -> assert false
               | Some v -> insert v
             done;
@@ -80,20 +83,20 @@ module Qcheck_cue (Cue : Cues.Cue_tests) = struct
             lpush = List.rev !out);
         (* TEST 3 - push, pop_opt, peek_opt check FIFO  *)
         Test.make ~name:"fifo_peek_opt" (list int) (fun lpush ->
-            (* Building a random Cue *)
-            let cue = Cue.create () in
-            List.iter (Cue.push_exn cue) lpush;
+            (* Building a random Bounded_queue *)
+            let queue = Bounded_queue.create () in
+            List.iter (Bounded_queue.push_exn queue) lpush;
 
             let pop = ref [] in
             let peek = ref [] in
             let insert out v = out := v :: !out in
 
             for _ = 1 to List.length lpush do
-              match Cue.peek_opt cue with
+              match Bounded_queue.peek_opt queue with
               | None -> assert false
               | Some v -> (
                   insert peek v;
-                  match Cue.pop_opt cue with
+                  match Bounded_queue.pop_opt queue with
                   | None -> assert false
                   | Some v -> insert pop v)
             done;
@@ -109,14 +112,14 @@ module Qcheck_cue (Cue : Cues.Cue_tests) = struct
            Parallel [push] and [pop_opt]. *)
         Test.make ~name:"parallel_fifo" (list int) (fun lpush ->
             (* Initialization *)
-            let cue = Cue.create () in
+            let queue = Bounded_queue.create () in
             let barrier = Barrier.create 2 in
 
             (* Producer pushes. *)
             let producer =
               Domain.spawn (fun () ->
                   Barrier.await barrier;
-                  List.iter (Cue.push_exn cue) lpush)
+                  List.iter (Bounded_queue.push_exn queue) lpush)
             in
 
             Barrier.await barrier;
@@ -124,7 +127,7 @@ module Qcheck_cue (Cue : Cues.Cue_tests) = struct
               List.fold_left
                 (fun acc item ->
                   let rec pop_one () =
-                    match Cue.pop_opt cue with
+                    match Bounded_queue.pop_opt queue with
                     | None ->
                         Domain.cpu_relax ();
                         pop_one ()
@@ -133,7 +136,7 @@ module Qcheck_cue (Cue : Cues.Cue_tests) = struct
                   pop_one ())
                 true lpush
             in
-            let empty = Cue.is_empty cue in
+            let empty = Bounded_queue.is_empty queue in
 
             (* Ensure nothing is left behind. *)
             Domain.join producer;
@@ -143,22 +146,22 @@ module Qcheck_cue (Cue : Cues.Cue_tests) = struct
         Test.make ~name:"parallel_peek" (list int) (fun pushed ->
             (* Initialization *)
             let npush = List.length pushed in
-            let cue = Cue.create () in
+            let queue = Bounded_queue.create () in
             let barrier = Barrier.create 2 in
 
             (* Producer pushes. *)
             let producer =
               Domain.spawn (fun () ->
                   Barrier.await barrier;
-                  List.iter (Cue.push_exn cue) pushed)
+                  List.iter (Bounded_queue.push_exn queue) pushed)
             in
 
             let peeked = ref [] in
             let popped = ref [] in
             Barrier.await barrier;
             for _ = 1 to npush do
-              peeked := Cue.peek_opt cue :: !peeked;
-              popped := Cue.pop_opt cue :: !popped
+              peeked := Bounded_queue.peek_opt queue :: !peeked;
+              popped := Bounded_queue.pop_opt queue :: !popped
             done;
 
             Domain.join producer;
@@ -186,7 +189,7 @@ module Qcheck_cue (Cue : Cues.Cue_tests) = struct
         Test.make ~name:"parallel_pop_opt_push" (pair small_nat small_nat)
           (fun (npush1, npush2) ->
             (* Initialization *)
-            let cue = Cue.create () in
+            let queue = Bounded_queue.create () in
             let barrier = Barrier.create 2 in
 
             (* Using these lists instead of a random one enables to
@@ -197,9 +200,9 @@ module Qcheck_cue (Cue : Cues.Cue_tests) = struct
             let work lpush =
               List.map
                 (fun elt ->
-                  Cue.push_exn cue elt;
+                  Bounded_queue.push_exn queue elt;
                   Domain.cpu_relax ();
-                  Cue.pop_opt cue)
+                  Bounded_queue.pop_opt queue)
                 lpush
             in
 
@@ -244,7 +247,7 @@ module Qcheck_cue (Cue : Cues.Cue_tests) = struct
         Test.make ~name:"parallel_pop_opt_push_random"
           (pair small_nat small_nat) (fun (npush1, npush2) ->
             (* Initialization *)
-            let cue = Cue.create () in
+            let queue = Bounded_queue.create () in
             let barrier = Barrier.create 2 in
 
             let lpush1 = List.init npush1 (fun i -> i) in
@@ -261,11 +264,11 @@ module Qcheck_cue (Cue : Cues.Cue_tests) = struct
                   match lpush with
                   | [] -> popped
                   | elt :: xs ->
-                      Cue.push_exn cue elt;
+                      Bounded_queue.push_exn queue elt;
                       loop xs popped)
                 else (
                   incr consecutive_pop;
-                  let p = Cue.pop_opt cue in
+                  let p = Bounded_queue.pop_opt queue in
                   loop lpush (p :: popped))
               in
               loop lpush []
@@ -292,10 +295,10 @@ module Qcheck_cue (Cue : Cues.Cue_tests) = struct
               |> List.map Option.get
             in
 
-            (* Pop everything that is still on the Cue *)
+            (* Pop everything that is still on the Bounded_queue *)
             let popped3 =
               let rec loop popped =
-                match Cue.pop_opt cue with
+                match Bounded_queue.pop_opt queue with
                 | None -> popped
                 | Some v -> loop (v :: popped)
               in
@@ -313,7 +316,7 @@ end
 let () =
   let to_alcotest = List.map QCheck_alcotest.to_alcotest in
 
-  let module Safe = Qcheck_cue (Cues.Cue) in
+  let module Safe = Qcheck_bounded_queue (Bounded_queues.Bounded_queue) in
   let name = "safe" in
   let safe_tests =
     [
@@ -323,7 +326,7 @@ let () =
       ("two_domains_" ^ name, to_alcotest Safe.tests_two_domains);
     ]
   in
-  let module Unsafe = Qcheck_cue (Cues.Cue_unsafe) in
+  let module Unsafe = Qcheck_bounded_queue (Bounded_queues.Bounded_queue_unsafe) in
   let name = "unsafe" in
   let unsafe_tests =
     [
@@ -333,4 +336,4 @@ let () =
       ("two_domains_" ^ name, to_alcotest Unsafe.tests_two_domains);
     ]
   in
-  Alcotest.run "Michael_scott_Cue" (safe_tests @ unsafe_tests)
+  Alcotest.run "Bounded_queue" (safe_tests @ unsafe_tests)
