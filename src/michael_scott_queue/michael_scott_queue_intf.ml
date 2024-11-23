@@ -1,5 +1,4 @@
-module type MS_QUEUE = sig
-  (*
+(*
  * Copyright (c) 2015, Théo Laurent <theo.laurent@ens.fr>
  * Copyright (c) 2015, KC Sivaramakrishnan <sk826@cl.cam.ac.uk>
  *
@@ -16,7 +15,7 @@ module type MS_QUEUE = sig
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-  (**
+(**
     Michael-Scott classic multi-producer multi-consumer queue.
 
    All functions are lockfree. It is the recommended starting point
@@ -26,6 +25,7 @@ module type MS_QUEUE = sig
    Queue Algorithms}.
 *)
 
+module type MS_QUEUE = sig
   type 'a t
   (** The type of lock-free queue. *)
 
