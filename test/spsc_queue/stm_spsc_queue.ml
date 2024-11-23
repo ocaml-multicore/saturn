@@ -6,13 +6,14 @@ open Util
 
 module STM_spsc (Spsc_queue : Spsc_queues.SPSC_tests) = struct
   module Spec = struct
-    type cmd = Push of int | Pop | Peek
+    type cmd = Push of int | Pop | Peek | Drop
 
     let show_cmd c =
       match c with
       | Push i -> "Push " ^ string_of_int i
       | Pop -> "Pop"
       | Peek -> "Peek"
+      | Drop -> "Drop"
 
     type state = int * int list
     type sut = int Spsc_queue.t
@@ -23,14 +24,17 @@ module STM_spsc (Spsc_queue : Spsc_queues.SPSC_tests) = struct
 
     let consumer_cmd _s =
       QCheck.make ~print:show_cmd
-        (Gen.oneof [ Gen.return Pop; Gen.return Peek ])
+        (Gen.oneof [ Gen.return Pop; Gen.return Peek; Gen.return Drop ])
 
     let arb_cmd _s =
       let int_gen = Gen.nat in
       QCheck.make ~print:show_cmd
         (Gen.oneof
            [
-             Gen.return Pop; Gen.return Peek; Gen.map (fun i -> Push i) int_gen;
+             Gen.return Pop;
+             Gen.return Peek;
+             Gen.return Drop;
+             Gen.map (fun i -> Push i) int_gen;
            ])
 
     let size_exponent = 4
@@ -42,7 +46,7 @@ module STM_spsc (Spsc_queue : Spsc_queues.SPSC_tests) = struct
     let next_state c (n, s) =
       match c with
       | Push i -> if n = max_size then (n, s) else (n + 1, i :: s)
-      | Pop -> (
+      | Pop | Drop -> (
           match List.rev s with [] -> (0, s) | _ :: s' -> (n - 1, List.rev s'))
       | Peek -> (n, s)
 
@@ -54,6 +58,7 @@ module STM_spsc (Spsc_queue : Spsc_queues.SPSC_tests) = struct
           Res (result unit exn, protect (fun d -> Spsc_queue.push_exn d i) d)
       | Pop -> Res (result int exn, protect Spsc_queue.pop_exn d)
       | Peek -> Res (result int exn, protect Spsc_queue.peek_exn d)
+      | Drop -> Res (result unit exn, protect Spsc_queue.drop_exn d)
 
     let postcond c ((n, s) : state) res =
       match (c, res) with
@@ -66,6 +71,11 @@ module STM_spsc (Spsc_queue : Spsc_queues.SPSC_tests) = struct
           match (res, List.rev s) with
           | Error Spsc_queue.Empty, [] -> true
           | Ok popped, x :: _ -> x = popped
+          | _ -> false)
+      | Drop, Res ((Result (Unit, Exn), _), res) -> (
+          match (res, List.rev s) with
+          | Error Spsc_queue.Empty, [] -> true
+          | Ok (), _ :: _ -> true
           | _ -> false)
       | _, _ -> false
   end

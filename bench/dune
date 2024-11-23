@@ -19,6 +19,11 @@ let () =
 
 (rule
  (action
+  (copy ../src/spsc_queue/spsc_queue_intf.mli spsc_queue_intf.ml))
+ (package saturn))
+
+(rule
+ (action
   (copy ../src/bounded_queue/bounded_queue_intf.mli bounded_queue_intf.ml))
  (package saturn))
 

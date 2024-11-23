@@ -39,6 +39,9 @@ type 'a t = {
 }
 
 exception Full
+exception Empty
+
+(* *)
 
 let create ~size_exponent =
   if size_exponent < 0 || Sys.int_size - 2 < size_exponent then
@@ -51,6 +54,23 @@ let create ~size_exponent =
   let head = Atomic.make_contended 0 in
   let head_cache = Padded_int_ref.make s 0 in
   { array; tail; tail_cache; head; head_cache }
+
+let of_list_exn ~size_exponent values =
+  if size_exponent < 0 || Sys.int_size - 2 < size_exponent then
+    invalid_arg "size_exponent out of range";
+  let size = 1 lsl size_exponent in
+  let nvalues = List.length values in
+  if nvalues > size then raise Full;
+  let array = Array.make size None in
+  List.iteri (fun i elt -> Array.unsafe_set array i (Some elt)) values;
+  let tail = Atomic.make_contended nvalues in
+  let s = Obj.size (Obj.repr tail) in
+  let tail_cache = Padded_int_ref.make s nvalues in
+  let head = Atomic.make_contended 0 in
+  let head_cache = Padded_int_ref.make s 0 in
+  { array; tail; tail_cache; head; head_cache }
+
+(* *)
 
 type _ mono = Unit : unit mono | Bool : bool mono
 
@@ -74,9 +94,13 @@ let push_as (type r) t element (mono : r mono) : r =
 let push_exn t element = push_as t element Unit
 let try_push t element = push_as t element Bool
 
-exception Empty
+(* *)
 
-type ('a, _) poly = Option : ('a, 'a option) poly | Value : ('a, 'a) poly
+type ('a, _) poly =
+  | Option : ('a, 'a option) poly
+  | Value : ('a, 'a) poly
+  | Unit : ('a, unit) poly
+
 type op = Peek | Pop
 
 let pop_or_peek_as (type a r) (t : a t) op (poly : (a, r) poly) : r =
@@ -88,7 +112,7 @@ let pop_or_peek_as (type a r) (t : a t) op (poly : (a, r) poly) : r =
     let tail = Atomic.get t.tail in
     Padded_int_ref.set t.tail_cache tail;
     tail_cache == tail
-  then match poly with Value -> raise_notrace Empty | Option -> None
+  then match poly with Value | Unit -> raise_notrace Empty | Option -> None
   else
     let index = head land (Array.length t.array - 1) in
     let v = Array.unsafe_get t.array index in
@@ -99,14 +123,17 @@ let pop_or_peek_as (type a r) (t : a t) op (poly : (a, r) poly) : r =
           Atomic.incr t.head
       | Peek -> ()
     end;
-    match poly with Value -> Option.get v | Option -> v
+    match poly with Value -> Option.get v | Option -> v | Unit -> ()
 
 let pop_exn t = pop_or_peek_as t Pop Value
 let pop_opt t = pop_or_peek_as t Pop Option
 let peek_exn t = pop_or_peek_as t Peek Value
 let peek_opt t = pop_or_peek_as t Peek Option
+let drop_exn t = pop_or_peek_as t Pop Unit
 
-let size t =
+(* *)
+
+let length t =
   let tail = Atomic.get t.tail in
   let head = Atomic.get t.head in
   tail - head
