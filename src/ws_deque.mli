@@ -19,14 +19,16 @@ type 'a t
 val create : unit -> 'a t
 (** [create ()] returns a new empty work-stealing queue. *)
 
+exception Empty
+
 (** {1 Queue owner functions} *)
 
 val push : 'a t -> 'a -> unit
 (** [push t v] adds [v] to the front of the queue [q].
       It should only be invoked by the domain which owns the queue [q]. *)
 
-val pop : 'a t -> 'a
-(** [pop q] removes and returns the first element in queue
+val pop_exn : 'a t -> 'a
+(** [pop_exn q] removes and returns the first element in queue
       [q].It should only be invoked by the domain which owns the queue
       [q].
 
@@ -39,8 +41,8 @@ val pop_opt : 'a t -> 'a option
 
 (** {1 Stealers function} *)
 
-val steal : 'a t -> 'a
-(** [steal q] removes and returns the last element from queue
+val steal_exn : 'a t -> 'a
+(** [steal_exn q] removes and returns the last element from queue
       [q]. It should only be invoked by domain which doesn't own the
       queue [q].
 

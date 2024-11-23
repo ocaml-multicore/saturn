@@ -47,14 +47,14 @@ module Spec = struct
   let run c d =
     match c with
     | Push i -> Res (unit, Ws_deque.push d i)
-    | Pop -> Res (result int exn, protect Ws_deque.pop d)
-    | Steal -> Res (result int exn, protect Ws_deque.steal d)
+    | Pop -> Res (result int exn, protect Ws_deque.pop_exn d)
+    | Steal -> Res (result int exn, protect Ws_deque.steal_exn d)
 
   let postcond c (s : state) res =
     match (c, res) with
     | Push _, Res ((Unit, _), _) -> true
     | Pop, Res ((Result (Int, Exn), _), res) -> (
-        match s with [] -> res = Error Exit | j :: _ -> res = Ok j)
+        match s with [] -> res = Error Ws_deque.Empty | j :: _ -> res = Ok j)
     | Steal, Res ((Result (Int, Exn), _), res) -> (
         match List.rev s with [] -> Result.is_error res | j :: _ -> res = Ok j)
     | _, _ -> false
@@ -77,10 +77,6 @@ let () =
           assume (Dom.all_interleavings_ok triple);
           repeat rep_count Dom.agree_prop_par_asym triple)
     in
-    [
-      agree_test_par_asym ~count ~name:(name ^ " parallel");
-      (* Note: this can generate, e.g., pop commands/actions in different threads, thus violating the spec. *)
-      Dom.neg_agree_test_par ~count ~name:(name ^ " parallel, negative");
-    ]
+    [ agree_test_par_asym ~count ~name:(name ^ " parallel") ]
   in
   Stm_run.run ~name:"Saturn.Ws_deque" ~make_domain (module Spec) |> exit

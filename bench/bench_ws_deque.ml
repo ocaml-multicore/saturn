@@ -14,22 +14,22 @@ let run_as_scheduler ~budgetf ?(n_domains = 1) () =
   in
 
   let rec try_own own =
-    match Ws_deque.pop (Array.unsafe_get deques own) with
+    match Ws_deque.pop_exn (Array.unsafe_get deques own) with
     | work -> work
-    | exception Exit -> try_steal own (next own)
+    | exception Ws_deque.Empty -> try_steal own (next own)
   and try_steal own other =
-    if other = own then raise_notrace Exit
+    if other = own then raise_notrace Ws_deque.Empty
     else
-      match Ws_deque.steal (Array.unsafe_get deques other) with
+      match Ws_deque.steal_exn (Array.unsafe_get deques other) with
       | work -> work
-      | exception Exit -> try_steal own (next other)
+      | exception Ws_deque.Empty -> try_steal own (next other)
   in
   let rec run own =
     match try_own own with
     | work ->
         work own;
         run own
-    | exception Exit ->
+    | exception Ws_deque.Empty ->
         if not !exit then begin
           Domain.cpu_relax ();
           run own
@@ -47,7 +47,7 @@ let run_as_scheduler ~budgetf ?(n_domains = 1) () =
     if x == Obj.magic exit then begin
       begin
         match try_own own with
-        | exception Exit -> Domain.cpu_relax ()
+        | exception Ws_deque.Empty -> Domain.cpu_relax ()
         | work -> work own
       end;
       await own promise
@@ -90,14 +90,19 @@ let run_as_one_domain ~budgetf ?(n_msgs = 150 * Util.iter_factor) order =
 
   let op_lifo push =
     if push then Ws_deque.push t 101
-    else match Ws_deque.pop t with _ -> () | exception Exit -> ()
+    else
+      match Ws_deque.pop_exn t with _ -> () | exception Ws_deque.Empty -> ()
   and op_fifo push =
     if push then Ws_deque.push t 101
-    else match Ws_deque.steal t with _ -> () | exception Exit -> ()
+    else
+      match Ws_deque.steal_exn t with _ -> () | exception Ws_deque.Empty -> ()
   in
 
   let init _ =
-    assert (match Ws_deque.steal t with _ -> false | exception Exit -> true);
+    assert (
+      match Ws_deque.steal_exn t with
+      | _ -> false
+      | exception Ws_deque.Empty -> true);
     Util.generate_push_and_pop_sequence n_msgs
   in
   let work _ bits =
@@ -121,7 +126,10 @@ let run_as_spmc ~budgetf ~n_thiefs () =
   let n_msgs_to_steal = Atomic.make 0 |> Multicore_magic.copy_as_padded in
 
   let init _ =
-    assert (match Ws_deque.steal t with _ -> false | exception Exit -> true);
+    assert (
+      match Ws_deque.steal_exn t with
+      | _ -> false
+      | exception Ws_deque.Empty -> true);
     Atomic.set n_msgs_to_steal n_msgs
   in
   let work i () =
@@ -131,8 +139,8 @@ let run_as_spmc ~budgetf ~n_thiefs () =
         if 0 < n then
           let rec loop n =
             if 0 < n then
-              match Ws_deque.steal t with
-              | exception Exit ->
+              match Ws_deque.steal_exn t with
+              | exception Ws_deque.Empty ->
                   Domain.cpu_relax ();
                   loop n
               | _ -> loop (n - 1)
