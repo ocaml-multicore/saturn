@@ -12,7 +12,7 @@ let is_empty t = Atomic.get t.head = (0, [])
 exception Empty
 exception Full
 
-let of_list ?(capacity = Int.max_int) list =
+let of_list_exn ?(capacity = Int.max_int) list =
   if capacity < List.length list then raise Full
   else
     let head = Atomic.make_contended (List.length list, List.rev list) in
