@@ -88,6 +88,7 @@ module type BOUNDED_QUEUE = sig
 
   val drop_exn : 'a t -> unit
   (** [drop_exn queue] removes the top element of the [queue]. 
+  
     @raises Empty if the [queue] is empty. *)
 
   (** {2 Producer functions} *)

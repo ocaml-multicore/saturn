@@ -242,14 +242,36 @@ let push_push_with_capacity () =
           (* got the same number of items out as in *)
           Atomic.check (fun () -> capacity = List.length items)))
 
+let push_pop_of_list () =
+  Atomic.trace (fun () ->
+      let items_total = 4 in
+      let pushed = List.init items_total (fun x -> x + 1) in
+      let cue = Cue.of_list_exn pushed in
+
+      Atomic.spawn (fun () -> Cue.try_push cue 42 |> ignore);
+
+      (* consumer *)
+      let popped = ref [] in
+      Atomic.spawn (fun () ->
+          for _ = 1 to items_total do
+            begin
+              match Cue.pop_opt cue with
+              | None -> ()
+              | Some v -> popped := v :: !popped
+            end
+          done);
+
+      (* checks*)
+      Atomic.final (fun () ->
+          Atomic.check (fun () ->
+              let remaining = drain cue in
+              let pushed = pushed @ [ 42 ] in
+              List.sort Int.compare (!popped @ remaining) = pushed)))
+
 let pop_pop () =
   Atomic.trace (fun () ->
-      let cue = Cue.create () in
       let items_total = 4 in
-
-      for i = 1 to items_total do
-        Cue.try_push cue i |> ignore
-      done;
+      let cue = Cue.of_list_exn (List.init items_total (fun x -> x + 1)) in
 
       (* two consumers *)
       let lists = [ ref []; ref [] ] in
@@ -369,6 +391,7 @@ let tests =
         test_case "2-domains-is_empty" `Slow is_empty;
         test_case "1-producer-1-consumer-capacity" `Slow push_pop_with_capacity;
         test_case "1-push-1-drop" `Slow push_drop;
+        test_case "1-push-1-pop-of_list" `Slow push_pop_of_list;
         test_case "2-producers" `Slow push_push;
         test_case "2-producers-capacity" `Slow push_push_with_capacity;
         test_case "2-consumers" `Slow pop_pop;
