@@ -4,13 +4,14 @@ open STM
 (** Sequential and Parallel model-based tests of michael_scott_queue *)
 module STM_ms_queue (Queue : Ms_queues.MS_queue_tests) = struct
   module Spec = struct
-    type cmd = Push of int | Pop | Peek | Is_empty
+    type cmd = Push of int | Pop | Peek | Drop | Is_empty
 
     let show_cmd c =
       match c with
       | Push i -> "Push " ^ string_of_int i
       | Pop -> "Pop"
       | Peek -> "Peek"
+      | Drop -> "Drop"
       | Is_empty -> "Is_empty"
 
     type state = int list
@@ -24,6 +25,7 @@ module STM_ms_queue (Queue : Ms_queues.MS_queue_tests) = struct
              Gen.map (fun i -> Push i) int_gen;
              Gen.return Pop;
              Gen.return Peek;
+             Gen.return Drop;
              Gen.return Is_empty;
            ])
 
@@ -34,7 +36,8 @@ module STM_ms_queue (Queue : Ms_queues.MS_queue_tests) = struct
     let next_state c s =
       match c with
       | Push i -> i :: s
-      | Pop -> ( match List.rev s with [] -> s | _ :: s' -> List.rev s')
+      | Pop | Drop -> (
+          match List.rev s with [] -> s | _ :: s' -> List.rev s')
       | Peek | Is_empty -> s
 
     let precond _ _ = true
@@ -44,6 +47,7 @@ module STM_ms_queue (Queue : Ms_queues.MS_queue_tests) = struct
       | Push i -> Res (unit, Queue.push d i)
       | Pop -> Res (result int exn, protect Queue.pop_exn d)
       | Peek -> Res (result int exn, protect Queue.peek_exn d)
+      | Drop -> Res (result unit exn, protect Queue.drop_exn d)
       | Is_empty -> Res (bool, Queue.is_empty d)
 
     let postcond c (s : state) res =
@@ -53,6 +57,10 @@ module STM_ms_queue (Queue : Ms_queues.MS_queue_tests) = struct
           match List.rev s with
           | [] -> res = Error Queue.Empty
           | j :: _ -> res = Ok j)
+      | Drop, Res ((Result (Unit, Exn), _), res) -> (
+          match List.rev s with
+          | [] -> res = Error Queue.Empty
+          | _ -> res = Ok ())
       | Is_empty, Res ((Bool, _), res) -> res = (s = [])
       | _, _ -> false
   end
