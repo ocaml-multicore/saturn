@@ -47,6 +47,20 @@ let create () =
   let top_cache = ref 0 |> Multicore_magic.copy_as_padded in
   { top; bottom; top_cache; tab } |> Multicore_magic.copy_as_padded
 
+
+let of_list l = 
+  let len = List.length l in
+  let capacity = min min_capacity (2 * len) in
+  let top = Atomic.make_contended 0 in
+  let tab = Array.make capacity (Obj.magic ()) in
+  List.iteri (fun i x -> Array.unsafe_set tab i (ref x)) l;
+  let bottom = Atomic.make_contended len in
+  let top_cache = ref 0 |> Multicore_magic.copy_as_padded in
+  { top; bottom; top_cache; tab } |> Multicore_magic.copy_as_padded
+
+
+(*  *)
+
 let realloc a t b sz new_sz =
   let new_a = Array.make new_sz (Obj.magic ()) in
   ArrayExtra.blit_circularly a
@@ -80,6 +94,8 @@ let push q v =
     Array.unsafe_set a (b land (Array.length a - 1)) v;
     q.tab <- a;
     Atomic.incr q.bottom
+
+(* *)
 
 type ('a, _) poly = Option : ('a, 'a option) poly | Value : ('a, 'a) poly
 
@@ -128,6 +144,8 @@ let pop_as : type a r. a t -> (a, r) poly -> r =
 
 let pop_exn q = pop_as q Value
 let pop_opt q = pop_as q Option
+
+(* *)
 
 let rec steal_as : type a r. a t -> Backoff.t -> (a, r) poly -> r =
  fun q backoff poly ->
