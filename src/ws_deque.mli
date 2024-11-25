@@ -104,6 +104,7 @@ val steal_drop_exn : 'a t -> unit
   this example interesting by improving the likelihood of parallelism. 
   Spawning a domain is a costly operation compared to the work actually run on them
   here. In practice, you should not use a barrier.
+
 {@ocaml non-deterministic[
       # open Saturn.Work_stealing_deque
       # let t : int t = create ()
