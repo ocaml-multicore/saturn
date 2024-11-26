@@ -128,7 +128,7 @@ module type SPSC_queue = sig
    a costly operation, especially compared to the relatively small amount of work
    being performed here. In practice, using a barrier in this manner is unnecessary.
 
-   {@ocaml non-deterministic[
+   {@ocaml non-deterministic=command[
     # open Saturn.Single_prod_single_cons_queue
     # let t : int t = create ~size_exponent:5
     val t : int t = <abstr>
