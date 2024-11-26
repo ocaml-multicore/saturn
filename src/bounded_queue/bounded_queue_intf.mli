@@ -109,7 +109,9 @@ module type BOUNDED_QUEUE = sig
       queue is full. *)
 end
 
-(** {1 Examples}
+(** {1 Examples} *)
+
+(** {2 Sequential example}
     An example top-level session:
     {[
       # open Saturn.Bounded_queue
@@ -137,8 +139,15 @@ end
       - : int option = None
       # pop_exn t
       Exception: Saturn__Bounded_queue.Empty.]}
+*)
 
-    A multicore example: 
+(** {2 Multicore example}
+
+  Note: The barrier is used in this example solely to make the results more
+   interesting by increasing the likelihood of parallelism. Spawning a domain is 
+   a costly operation, especially compared to the relatively small amount of work
+   being performed here. In practice, using a barrier in this manner is unnecessary.
+
     {@ocaml non-deterministic[
       # open Saturn.Bounded_queue
       # let t :int t = create ~capacity:4 ()

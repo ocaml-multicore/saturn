@@ -167,7 +167,9 @@ the [seq] is too long to fit in the stack.
 
 🐌 This is a linear-time operation. *)
 
-(** {1 Examples}
+(** {1 Examples} *)
+
+(** {2 Sequential example}
     An example top-level session:
     {[
       # open Saturn.Bounded_stack
@@ -187,8 +189,15 @@ the [seq] is too long to fit in the stack.
       - : int option = None
       # pop_exn t
       Exception: Saturn__Bounded_stack.Empty.]}
+*)
 
-    A multicore example: 
+(** {2 Multicore example}
+  Note: The barrier is used in this example solely to make the results more
+   interesting by increasing the likelihood of parallelism. Spawning a domain is 
+   a costly operation, especially compared to the relatively small amount of work
+   being performed here. In practice, using a barrier in this manner is unnecessary.
+
+
     {@ocaml non-deterministic[
       # open Saturn.Bounded_stack
       # let t :int t = create ()
@@ -219,5 +228,4 @@ the [seq] is too long to fit in the stack.
       # Domain.join domain_popper
       - : int option list = [Some 42; Some 3; Some 2; Some 1; None; Some 12]
       ]}
- 
     *)

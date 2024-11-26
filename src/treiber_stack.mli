@@ -108,7 +108,9 @@ val add_seq : 'a t -> 'a Seq.t -> unit
 
   🐌 This is a linear-time operation on the size of [elements]. *)
 
-(** {1 Examples}
+(** {1 Examples} *)
+
+(** {2 Sequential example}
   An example top-level session:
   {[
     # open Saturn.Stack
@@ -126,8 +128,14 @@ val add_seq : 'a t -> 'a Seq.t -> unit
     - : int list = [2; 1; 42]
     # pop_exn t
     Exception: Saturn__Treiber_stack.Empty.]}
+*)
 
-  A multicore example: 
+(** {2 Multicore example}
+  Note: The barrier is used in this example solely to make the results more
+   interesting by increasing the likelihood of parallelism. Spawning a domain is 
+   a costly operation, especially compared to the relatively small amount of work
+   being performed here. In practice, using a barrier in this manner is unnecessary.
+
   {@ocaml non-deterministic[
     # open Saturn.Stack
     # let t : int t = create ()
@@ -158,5 +166,4 @@ val add_seq : 'a t -> 'a Seq.t -> unit
     # Domain.join domain_popper
     - : int option list = [Some 42; Some 3; Some 2; Some 1; None; Some 12]
     ]}
- 
   *)
