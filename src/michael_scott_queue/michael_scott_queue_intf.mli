@@ -123,7 +123,7 @@ module type MS_QUEUE = sig
    being performed here. In practice, using a barrier in this manner is unnecessary.
 
 
-    {@ocaml non-deterministic[
+    {@ocaml non-deterministic=command[
       # open Saturn.Queue
       # let t : string t = create ()
       val t : string t = <abstr>
