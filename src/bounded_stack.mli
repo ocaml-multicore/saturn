@@ -178,7 +178,7 @@ the [seq] is too long to fit in the stack.  *)
       Exception: Saturn__Bounded_stack.Empty.]}
 
     A multicore example: 
-    {@ocaml non-deterministic=output[
+    {@ocaml non-deterministic[
       # open Saturn.Bounded_stack
       # let t :int t = create ()
       val t : int t = <abstr>
