@@ -41,6 +41,8 @@ module type MS_QUEUE = sig
   val of_list : 'a list -> 'a t
   (** [of_list list] creates a new queue from a list.
           
+    🐌 This is a linear-time operation.
+    
     {[
       # open Saturn.Queue
       # let t : int t = of_list [1;2;3;4]
@@ -115,10 +117,11 @@ module type MS_QUEUE = sig
   *)
 
   (** {2 Parallel example} 
-  **Note** that the use of a barrier is only necessary to make the result of 
-  this example interesting by improving the likelihood of parallelism. 
-  Spawning a domain is a costly operation compared to the work actually run on them
-  here. In practice, you should not use a barrier. 
+  Note: The barrier is used in this example solely to make the results more
+   interesting by increasing the likelihood of parallelism. Spawning a domain is 
+   a costly operation, especially compared to the relatively small amount of work
+   being performed here. In practice, using a barrier in this manner is unnecessary.
+
 
     {@ocaml non-deterministic[
       # open Saturn.Queue
