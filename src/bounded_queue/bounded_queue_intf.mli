@@ -137,7 +137,7 @@ end
       Exception: Saturn__Bounded_queue.Empty.]}
 
     A multicore example: 
-    {@ocaml non-deterministic[
+    {@ocaml non-deterministic=output[
       # open Saturn.Bounded_queue
       # let t :int t = create ~capacity:4 ()
       val t : int t = <abstr>

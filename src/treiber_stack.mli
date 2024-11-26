@@ -122,7 +122,7 @@ val add_seq : 'a t -> 'a Seq.t -> unit
     Exception: Saturn__Treiber_stack.Empty.]}
 
   A multicore example: 
-  {@ocaml non-deterministic[
+  {@ocaml non-deterministic=output[
     # open Saturn.Stack
     # let t : int t = create ()
     val t : int t = <abstr>
