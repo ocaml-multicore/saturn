@@ -35,6 +35,8 @@ module type BOUNDED_QUEUE = sig
   (** [of_list_exn ~capacity list] creates a new queue from a list.
     
     @raises Full if the length of [list] is greater than [capacity]. 
+  
+    🐌 This is a linear-time operation.
       
     {[
       # open Saturn.Bounded_queue

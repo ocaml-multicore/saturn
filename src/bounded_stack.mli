@@ -22,6 +22,7 @@ val of_list_exn : ?capacity:int -> 'a list -> 'a t
 
   @raises Full if the [list] is longer than the capacity of the stack.
 
+  🐌 This is a linear-time operation.
  {[
       # open Saturn.Bounded_stack
       # let t : int t = of_list_exn [1;2;3;4]
@@ -106,12 +107,16 @@ val push_exn : 'a t -> 'a -> unit
 val try_push : 'a t -> 'a -> bool
 (** [try_push stack element] tries to add [element] to the top of the [stack].
     Returns [true] if the element was successfully added, or [false] if the
-    stack is full. *)
+    stack is full. 
+    
+  🐌 This is linear-time operation on the size of [elements]. *)
 
 val push_all_exn : 'a t -> 'a list -> unit
 (** [push_all_exn stack elements] adds all [elements] to the top of the [stack].
     
-  @raises Full if the [stack] is full. *)
+  @raises Full if the [stack] is full. 
+    
+  🐌 This is a linear-time operation on the size of [elements]. *)
 
 val try_push_all : 'a t -> 'a list -> bool
 (** [try_push_all stack elements] tries to add all [elements] to the top of the 
@@ -143,18 +148,24 @@ val of_seq : ?capacity:int -> 'a Seq.t -> 'a t
 (** [of_seq seq] creates a stack from a [seq]. It must be finite. 
 
   @raises Full if the [list] is longer than the capacity of the stack.
+  
+  🐌 This is a linear-time operation.
 *)
 
 val add_seq_exn : 'a t -> 'a Seq.t -> unit
 (** [add_seq_exn stack seq] adds all elements of [seq] to the top of the 
 [stack]. [seq] must be finite. 
 
-@raises Full if the [seq] is too long to fit in the stack. *)
+@raises Full if the [seq] is too long to fit in the stack. 
+  
+🐌 This is a linear-time operation on the size of [seq]. *)
 
 val try_add_seq : 'a t -> 'a Seq.t -> bool
 (** [try_add_seq stack seq] tries to add all elements of [seq] to the top of the
 [stack]. Returns [true] if the elements were successfully added, or [false] if 
-the [seq] is too long to fit in the stack.  *)
+the [seq] is too long to fit in the stack. 
+
+🐌 This is a linear-time operation. *)
 
 (** {1 Examples}
     An example top-level session:
@@ -184,19 +195,21 @@ the [seq] is too long to fit in the stack.  *)
       val t : int t = <abstr>
       # let barrier =  Atomic.make 2
       val barrier : int Atomic.t = <abstr>
+
       # let pusher () = 
         Atomic.decr barrier;
         while Atomic.get barrier != 0 do Domain.cpu_relax () done;
-
         try_push_all t [1;2;3] |> ignore;
         push_exn t 42;
         push_exn t 12
       val pusher : unit -> unit = <fun>
+
       # let popper () = 
         Atomic.decr barrier;
         while Atomic.get barrier != 0 do Domain.cpu_relax () done;
         List.init 6 (fun i -> Domain.cpu_relax (); pop_opt t)
       val popper : unit -> int option list = <fun>
+      
       # let domain_pusher = Domain.spawn pusher
       val domain_pusher : unit Domain.t = <abstr>
       # let domain_popper = Domain.spawn popper
