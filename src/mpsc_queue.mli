@@ -22,6 +22,8 @@ val create : unit -> 'a t
 val of_list : 'a list -> 'a t
 (** [of_list l] creates a new single-consumer queue from list [l]. 
 
+    🐌 This is a linear-time operation.
+
     {[
     # open Saturn.Single_consumer_queue
     # let t : int t = of_list [1; 2; 3]
@@ -52,7 +54,9 @@ val push_all : 'a t -> 'a list -> unit
     the other operations.
         
     @raise Closed if [q] is closed. 
-        
+     
+    🐌 This is a linear-time operation on the size of [vs].
+
     {[
     # open Saturn.Single_consumer_queue
     # let t : int t = create ()
@@ -134,7 +138,9 @@ val push_head : 'a t -> 'a -> unit
 
     @raise Closed if [q] is closed and empty. *)
 
-(** {1 Examples}
+(** {1 Examples} *)
+
+(** {2 Sequential example}
     An example top-level session:
     {[
     # open Saturn.Single_consumer_queue
@@ -152,9 +158,15 @@ val push_head : 'a t -> 'a -> unit
     - : unit = ()
     # pop_exn t
     Exception: Saturn__Mpsc_queue.Empty.]}
+*)
 
-    A multicore example: 
-    {@ocaml non-deterministic[
+(** {2 Multicore example}
+  Note: The barrier is used in this example solely to make the results more
+   interesting by increasing the likelihood of parallelism. Spawning a domain is
+   a costly operation, especially compared to the relatively small amount of work
+   being performed here. In practice, using a barrier in this manner is unnecessary.
+    
+    {@ocaml non-deterministic=command[
     # open Saturn.Single_consumer_queue
     # let t : (string * int) t = create ()
     val t : (string * int) t = <abstr>
