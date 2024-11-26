@@ -24,6 +24,8 @@ val create : unit -> 'a t
 val of_list : 'a list -> 'a t
 (** [of_list list] creates a new work-stealing queue from [list].
 
+  🐌 This is a linear-time operation.
+
  {[
         # open Saturn.Work_stealing_deque
         # let t : int t = of_list [1;2;3;4]
@@ -76,7 +78,9 @@ val steal_drop_exn : 'a t -> unit
             
       @raises Empty if the [queue] is empty. *)
 
-(** {1 Examples} 
+(** {1 Examples} *)
+
+(** {2 Sequential example} 
       An example top-level session:
 {[
       # open Saturn.Work_stealing_deque
@@ -99,13 +103,13 @@ val steal_drop_exn : 'a t -> unit
 ]}
 *)
 
-(** {2 Sequential examples} 
+(** {2 Multicore example} 
 **Note** that the use of a barrier is only necessary to make the result of 
   this example interesting by improving the likelihood of parallelism. 
   Spawning a domain is a costly operation compared to the work actually run on them
   here. In practice, you should not use a barrier.
 
-{@ocaml non-deterministic=output[
+{@ocaml non-deterministic=command[
       # open Saturn.Work_stealing_deque
       # let t : int t = create ()
       val t : int t = <abstr>
