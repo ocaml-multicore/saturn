@@ -198,7 +198,7 @@ the [seq] is too long to fit in the stack.
    being performed here. In practice, using a barrier in this manner is unnecessary.
 
 
-    {@ocaml non-deterministic[
+    {@ocaml non-deterministic=command[
       # open Saturn.Bounded_stack
       # let t :int t = create ()
       val t : int t = <abstr>

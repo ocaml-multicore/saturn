@@ -136,7 +136,7 @@ val add_seq : 'a t -> 'a Seq.t -> unit
    a costly operation, especially compared to the relatively small amount of work
    being performed here. In practice, using a barrier in this manner is unnecessary.
 
-  {@ocaml non-deterministic[
+  {@ocaml non-deterministic=command[
     # open Saturn.Stack
     # let t : int t = create ()
     val t : int t = <abstr>

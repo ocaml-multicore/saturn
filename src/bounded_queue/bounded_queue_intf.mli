@@ -148,7 +148,7 @@ end
    a costly operation, especially compared to the relatively small amount of work
    being performed here. In practice, using a barrier in this manner is unnecessary.
 
-    {@ocaml non-deterministic[
+    {@ocaml non-deterministic=command[
       # open Saturn.Bounded_queue
       # let t :int t = create ~capacity:4 ()
       val t : int t = <abstr>
