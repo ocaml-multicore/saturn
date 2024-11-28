@@ -40,3 +40,4 @@ module Size = Size
 module Skiplist = Skiplist
 module Htbl = Htbl
 module Htbl_unsafe = Htbl_unsafe
+module Bag = Bag
