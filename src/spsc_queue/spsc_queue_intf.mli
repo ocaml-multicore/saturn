@@ -14,8 +14,10 @@ module type SPSC_queue = sig
       that works in FIFO order. *)
 
   val create : size_exponent:int -> 'a t
-  (** [create ~size_exponent:int] creates a new single-producer single-consumer
-     queue of maximum size [2^size_exponent] and initially empty. *)
+  (** [create ~size_exponent] creates a new single-producer single-consumer
+    queue with a maximum size of [2^size_exponent] and initially empty.
+    
+    🐌 This is a linear-time operation in [2^size_exponent]. *)
 
   val of_list_exn : size_exponent:int -> 'a list -> 'a t
   (** [of_list_exn ~size_exponent list] creates a new queue from a list.

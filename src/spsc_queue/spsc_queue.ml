@@ -62,7 +62,7 @@ let of_list_exn ~size_exponent values =
   let nvalues = List.length values in
   if nvalues > size then raise Full;
   let array = Array.make size None in
-  List.iteri (fun i elt -> Array.unsafe_set array i (Some elt)) values;
+  List.iteri (fun i elt -> Array.set array i (Some elt)) values;
   let tail = Atomic.make_contended nvalues in
   let s = Obj.size (Obj.repr tail) in
   let tail_cache = Padded_int_ref.make s nvalues in
@@ -86,7 +86,7 @@ let push_as (type r) t element (mono : r mono) : r =
     head == head_cache
   then match mono with Unit -> raise_notrace Full | Bool -> false
   else begin
-    Array.unsafe_set t.array (tail land (size - 1)) (Some element);
+    Array.set t.array (tail land (size - 1)) (Some element);
     Atomic.incr t.tail;
     match mono with Unit -> () | Bool -> true
   end
@@ -115,11 +115,11 @@ let pop_or_peek_as (type a r) (t : a t) op (poly : (a, r) poly) : r =
   then match poly with Value | Unit -> raise_notrace Empty | Option -> None
   else
     let index = head land (Array.length t.array - 1) in
-    let v = Array.unsafe_get t.array index in
+    let v = Array.get t.array index in
     begin
       match op with
       | Pop ->
-          Array.unsafe_set t.array index None;
+          Array.set t.array index None;
           Atomic.incr t.head
       | Peek -> ()
     end;
