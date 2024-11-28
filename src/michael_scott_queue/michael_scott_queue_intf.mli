@@ -55,13 +55,13 @@ module type MS_QUEUE = sig
     *)
 
   val is_empty : 'a t -> bool
-  (** [is_empty q] returns [true] if [q] is empty and [false otherwise]. *)
+  (** [is_empty q] returns [true] if [q] is empty and [false] otherwise. *)
 
   (** {2 Consumer functions} *)
 
   exception Empty
   (** Raised when {!pop_exn}, {!peek_exn}, or {!drop_exn} is applied to an empty
-   stack. *)
+   queue. *)
 
   val peek_exn : 'a t -> 'a
   (** [peek_exn queue] returns the first element of the [queue] without removing it.
