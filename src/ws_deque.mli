@@ -53,10 +53,12 @@ val pop_exn : 'a t -> 'a
 
 val pop_opt : 'a t -> 'a option
 (** [pop_opt queue] removes and returns [Some] of the last element of the 
-      [queue], or returns [None] if the [queue] is empty.  *)
+      [queue], or returns [None] if the [queue] is empty. It should only 
+      be invoked by the domain that owns the [queue]. *)
 
 val drop_exn : 'a t -> unit
-(** [drop_exn queue] removes the last element of the [queue]. 
+(** [drop_exn queue] removes the last element of the [queue]. It should only
+      be invoked by the domain that owns the [queue].
             
       @raises Empty if the [queue] is empty. *)
 
@@ -64,14 +66,12 @@ val drop_exn : 'a t -> unit
 
 val steal_exn : 'a t -> 'a
 (** [steal_exn queue] removes and returns the first element of the [queue]. 
-      It should only be invoked by a domain that doesn't own the [queue].
 
         @raises Empty if the [queue] is empty. *)
 
 val steal_opt : 'a t -> 'a option
 (** [steal_opt queue] removes and returns [Some] of the first element of the 
-      [queue], or returns [None] if the [queue] is empty. It should only be
-      invoked by a domain that doesn't own the [queue]. *)
+      [queue], or returns [None] if the [queue] is empty. *)
 
 val steal_drop_exn : 'a t -> unit
 (** [steal_drop_exn queue] removes the first element of the [queue]. 

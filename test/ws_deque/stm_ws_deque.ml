@@ -27,8 +27,8 @@ module Spec = struct
            Gen.map (fun i -> Push i) int_gen;
            Gen.return Pop;
            Gen.return Drop;
-           (*Gen.return Steal;*)
-           (* No point in stealing from yourself :-D *)
+           Gen.return Steal;
+           Gen.return Steal_drop;
          ])
 
   let stealer_cmd _s =

@@ -53,7 +53,7 @@ let next_pow2 n =
 
 let of_list l =
   let len = List.length l in
-  let capacity = min min_capacity (next_pow2 len) in
+  let capacity = max min_capacity (next_pow2 len) in
   let top = Atomic.make_contended 0 in
   let tab = Array.make capacity (Obj.magic ()) in
   List.iteri (fun i x -> Array.unsafe_set tab i (ref x)) l;
