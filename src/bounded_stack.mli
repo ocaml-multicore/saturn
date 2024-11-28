@@ -108,8 +108,7 @@ val try_push : 'a t -> 'a -> bool
 (** [try_push stack element] tries to add [element] to the top of the [stack].
     Returns [true] if the element was successfully added, or [false] if the
     stack is full. 
-    
-  🐌 This is linear-time operation on the size of [elements]. *)
+*)
 
 val push_all_exn : 'a t -> 'a list -> unit
 (** [push_all_exn stack elements] adds all [elements] to the top of the [stack].
@@ -123,6 +122,8 @@ val try_push_all : 'a t -> 'a list -> bool
     [stack]. Returns [true] if the elements were successfully added, or [false] if 
     the stack is full. 
     
+🐌 This is a linear-time operation on the size of [elements]. 
+
   {[
     # let t : int t = create ()
     val t : int t = <abstr>
@@ -147,7 +148,7 @@ bottom.
 val of_seq : ?capacity:int -> 'a Seq.t -> 'a t
 (** [of_seq seq] creates a stack from a [seq]. It must be finite. 
 
-  @raises Full if the [list] is longer than the capacity of the stack.
+  @raises Full if the [seq] is longer than the capacity of the stack.
   
   🐌 This is a linear-time operation.
 *)
