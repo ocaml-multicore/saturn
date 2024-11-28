@@ -60,10 +60,10 @@ can run this command to check:
 opam --version
 ```
 
-Then use opam to install OCaml 5.0.0:
+Then use opam to install OCaml 5.2.0:
 
 ```sh
-opam switch create 5.0.0
+opam switch create 5.2.0
 ```
 
 If you want a later version, you can run the following line to get a list of all
