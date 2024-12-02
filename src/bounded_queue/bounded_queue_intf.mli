@@ -35,6 +35,8 @@ module type BOUNDED_QUEUE = sig
   (** [of_list_exn ~capacity list] creates a new queue from a list.
     
     @raises Full if the length of [list] is greater than [capacity]. 
+  
+    🐌 This is a linear-time operation.
       
     {[
       # open Saturn.Bounded_queue
@@ -107,7 +109,9 @@ module type BOUNDED_QUEUE = sig
       queue is full. *)
 end
 
-(** {1 Examples}
+(** {1 Examples} *)
+
+(** {2 Sequential example}
     An example top-level session:
     {[
       # open Saturn.Bounded_queue
@@ -135,9 +139,16 @@ end
       - : int option = None
       # pop_exn t
       Exception: Saturn__Bounded_queue.Empty.]}
+*)
 
-    A multicore example: 
-    {@ocaml non-deterministic[
+(** {2 Multicore example}
+
+  Note: The barrier is used in this example solely to make the results more
+   interesting by increasing the likelihood of parallelism. Spawning a domain is 
+   a costly operation, especially compared to the relatively small amount of work
+   being performed here. In practice, using a barrier in this manner is unnecessary.
+
+    {@ocaml non-deterministic=command[
       # open Saturn.Bounded_queue
       # let t :int t = create ~capacity:4 ()
       val t : int t = <abstr>

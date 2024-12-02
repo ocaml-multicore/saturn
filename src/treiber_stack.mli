@@ -74,6 +74,8 @@ val push : 'a t -> 'a -> unit
 val push_all : 'a t -> 'a list -> unit
 (** [push_all stack elements] adds all [elements] to the top of the [stack]. 
   
+  🐌 This is a linear-time operation on the size of [elements].
+
   {[
   # let t : int t = create ()
   val t : int t = <abstr>
@@ -96,13 +98,19 @@ bottom.
   🐌 This is a linear time operation. *)
 
 val of_seq : 'a Seq.t -> 'a t
-(** [of_seq seq] creates a stack from a [seq]. It must be finite. *)
+(** [of_seq seq] creates a stack from a [seq]. It must be finite. 
+
+  🐌 This is a linear-time operation. *)
 
 val add_seq : 'a t -> 'a Seq.t -> unit
 (** [add_seq stack seq] adds all elements of [seq] to the top of the 
-[stack]. [seq] must be finite. *)
+[stack]. [seq] must be finite. 
 
-(** {1 Examples}
+  🐌 This is a linear-time operation on the size of [elements]. *)
+
+(** {1 Examples} *)
+
+(** {2 Sequential example}
   An example top-level session:
   {[
     # open Saturn.Stack
@@ -120,14 +128,21 @@ val add_seq : 'a t -> 'a Seq.t -> unit
     - : int list = [2; 1; 42]
     # pop_exn t
     Exception: Saturn__Treiber_stack.Empty.]}
+*)
 
-  A multicore example: 
-  {@ocaml non-deterministic[
+(** {2 Multicore example}
+  Note: The barrier is used in this example solely to make the results more
+   interesting by increasing the likelihood of parallelism. Spawning a domain is 
+   a costly operation, especially compared to the relatively small amount of work
+   being performed here. In practice, using a barrier in this manner is unnecessary.
+
+  {@ocaml non-deterministic=command[
     # open Saturn.Stack
     # let t : int t = create ()
     val t : int t = <abstr>
     # let barrier =  Atomic.make 2
     val barrier : int Atomic.t = <abstr>
+
     # let pusher () = 
         Atomic.decr barrier;
         while Atomic.get barrier != 0 do Domain.cpu_relax () done;
@@ -135,11 +150,13 @@ val add_seq : 'a t -> 'a Seq.t -> unit
         push t 42;
         push t 12
     val pusher : unit -> unit = <fun>
+
     # let popper () = 
         Atomic.decr barrier;
         while Atomic.get barrier != 0 do Domain.cpu_relax () done;
         List.init 6 (fun i -> Domain.cpu_relax (); pop_opt t)
     val popper : unit -> int option list = <fun>
+    
     # let domain_pusher = Domain.spawn pusher
     val domain_pusher : unit Domain.t = <abstr>
     # let domain_popper = Domain.spawn popper
@@ -149,5 +166,4 @@ val add_seq : 'a t -> 'a Seq.t -> unit
     # Domain.join domain_popper
     - : int option list = [Some 42; Some 3; Some 2; Some 1; None; Some 12]
     ]}
- 
   *)
