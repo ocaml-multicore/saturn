@@ -84,32 +84,32 @@ opam install saturn
 # Provided data structures
 
 ### Treiber Lock-free Stack
-- **Module**: [Stack](https://ocaml-multicore.github.io/saturn/saturn/Stack/index.html)
+- **Module**: [Stack](https://ocaml-multicore.github.io/saturn/Saturn/Stack/index.html)
 - **Description**: A classic multi-producer, multi-consumer, lock-free stack, known for robustness and flexibility.
 - **Recommendation**: It's a recommended starting point when a LIFO structure is needed.
 
 ### Lock-free Bounded Stack
 
-- **Module**: [Bounded_stack](https://ocaml-multicore.github.io/saturn/saturn/Bounded_stack/index.html)
+- **Module**: [Bounded_stack](https://ocaml-multicore.github.io/saturn/Saturn/Bounded_stack/index.html)
 - **Description**: A stack based on the Treiber stack algorithm, with a limited capacity and a `length` function.
 - **Recommendation**: Adding a capacity introduces a general overhead to the operations. It is recommended to use the unbounded stack if neither the capacity nor the `length` function is needed.
 
 ### Michael-Scott Lock-free Queue
 
-- **Module**: [Queue](https://ocaml-multicore.github.io/saturn/saturn/Queue/index.html)
+- **Module**: [Queue](https://ocaml-multicore.github.io/saturn/Saturn/Queue/index.html)
 - **Description**: A multi-producer, multi-consumer lock-free queue that is both robust and flexible.
 - **Recommendation**: This structure is ideal when a FIFO setup is required.
 - **Sources**: [Simple, Fast, and Practical Non-Blocking and Blocking Concurrent Queue Algorithms](https://www.cs.rochester.edu/~scott/papers/1996_PODC_queues.pdf)
 
 ### Lock-free Bounded Queue
 
-- **Module**: [Bounded_queue](https://ocaml-multicore.github.io/saturn/saturn/Bounded_queue/index.html)
+- **Module**: [Bounded_queue](https://ocaml-multicore.github.io/saturn/Saturn/Bounded_queue/index.html)
 - **Description**: A queue based on the Michael-Scott queue algorithm, with a limited capacity and a `length` function.
 - **Recommendation**: Adding a capacity introduces a general overhead to the operations. It is recommended to use the unbounded queue if neither the capacity nor the `length` function is needed.
 
 ### Lock-free Chase-Lev Work-Stealing Dequeue
 
-- **Module**: [Work_stealing_deque](https://ocaml-multicore.github.io/saturn/saturn/Work_stealing_deque/index.html)
+- **Module**: [Work_stealing_deque](https://ocaml-multicore.github.io/saturn/Saturn/Work_stealing_deque/index.html)
 - **Description**: Single-producer, multi-consumer dynamic-size deque (double-ended queue).
 - **Recommendation**: Designed for high-throughput scheduling using per-core work distribution. Note that `pop` and `steal` operations follow different ordering (LIFO and FIFO) with distinct linearization constraints. It is a role-oriented data structure: most functions can't be used by all domains.
 - **Sources**:
@@ -118,26 +118,26 @@ opam install saturn
 
 ### Lock-free Single Producer Single Consumer Queue
 
-- **Module**: [Single_prod_single_cons_queue](https://ocaml-multicore.github.io/saturn/saturn/Single_prod_single_cons_queue/index.html)
+- **Module**: [Single_prod_single_cons_queue](https://ocaml-multicore.github.io/saturn/Saturn/Single_prod_single_cons_queue/index.html)
 - **Description**: A single-producer, single-consumer fixed-size queue. This specific configuration enables strong optimizations but also makes the data structure unsafe if used improperly, i.e., with more than one producer or one consumer at any time.
 - **Recommendation**: It's concurrent-safe as long as only one thread acts as producer and one as consumer at any time.
 
 ### Lock-free Multiple Producers Single Consumer Queue
 
-- **Module**: [Single_consumer_queue](https://ocaml-multicore.github.io/saturn/saturn/Single_consumer_queue/index.html)
+- **Module**: [Single_consumer_queue](https://ocaml-multicore.github.io/saturn/Saturn/Single_consumer_queue/index.html)
 - **Description**: A multi-producer, single-consumer concurrent-safe queue with a closing mechanism to prevent further pushes.
 - **Recommendation**: Designed for scheduler run queues. It is not concurrent-safe if used by multiple consumers simultaneously.
 
 ### Lock-free Skip List
 
-- **Module**: [Skiplist](https://ocaml-multicore.github.io/saturn/saturn/Skiplist/index.html)
-- **Description**: A skiplist is a probabilistic data structure that has an average logarithmic complexity for search and insertion operations.
+- **Module**: [Skiplist](https://ocaml-multicore.github.io/saturn/Saturn/Skiplist/index.html)
+- **Description**: A skiplist is a probabilistic data structure that has an average logarithmic complexity for search and insertion operations. Like `Stdlib.Map`, it is an ordered collection.
 - **Recommendation**: The skiplist is not resizable. It will, however, continue to work once the limit capacity is reached, but performance will decrease as the depth of the structure won't be enough to maintain logarithmic performance.
 - **Sources**: See Chapter 14 in [The Art of Multiprocessor Programming](https://www.researchgate.net/profile/Maurice-Herlihy/publication/213876653_The_Art_of_Multiprocessor_Programming/links/0deec516186548c25c000000/The-Art-of-Multiprocessor-Programming.pdf)
 
 ### Lock-free Hash Table
 
-- **Module**: [Hstbl](https://ocaml-multicore.github.io/saturn/saturn/htbl/index.html)
+- **Module**: [Htbl](https://ocaml-multicore.github.io/saturn/Saturn/Htbl/index.html)
 - **Description**: A resizable lock-free hash table with a snapshot mechanism.
 - **Recommendation**: Contains useful high-level operations designed to work as building blocks of non-blocking algorithms.
 
