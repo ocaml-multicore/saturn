@@ -4,7 +4,7 @@ module Tests_spsc (Spsc_queue : Spsc_queues.SPSC_tests) = struct
   let test_empty () =
     let q = Spsc_queue.create ~size_exponent:3 in
     assert (Option.is_none (Spsc_queue.pop_opt q));
-    assert (Spsc_queue.size q == 0);
+    assert (Spsc_queue.length q == 0);
     Printf.printf "test_%s_empty: ok\n" Spsc_queue.name
 
   let push_not_full q elt =
@@ -18,7 +18,7 @@ module Tests_spsc (Spsc_queue : Spsc_queues.SPSC_tests) = struct
     while push_not_full q () do
       Domain.cpu_relax ()
     done;
-    assert (Spsc_queue.size q == 8);
+    assert (Spsc_queue.length q == 8);
     Printf.printf "test_%s_full: ok\n" Spsc_queue.name
 
   let test_parallel () =
@@ -48,7 +48,7 @@ module Tests_spsc (Spsc_queue : Spsc_queues.SPSC_tests) = struct
           last_num := Float.to_int v
     done;
     assert (Option.is_none (Spsc_queue.pop_opt q));
-    assert (Spsc_queue.size q == 0);
+    assert (Spsc_queue.length q == 0);
     Domain.join producer;
     Printf.printf "test_%s_parallel: ok (transferred = %d)\n" Spsc_queue.name
       !last_num
