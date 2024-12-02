@@ -1,7 +1,7 @@
 let benchmarks =
   [
-    ("Saturn Queue", Bench_queue.Safe.run_suite);
-    ("Saturn Queue_unsafe", Bench_queue.Unsafe.run_suite);
+    ("Saturn Queue (MS)", Bench_queue.Safe.run_suite);
+    ("Saturn Queue_unsafe (MS)", Bench_queue.Unsafe.run_suite);
     ("Saturn Bounded_Queue", Bench_bounded_queue.Safe.run_suite);
     ("Saturn Bounded_Queue_unsafe", Bench_bounded_queue.Unsafe.run_suite);
     ("Saturn Single_prod_single_cons_queue", Bench_spsc_queue.Safe.run_suite);
