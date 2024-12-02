@@ -13,7 +13,7 @@
 
 This repository is a collection of concurrent-safe data structures for OCaml 5. It aims to provide an industrial-strength, well-tested (and possibly model-checked and verified in the future), well documented, and maintained concurrent-safe data structure library. We want to make it easier for Multicore OCaml users to find the right data structures for their uses.
 
-You can learn more about the **motivation** behind `Saturn` through the implemnetation of a lock-free stack [here](doc/motivation.md). 
+You can learn more about the **motivation** behind `Saturn` through the implementation of a lock-free stack [here](doc/motivation.md). 
 
 **Saturn** is published on [opam](https://opam.ocaml.org/packages/saturn/) and is distributed under the [ISC license](https://github.com/ocaml-multicore/saturn/blob/main/LICENSE.md).
 
@@ -179,9 +179,9 @@ To learn more about it, see this [document](doc/composability.md).
 One of the many difficulties of implementating parallelism-safe data structures is that in addition to providing the same safety properties as sequental ones, they may also have to observe some [liveness properties](https://en.wikipedia.org/wiki/Safety_and_liveness_properties) as well as additional safety properties specific to concurrent programming, like deadlock-freedom.
 
 In addition to the expected safety properties, the main properties we want to test for are:
-- linearisability
-- lock-freedom for all the lock-free data structures
-- no potentially harmful data races
+- linearisability,
+- lock-freedom for all the lock-free data structures,
+- no potentially harmful data races.
 
 Here is a list of the tools we use to ensure them:
 - _safety_ : unitary tests and `qcheck` tests check semantics and expected behaviors with one and more domains.
