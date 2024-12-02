@@ -91,7 +91,7 @@ opam install saturn
 ### Lock-free Bounded Stack
 
 - **Module**: [Bounded_stack](https://ocaml-multicore.github.io/saturn/Saturn/Bounded_stack/index.html)
-- **Description**: A stack based on the Treiber stack algorithm, with a limited capacity and a `length` function.
+- **Description**: A stack based on the Treiber stack algorithm, with a limited capacity and a `length` function. This ensures that the stack is memory-bounded.
 - **Recommendation**: Adding a capacity introduces a general overhead to the operations. It is recommended to use the unbounded stack if neither the capacity nor the `length` function is needed.
 
 ### Michael-Scott Lock-free Queue
@@ -104,7 +104,7 @@ opam install saturn
 ### Lock-free Bounded Queue
 
 - **Module**: [Bounded_queue](https://ocaml-multicore.github.io/saturn/Saturn/Bounded_queue/index.html)
-- **Description**: A queue based on the Michael-Scott queue algorithm, with a limited capacity and a `length` function.
+- **Description**: A queue based on the Michael-Scott queue algorithm, with a limited capacity and a `length` function. This ensures that the queue is memory-bounded.
 - **Recommendation**: Adding a capacity introduces a general overhead to the operations. It is recommended to use the unbounded queue if neither the capacity nor the `length` function is needed.
 
 ### Lock-free Chase-Lev Work-Stealing Dequeue
