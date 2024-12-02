@@ -2,9 +2,8 @@ module Mpsc_queue = Saturn.Single_consumer_queue
 
 (* Mpsc_queue is a multiple producers, single consumer queue. *)
 (* Producers can use the functions
-   - [push],
-   - [is_empty],
-   - [close] *)
+   - [push]
+*)
 (* Consumer can use the functions
    - [pop],
    - [push],
@@ -53,16 +52,6 @@ let extract_n_with_peek q n close =
   let peeked, popped = loop [] [] n in
   (List.rev peeked, List.rev popped)
 
-let popped_until_empty_and_closed q =
-  let rec loop acc =
-    try
-      let popped = Mpsc_queue.pop_opt q in
-      Domain.cpu_relax ();
-      loop (popped :: acc)
-    with Mpsc_queue.Closed -> acc
-  in
-  loop [] |> List.rev
-
 let keep_n_first n = List.filteri (fun i _ -> i < n)
 let keep_n_last n l = List.filteri (fun i _ -> i >= List.length l - n) l
 let list_some = List.map (fun elt -> `Some elt)
@@ -94,7 +83,7 @@ let tests_one_consumer =
 
           (* Testing property *)
           Mpsc_queue.push_head queue i;
-          try Mpsc_queue.pop queue = i with Mpsc_queue.Empty -> false);
+          try Mpsc_queue.pop_exn queue = i with Mpsc_queue.Empty -> false);
       (* TEST 1c - single consumer no producer:
          forall q and n, peek_opt (push_head q i; q) = Some i*)
       Test.make ~name:"push_head_peek_opt"
@@ -118,7 +107,7 @@ let tests_one_consumer =
 
           (* Testing property *)
           Mpsc_queue.push_head queue i;
-          try Mpsc_queue.peek queue = i with Mpsc_queue.Empty -> false);
+          try Mpsc_queue.peek_exn queue = i with Mpsc_queue.Empty -> false);
       (* TEST 2 - single consumer no producer:
          forall q, if is_empty q then pop_opt queue = None *)
       Test.make ~name:"pop_opt_empty" (list int) (fun lpush ->
@@ -149,7 +138,7 @@ let tests_one_consumer =
 
           (* Testing property *)
           (try
-             ignore (Mpsc_queue.pop queue);
+             ignore (Mpsc_queue.pop_exn queue);
              false
            with Mpsc_queue.Empty -> true)
           && !count = List.length lpush);
@@ -183,7 +172,7 @@ let tests_one_consumer =
 
           (* Testing property *)
           (try
-             ignore (Mpsc_queue.peek queue);
+             ignore (Mpsc_queue.peek_exn queue);
              false
            with Mpsc_queue.Empty -> true)
           && !count = List.length lpush);
@@ -497,213 +486,6 @@ let tests_one_consumer_one_producer =
           && keep_n_first (List.length lpush_head) all_pushed
              = list_some (lpush_head |> List.rev)
           && keep_n_last (List.length lpush) all_pushed = list_some lpush);
-      (* TEST 4 - one consumer one producer
-         Consumer push then close while consumer pop_opt until the queue
-         is empty and closed. *)
-      Test.make ~name:"par_pop_opt_push2" (list int) (fun lpush ->
-          (* Initialisation*)
-          let queue = Mpsc_queue.create () in
-          let barrier = Barrier.create 2 in
-
-          (* Sequential [push_head] *)
-          let producer =
-            Domain.spawn (fun () ->
-                Barrier.await barrier;
-                let res =
-                  try
-                    List.iter
-                      (fun elt ->
-                        Mpsc_queue.push queue elt;
-                        Domain.cpu_relax ())
-                      lpush;
-                    false
-                  with Mpsc_queue.Closed -> true
-                in
-                Mpsc_queue.close queue;
-                res)
-          in
-
-          Barrier.await barrier;
-          let popped = popped_until_empty_and_closed queue in
-          let unexpected_closed = Domain.join producer in
-          let popped_value =
-            List.filter (function Some _ -> true | _ -> false) popped
-          in
-
-          (not unexpected_closed)
-          && lpush |> List.map (fun elt -> Some elt) = popped_value);
-    ]
-
-let tests_one_consumer_two_producers =
-  QCheck.
-    [
-      (* TEST 1 - one consumer two producers:
-         Two producers push at the same time.
-         Checks that producers do not erase each other [pushes]. *)
-      Test.make ~name:"par_push"
-        (pair (list int) (list int))
-        (fun (lpush1, lpush2) ->
-          (* Initialization *)
-          let npush1, npush2 = (List.length lpush1, List.length lpush2) in
-          let queue = Mpsc_queue.create () in
-          let barrier = Barrier.create 2 in
-
-          let multi_push lpush =
-            Barrier.await barrier;
-            try
-              List.iter
-                (fun elt ->
-                  Mpsc_queue.push queue elt;
-                  Domain.cpu_relax ())
-                lpush;
-              false
-            with Mpsc_queue.Closed -> true
-          in
-
-          (* Producers pushes. *)
-          let producer1 = Domain.spawn (fun () -> multi_push lpush1) in
-          let producer2 = Domain.spawn (fun () -> multi_push lpush2) in
-
-          let closed1 = Domain.join producer1 in
-          let closed2 = Domain.join producer2 in
-
-          Mpsc_queue.close queue;
-
-          (* Retrieve pushed values. *)
-          let popped = popped_until_empty_and_closed queue in
-
-          let popped_value =
-            List.fold_left
-              (fun acc elt ->
-                match elt with Some elt -> elt :: acc | _ -> acc)
-              [] popped
-            |> List.rev
-          in
-
-          let rec compare l l1 l2 =
-            match (l, l1, l2) with
-            | [], [], [] -> true
-            | [], _, _ -> false
-            | _, [], _ -> l = l2
-            | _, _, [] -> l = l1
-            | x :: l', y :: l1', z :: l2' ->
-                if x = y && x = z then compare l' l1 l2' || compare l' l1' l2
-                else if x = y then compare l' l1' l2
-                else if x = z then compare l' l1 l2'
-                else false
-          in
-
-          (* Testing property :
-             - no Close exception raised before the queue being actually closed
-             - all pushed values are in the queue
-          *)
-          (not closed1) && (not closed2)
-          && List.length popped_value = npush1 + npush2
-          && compare popped_value lpush1 lpush2);
-      (* TEST 2 - one consumer two producers:
-
-         Two producers push and close the queue when one has finished
-         pushing. At the same time a consumer popes.
-
-         Checks that closing the queue prevent other producers to push
-         and that popping at the same time works.
-      *)
-      Test.make ~name:"par_push_close_pop_opt"
-        (pair (list int) (list int))
-        (fun (lpush1, lpush2) ->
-          (* Initialization *)
-          let npush1, npush2 = (List.length lpush1, List.length lpush2) in
-          let queue = Mpsc_queue.create () in
-          let barrier = Barrier.create 3 in
-
-          let guard_push lpush =
-            Barrier.await barrier;
-            let closed_when_pushing =
-              try
-                List.iter
-                  (fun elt ->
-                    Mpsc_queue.push queue elt;
-                    Domain.cpu_relax ())
-                  lpush;
-                false
-              with Mpsc_queue.Closed -> true
-            in
-            ( closed_when_pushing,
-              try
-                Mpsc_queue.close queue;
-                true
-              with Mpsc_queue.Closed -> false )
-          in
-
-          (* Producers pushes. *)
-          let producer1 = Domain.spawn (fun () -> guard_push lpush1) in
-          let producer2 = Domain.spawn (fun () -> guard_push lpush2) in
-
-          (* Waiting to make sure the producers have time to
-             start. However, as the consumer will [pop_opt] until one of
-             the producer closes the queue, it is not a requirement to wait here. *)
-          Barrier.await barrier;
-
-          let popped = popped_until_empty_and_closed queue in
-
-          let closed_when_pushing1, has_closed1 = Domain.join producer1 in
-          let closed_when_pushing2, has_closed2 = Domain.join producer2 in
-
-          let popped_value =
-            List.fold_left
-              (fun acc elt ->
-                match elt with Some elt -> elt :: acc | _ -> acc)
-              [] popped
-            |> List.rev
-          in
-
-          let rec compare l l1 l2 =
-            match (l, l1, l2) with
-            | [], [], [] -> true
-            | [], _, _ -> false
-            | _, [], _ -> l = l2
-            | _, _, [] -> l = l1
-            | x :: l', y :: l1', z :: l2' ->
-                if x = y && x = z then compare l' l1 l2' || compare l' l1' l2
-                else if x = y then compare l' l1' l2
-                else if x = z then compare l' l1 l2'
-                else false
-          in
-
-          (* Testing property :
-             - there should be only 4 workings combinaisons for the boolean values
-             [closed_when_pushing] and [has_closed] :
-               + CASE 1 : if producer 1 closed the queue before producer 2 have finised
-             pushing. In this case returned values will be:
-             1 -> false, true / 2 -> true, false
-               + CASE 2 : if producer 1 closed the queue and producer 2 have finised
-             pushing but have not closed the queue.
-             1 -> false, true / 2 -> false, false
-               + two symetrical cases.
-             - in case 1, the closing producer should have pushed everything but not
-             the other.
-             - in case 2, both queues should have finished pushing. *)
-          match
-            ( closed_when_pushing1,
-              has_closed1,
-              closed_when_pushing2,
-              has_closed2 )
-          with
-          | false, true, true, false ->
-              (* CASE 1 *)
-              let real_npush2 = List.length popped_value - npush1 in
-              real_npush2 < npush2
-              && compare popped_value lpush1 (keep_n_first real_npush2 lpush2)
-          | true, false, false, true ->
-              (* CASE 1, sym *)
-              let real_npush1 = List.length popped_value - npush2 in
-              real_npush1 < npush1
-              && compare popped_value (keep_n_first real_npush1 lpush1) lpush2
-          | false, true, false, false | false, false, false, true ->
-              (* CASE 2*)
-              List.length popped_value = npush1 + npush2
-              && compare popped_value lpush1 lpush2
-          | _, _, _, _ -> false);
     ]
 
 let main () =
@@ -713,7 +495,6 @@ let main () =
       ("one_consumer", to_alcotest tests_one_consumer);
       ("one_producer", to_alcotest tests_one_producer);
       ("one_cons_one_prod", to_alcotest tests_one_consumer_one_producer);
-      ("one_cons_two_prod", to_alcotest tests_one_consumer_two_producers);
     ]
 ;;
 
