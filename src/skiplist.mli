@@ -29,24 +29,29 @@ val length : ('k, 'v) t -> int
 (** {2 Looking up bindings} *)
 
 val find_opt : ('k, 'v) t -> 'k -> 'v option
-(** [find_opt s k] tries to find a binding of [k] to [v] from the skiplist [s]
-    and returns [Some v] in case such a binding was found or return [None] in
-    case no such binding was found. *)
+(** [find_opt sl key] returns [Some] of the current binding of [key] in the 
+    skiplist [sl] or [None] if it does not exist. *)
+
+val find_exn : ('k, 'v) t -> 'k -> 'v
+(** [find_exn sl key] returns the current binding of [key] in the skiplist
+    [sl] or raises {!Not_found} if no such binding exists.
+
+    @raise Not_found if no binding of [key] exists in the skiplist [sl]. *)
 
 val mem : ('k, 'v) t -> 'k -> bool
-(** [mem s k] determines whether the skiplist [s] contained a binding of [k]. *)
+(** [mem sl k] determines whether the skiplist [sl] contained a binding of [k]. *)
 
 (** {2 Adding bindings} *)
 
 val try_add : ('k, 'v) t -> 'k -> 'v -> bool
-(** [try_add s k v] tries to add a new binding of [k] to [v] into the skiplist
-    [s] and returns [true] on success.  Otherwise the skiplist already contained
-    a binding of [k] and [false] is returned. *)
+(** [try_add sk key value] tries to add a new binding of [key] to [value] to
+  the skiplist [sl]. Returns [true] on success and [false] if the skiplist 
+  already contains a binding for [key]. *)
 
 val try_remove : ('k, 'v) t -> 'k -> bool
-(** [try_remove s k] tries to remove a binding of [k] from the skiplist and
-    returns [true] on success.  Otherwise the skiplist did not contain a binding
-    of [k] and [false] is returned. *)
+(** [try_remove sl key] tries to remove a binding of [key] from the skiplist [sl].
+    Returns [true] on success and [false] if the skiplist does not contain a 
+    binding for [key]. *)
 
 (** {1 Examples} *)
 
