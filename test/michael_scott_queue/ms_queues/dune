@@ -1,7 +1,7 @@
 (rule
  (action
   (copy
-   ../../../src/michael_scott_queue/michael_scott_queue_intf.ml
+   ../../../src/michael_scott_queue/michael_scott_queue_intf.mli
    michael_scott_queue_intf.ml))
  (package saturn))
 

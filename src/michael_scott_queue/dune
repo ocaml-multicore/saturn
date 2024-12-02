@@ -1,0 +1,8 @@
+(mdx
+ (package saturn)
+ (enabled_if
+  (and
+   (<> %{os_type} Win32)
+   (>= %{ocaml_version} 5.0.0)))
+ (libraries saturn)
+ (files michael_scott_queue_intf.mli))

@@ -32,27 +32,38 @@ let create () =
 
 let is_empty t = Atomic.get (Node.as_atomic (Atomic.get t.head)) == Nil
 
+let of_list list =
+  match list with
+  | [] -> create ()
+  | _ ->
+      let tail, head = Node.node_of_list list in
+      let head = Node.Next { next = head; value = Obj.magic () } in
+      let head = Atomic.make head |> Multicore_magic.copy_as_padded in
+      let tail = Atomic.make tail |> Multicore_magic.copy_as_padded in
+      { head; tail } |> Multicore_magic.copy_as_padded
+
+(* *)
+
 exception Empty
 
-type ('a, _) poly = Option : ('a, 'a option) poly | Value : ('a, 'a) poly
+type ('a, _) poly =
+  | Option : ('a, 'a option) poly
+  | Value : ('a, 'a) poly
+  | Unit : ('a, unit) poly
 
 let rec pop_as :
     type a r. (a, [ `Next ]) Node.t Atomic.t -> Backoff.t -> (a, r) poly -> r =
  fun head backoff poly ->
   let old_head = Atomic.get head in
   match Atomic.get (Node.as_atomic old_head) with
-  | Nil -> begin match poly with Value -> raise Empty | Option -> None end
+  | Nil -> begin
+      match poly with Value | Unit -> raise Empty | Option -> None
+    end
   | Next r as new_head ->
       if Atomic.compare_and_set head old_head new_head then begin
-        match poly with
-        | Value ->
-            let value = r.value in
-            r.value <- Obj.magic ();
-            value
-        | Option ->
-            let value = r.value in
-            r.value <- Obj.magic ();
-            Some value
+        let value = r.value in
+        r.value <- Obj.magic ();
+        match poly with Value -> value | Option -> Some value | Unit -> ()
       end
       else
         let backoff = Backoff.once backoff in
@@ -60,20 +71,27 @@ let rec pop_as :
 
 let pop_opt t = pop_as t.head Backoff.default Option
 let pop_exn t = pop_as t.head Backoff.default Value
+let drop_exn t = pop_as t.head Backoff.default Unit
+
+(* *)
 
 let rec peek_as : type a r. (a, [ `Next ]) Node.t Atomic.t -> (a, r) poly -> r =
  fun head poly ->
   let old_head = Atomic.get head in
   match Atomic.get (Node.as_atomic old_head) with
-  | Nil -> begin match poly with Value -> raise Empty | Option -> None end
+  | Nil -> begin
+      match poly with Value | Unit -> raise Empty | Option -> None
+    end
   | Next r ->
       let value = r.value in
       if Atomic.get head == old_head then
-        match poly with Value -> value | Option -> Some value
+        match poly with Value -> value | Option -> Some value | Unit -> ()
       else peek_as head poly
 
 let peek_opt t = peek_as t.head Option
 let peek_exn t = peek_as t.head Value
+
+(* *)
 
 let rec fix_tail tail new_tail backoff =
   let old_tail = Atomic.get tail in

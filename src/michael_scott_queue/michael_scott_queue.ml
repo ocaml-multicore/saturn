@@ -33,19 +33,36 @@ let create () =
 
 let is_empty { head; _ } = Atomic.get (Atomic.get head) == Nil
 
+let of_list list =
+  let tail_ = Atomic.make Nil in
+  let tail = Atomic.make_contended tail_ in
+  let rec build_next = function
+    | [] -> tail_
+    | hd :: tl -> Atomic.make @@ Next (hd, build_next tl)
+  in
+  let head = Atomic.make_contended @@ build_next list in
+  { head; tail }
+
+(* *)
+
 exception Empty
 
-type ('a, _) poly = Option : ('a, 'a option) poly | Value : ('a, 'a) poly
+type ('a, _) poly =
+  | Option : ('a, 'a option) poly
+  | Value : ('a, 'a) poly
+  | Unit : ('a, unit) poly
 
 let rec pop_as :
     type a r. a node Atomic.t Atomic.t -> Backoff.t -> (a, r) poly -> r =
  fun head backoff poly ->
   let old_head = Atomic.get head in
   match Atomic.get old_head with
-  | Nil -> begin match poly with Value -> raise Empty | Option -> None end
+  | Nil -> begin
+      match poly with Value | Unit -> raise Empty | Option -> None
+    end
   | Next (value, next) ->
       if Atomic.compare_and_set head old_head next then begin
-        match poly with Value -> value | Option -> Some value
+        match poly with Value -> value | Option -> Some value | Unit -> ()
       end
       else
         let backoff = Backoff.once backoff in
@@ -53,17 +70,24 @@ let rec pop_as :
 
 let pop_exn t = pop_as t.head Backoff.default Value
 let pop_opt t = pop_as t.head Backoff.default Option
+let drop_exn t = pop_as t.head Backoff.default Unit
+
+(* *)
 
 let peek_as : type a r. a node Atomic.t Atomic.t -> (a, r) poly -> r =
  fun head poly ->
   let old_head = Atomic.get head in
   match Atomic.get old_head with
-  | Nil -> begin match poly with Value -> raise Empty | Option -> None end
+  | Nil -> begin
+      match poly with Value | Unit -> raise Empty | Option -> None
+    end
   | Next (value, _) -> (
-      match poly with Value -> value | Option -> Some value)
+      match poly with Value -> value | Option -> Some value | Unit -> ())
 
 let peek_opt t = peek_as t.head Option
 let peek_exn t = peek_as t.head Value
+
+(* *)
 
 let rec fix_tail tail new_tail =
   let old_tail = Atomic.get tail in
