@@ -1,4 +1,4 @@
-(** Randomized lock-free bag implemented using {!Saturn.Htbl} *)
+(** Randomized lock-free bag *)
 
 (** {1 API} *)
 

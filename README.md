@@ -145,7 +145,7 @@ opam install saturn
 ### Lock-free Bag
 
 - **Module**: [Bag](https://ocaml-multicore.github.io/saturn/Saturn/Bag/index.html)
-- **Description**: A resizable lock-free bag that uses on the hash table. The `pop` functions returns a random value contained on the bag. 
+- **Description**: A resizable lock-free bag based on the hash table. The `pop` functions returns a random value contained on the bag. 
 
 # About the Unsafe Data Structures
 
