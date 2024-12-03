@@ -234,6 +234,9 @@ let max_height_of t = Array.length t.root
 let find_opt t key =
   match find_node t key with Null -> None | Node r -> Some r.value
 
+let find_exn t key =
+  match find_node t key with Null -> raise Not_found | Node r -> r.value
+
 (* *)
 
 let mem t key = match find_node t key with Null -> false | Node _ -> true
