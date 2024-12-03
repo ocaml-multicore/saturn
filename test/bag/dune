@@ -1,0 +1,18 @@
+(test
+ (package saturn)
+ (name qcheck_bag)
+ (modules qcheck_bag)
+ (libraries
+  saturn
+  barrier
+  qcheck
+  qcheck-core
+  qcheck-alcotest
+  alcotest
+  domain_shims))
+
+(test
+ (package saturn)
+ (name stm_bag)
+ (modules stm_bag)
+ (libraries saturn qcheck-core qcheck-stm.stm stm_run))

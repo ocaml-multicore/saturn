@@ -168,5 +168,8 @@ module type HTBL = sig
 
       # Htbl.remove_all t |> List.of_seq
       - : (int * string) list = [(101, "Basics"); (42, "The answer")]
-    ]} *)
+    ]} 
+    
+    The lockfree bag (see {!Saturn.Bag}) is implemented using this hash table.
+*)
 end
