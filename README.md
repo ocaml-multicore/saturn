@@ -39,6 +39,7 @@ You can learn more about the **motivation** behind `Saturn` through the implemen
     - [Lock-free Multiple Producers Single Consumer Queue](#lock-free-multiple-producers-single-consumer-queue)
     - [Lock-free Skip List](#lock-free-skip-list)
     - [Lock-free Hash Table](#lock-free-hash-table)
+    - [Lock-free Bag](#lock-free-bag)
 - [About the Unsafe Data Structures](#about-the-unsafe-data-structures)
 - [Usage](#usage)
     - [Data Structures with Domain Roles](#data-structures-with-domain-roles)
@@ -141,6 +142,10 @@ opam install saturn
 - **Description**: A resizable lock-free hash table with a snapshot mechanism.
 - **Recommendation**: Contains useful high-level operations designed to work as building blocks of non-blocking algorithms.
 
+### Lock-free Bag
+
+- **Module**: [Bag](https://ocaml-multicore.github.io/saturn/Saturn/Bag/index.html)
+- **Description**: A resizable lock-free bag that uses on the hash table. The `pop` functions returns a random value contained on the bag. 
 
 # About the Unsafe Data Structures
 
