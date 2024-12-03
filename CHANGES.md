@@ -1,3 +1,19 @@
+### 1.0.0
+
+- Add lockfree Bag (@lyrm, @polytypic)
+- Update Skiplist with better documentation and additional functions (@lyrm)
+- Update Mpsc with better documentation and additional functions (@lyrm, @art-w)
+- Update Michael-Scott queue with better documentation and additional functions (@lyrm, @art-w)
+- Update Ws_deque with better documentation and additional functions (@lyrm, @art-w)
+- Update Spsc with better documentation and additional functions (@lyrm, @art-w)
+- Optimization of Ws_deque (@polytypic, @lyrm)
+- Add Bounded Queue (@lyrm, @polytypic, @art-w)
+- Add Bounded Stack (@lyrm, @art-w)
+- Update Treiber Stack with better documentation and additional functions (@lyrm, @art-w)
+- Remove Saturn_lockfree package (@lyrm)
+- Remove relaxed_queue and M module in ws_deque (@lyrm)
+- Add Htbl from Picos (@lyrm, @polytypic)
+  
 ### 0.5.0
 
 - Optimized Michael-Scott queue with a safe and an unsafe versions (@lyrm,
