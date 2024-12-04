@@ -238,8 +238,8 @@ let () =
   if safe then
     let module Safe = Dscheck_htbl (Htbl) in
     let open Alcotest in
-    run "DSCheck Hshtbl" (Safe.tests "safe")
+    run "dscheck_htbl" (Safe.tests "safe")
   else
     let module Unsafe = Dscheck_htbl (Htbl_unsafe) in
     let open Alcotest in
-    run "DSCheck Hshtbl" (Unsafe.tests "unsafe")
+    run "dscheck_htbl_unsafe" (Unsafe.tests "unsafe")
