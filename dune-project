@@ -13,7 +13,7 @@
  (name saturn)
  (synopsis "Collection of concurent-safe data structures for Multicore OCaml")
  (depends
-  (ocaml (>= 4.14))
+  (ocaml (or (and (>= 4.14) (< 5.0.0)) (>= 5.2.0)))
   (backoff (>= 0.1.1))
   (multicore-magic (>= 2.3.0))
   (alcotest (and (>= 1.7.0) :with-test))

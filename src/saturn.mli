@@ -26,7 +26,7 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 ########
 *)
 
-(** Lock-free data structures for Multicore OCaml *)
+(** Concurrent-safe data structures for Multicore OCaml. *)
 
 (** {1 Data structures} *)
 
@@ -41,7 +41,10 @@ module Single_prod_single_cons_queue = Spsc_queue
 module Single_prod_single_cons_queue_unsafe = Spsc_queue_unsafe
 module Single_consumer_queue = Mpsc_queue
 module Skiplist = Skiplist
-module Size = Size
 module Htbl = Htbl
 module Htbl_unsafe = Htbl_unsafe
 module Bag = Bag
+
+(** {1 Tools} *)
+
+module Size = Size
