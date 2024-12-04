@@ -1,4 +1,4 @@
-(** Classic multi-producer multi-consumer Treiber stack.
+(** Lock-free multi-producer multi-consumer Treiber stack.
 
   All functions are lock-free. It is the recommended starting point
   when needing a LIFO structure. *)

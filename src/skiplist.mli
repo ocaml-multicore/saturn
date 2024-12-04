@@ -1,4 +1,16 @@
-(** A lock-free skiplist. *)
+(** Lock-free non-resizable skiplist.
+
+    A skiplist is a probabilistic data structure that has an average logarithmic 
+    complexity for search and insertion operations. Like `Stdlib.Map`, it is an 
+    ordered collection.
+
+    {b Warning}: This skiplist is not resizable. It will, however, continue 
+    to work once the limit capacity is reached, but performance will decrease as 
+    the depth of the structure won't be enough to maintain logarithmic performance.
+
+    {b Sources}: This implementation is inspired by the algorithm in chapter 14 of  
+    {i The Art of Multiprocessor Programming} book.
+*)
 
 (** {1 API}*)
 
@@ -80,7 +92,7 @@ val try_remove : ('k, 'v) t -> 'k -> bool
 
 (** {2 Multicore example}
 
-  **Note**: The barrier is used in this example solely to make the results more
+  {b Note}: The barrier is used in this example solely to make the results more
   interesting by increasing the likelihood of parallelism. Spawning a domain is 
   a costly operation, especially compared to the relatively small amount of work
   being performed here. In practice, using a barrier in this manner is unnecessary.

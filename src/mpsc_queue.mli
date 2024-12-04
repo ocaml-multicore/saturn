@@ -1,12 +1,12 @@
-(** Lock-free multi-producer, single-consumer, domain-safe queue
-    without support for cancellation.
+(** Lock-free multi-producer, single-consumer, domain-safe queue without support
+    for cancellation.
 
     This data structure is well-suited for use as a scheduler's run queue.
     
-    **Note**: This queue does not include safety mechanisms to prevent 
-    misuse. If consumer-only functions are called concurrently by multiple
-    domains, the queue may enter an unexpected state, due to data races 
-    and a lack of linearizability.
+    {b Warning}: This queue does not include safety mechanisms to prevent misuse.
+    If consumer-only functions are called concurrently by multiple domains, the 
+    queue may enter an unexpected state, due to data races and a lack of 
+    linearizability.
 *)
 
 (** {1 API} *)
@@ -42,16 +42,16 @@ val of_list : 'a list -> 'a t
 (** {2 Producer-only functions} *)
 
 val push : 'a t -> 'a -> unit
-(** [push q v] adds the element [v] at the end of the queue [q]. This
-    can be used safely by multiple producer domains, in parallel with
-    the other operations.
+(** [push q v] adds the element [v] at the end of the queue [q]. This can be 
+    used safely by multiple producer domains, in parallel with the other 
+    operations.
 
     @raise Closed if [q] is closed. *)
 
 val push_all : 'a t -> 'a list -> unit
-(** [push_all q vs] adds all the elements [vs] at the end of the queue [q]. 
-    This can be used safely by multiple producer domains, in parallel with
-    the other operations.
+(** [push_all q vs] adds all the elements [vs] at the end of the queue [q]. This
+     can be used safely by multiple producer domains, in parallel with the other
+    operations.
         
     @raise Closed if [q] is closed. 
      
@@ -79,38 +79,38 @@ val push_all : 'a t -> 'a list -> unit
 (** {2 Consumer-only functions} *)
 
 exception Empty
-(** Raised when {!pop} or {!peek} is applied to an empty queue. *)
+(** Raised when {!pop_exn} or {!peek_exn} is applied to an empty queue. *)
 
 val is_empty : 'a t -> bool
-(** [is_empty q] is [true] if calling [pop] would return [None].
-    This can only be used by the consumer.
+(** [is_empty q] is [true] if calling [pop_exn] would return [None]. This can 
+    only be used by the consumer.
 
     @raise Closed if [q] is closed and empty. *)
 
 val close : 'a t -> unit
-(** [close q] marks [q] as closed, preventing any further items from
-    being pushed by the producers (i.e. with {!push}). This can only 
-    be used by the consumer.
+(** [close q] marks [q] as closed, preventing any further items from being 
+    pushed by the producers (i.e. with {!push}). This can only be used by the 
+    consumer.
 
     @raise Closed if [q] has already been closed. *)
 
 val pop_exn : 'a t -> 'a
-(** [pop_exn q] removes and returns the first element in queue [q]. This 
-    can only be used by the consumer.
+(** [pop_exn q] removes and returns the first element in queue [q]. This can 
+    only be used by the consumer.
 
     @raise Empty if [q] is empty.
 
     @raise Closed if [q] is closed and empty. *)
 
 val pop_opt : 'a t -> 'a option
-(** [pop_opt q] removes and returns the first element in queue [q] or
-    returns [None] if the queue is empty. This can only be used by the 
-    consumer.
+(** [pop_opt q] removes and returns the first element in queue [q] or returns 
+    [None] if the queue is empty. This can only be used by the consumer.
 
     @raise Closed if [q] is closed and empty. *)
 
 val drop_exn : 'a t -> unit
-(** [drop_exn q] removes the first element in queue [q]. This can only be used by the consumer.
+(** [drop_exn q] removes the first element in queue [q]. This can only be used 
+    by the consumer.
     
     @raise Empty if [q] is empty.
     
@@ -125,16 +125,15 @@ val peek_exn : 'a t -> 'a
     @raise Closed if [q] is closed and empty. *)
 
 val peek_opt : 'a t -> 'a option
-(** [peek_opt q] returns the first element in queue [q] or returns 
-    [None] if the queue is empty.  This can only be used by the
-    consumer.
+(** [peek_opt q] returns the first element in queue [q] or returns [None] if the
+     queue is empty.  This can only be used by the consumer.
 
     @raise Closed if [q] is closed and empty. *)
 
 val push_head : 'a t -> 'a -> unit
-(** [push_head q v] adds the element [v] at the head of the queue
-    [q]. This can only be used by the consumer (if run in parallel
-    with {!pop}, the item might be skipped).
+(** [push_head q v] adds the element [v] at the head of the queue [q]. This can 
+    only be used by the consumer (if run in parallel with {!pop_exn}, the item 
+    might be skipped).
 
     @raise Closed if [q] is closed and empty. *)
 
@@ -161,10 +160,11 @@ val push_head : 'a t -> 'a -> unit
 *)
 
 (** {2 Multicore example}
-  Note: The barrier is used in this example solely to make the results more
-   interesting by increasing the likelihood of parallelism. Spawning a domain is
-   a costly operation, especially compared to the relatively small amount of work
-   being performed here. In practice, using a barrier in this manner is unnecessary.
+    {b Note}: The barrier is used in this example solely to make the results more 
+    interesting by increasing the likelihood of parallelism. Spawning a domain 
+    is a costly operation, especially compared to the relatively small amount of
+    work being performed here. In practice, using a barrier in this manner is 
+    unnecessary.
     
     {@ocaml non-deterministic=command[
     # open Saturn.Single_consumer_queue
