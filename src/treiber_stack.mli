@@ -20,7 +20,7 @@ val is_empty : 'a t -> bool
 (** {2 Consumer functions} *)
 
 exception Empty
-(** Raised when {!pop_exn}, {!peek_exn}, {!drop_exn}, or {!set_exn} is 
+(** Raised when {!pop_exn}, {!peek_exn} and {!drop_exn} is 
   applied to an empty stack.
 *)
 

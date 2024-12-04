@@ -96,7 +96,7 @@ module type BOUNDED_QUEUE = sig
   (** {2 Producer functions} *)
 
   exception Full
-  (** Raised when {!push_exn} or {!push_all_exn} is applied to a full queue. *)
+  (** Raised when {!push_exn} is applied to a full queue. *)
 
   val push_exn : 'a t -> 'a -> unit
   (** [push_exn queue element] adds [element] at the end of the [queue].

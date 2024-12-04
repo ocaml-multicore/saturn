@@ -102,7 +102,7 @@ let _two_remove () =
 
 let () =
   let open Alcotest in
-  run "DSCheck Skiplist"
+  run "DSCheck_Skiplist"
     [
       ( "basic",
         [
