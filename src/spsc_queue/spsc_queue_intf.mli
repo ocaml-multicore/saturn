@@ -1,12 +1,4 @@
 module type SPSC_queue = sig
-  (** Single producer single consumer queue. 
-  
-   **Note**: This queue does not include safety mechanisms to prevent 
-    misuse. If consumer-only functions are called concurrently by multiple
-    domains, the queue may enter an unexpected state, due to data races 
-    and a lack of linearizability. The same goes for producer-only functions. 
-  *)
-
   (** {1 API} *)
 
   type 'a t

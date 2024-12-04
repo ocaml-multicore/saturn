@@ -26,22 +26,70 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 ########
 *)
 
-(** Lock-free data structures for Multicore OCaml *)
+(** Parallelism-safe data structures for Multicore OCaml *)
+
+(** {1 Useful Information}
+
+  {2 Domain-Specific Data Structures}
+  Some data structures are optimized for specific domain configurations. These 
+  restrictions enhance performance but must be adhered to for maintaining safety 
+  properties. These limitations are documented and often reflected in the data 
+  structure's name. For example, a single-consumer queue should only have one 
+  domain performing `pop` operations at any time.
+
+  For more details, refer to this 
+  {{: https://github.com/ocaml-multicore/saturn/blob/main/doc/domain-role.md}{document}}.
+
+  {2 Composability}
+
+  Composability is the ability to combine functions while preserving their 
+  properties, such as atomic consistency (linearizability) and progress 
+  guarantees (e.g., lock-freedom). Saturn's data structures, however, are not 
+  composable.
+
+  For more details, refer to this 
+  {{: https://github.com/ocaml-multicore/saturn/blob/main/doc/composability.md}{document}}.
+*)
+
+(** {2 Unsafe Data Structures}
+
+   Some data structures have both a normal and an {b unsafe} version. The 
+   {b unsafe} version uses `Obj.magic`, which may be unsafe with flambda2 
+   optimizations.
+
+  The unsafe version is provided because certain optimizations require features 
+  not currently available in OCaml, such as arrays of atomics or atomic fields 
+  in records. It is recommended to use the normal version unless performance 
+  requirements necessitate the unsafe version. *)
 
 (** {1 Data structures} *)
 
-module Queue = Michael_scott_queue
-module Queue_unsafe = Michael_scott_queue_unsafe
-module Stack = Treiber_stack
-module Bounded_stack = Bounded_stack
-module Bounded_queue = Bounded_queue
-module Bounded_queue_unsafe = Bounded_queue_unsafe
-module Work_stealing_deque = Ws_deque
-module Single_prod_single_cons_queue = Spsc_queue
-module Single_prod_single_cons_queue_unsafe = Spsc_queue_unsafe
-module Single_consumer_queue = Mpsc_queue
-module Skiplist = Skiplist
-module Size = Size
+(** {2 Collections} *)
+
 module Htbl = Htbl
 module Htbl_unsafe = Htbl_unsafe
+module Skiplist = Skiplist
 module Bag = Bag
+
+(** {2 Queues} *)
+
+module Queue = Michael_scott_queue
+module Queue_unsafe = Michael_scott_queue_unsafe
+module Bounded_queue = Bounded_queue
+module Bounded_queue_unsafe = Bounded_queue_unsafe
+module Single_consumer_queue = Mpsc_queue
+module Single_prod_single_cons_queue = Spsc_queue
+module Single_prod_single_cons_queue_unsafe = Spsc_queue_unsafe
+
+(** {2 Stacks} *)
+
+module Stack = Treiber_stack
+module Bounded_stack = Bounded_stack
+
+(** {2 Work Stealing Deque }*)
+
+module Work_stealing_deque = Ws_deque
+
+(** {1 Other}*)
+
+module Size = Size

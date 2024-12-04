@@ -1,4 +1,4 @@
-(** Lock-free hash table.
+(** Optimized lock-free and resizable hash table.
 
     The operations provided by this hash table are designed to work as building
     blocks of non-blocking algorithms.  Specifically, the operation signatures

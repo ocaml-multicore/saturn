@@ -42,8 +42,8 @@ You can learn more about the **motivation** behind `Saturn` through the implemen
     - [Lock-free Bag](#lock-free-bag)
 - [About the Unsafe Data Structures](#about-the-unsafe-data-structures)
 - [Usage](#usage)
-    - [Data Structures with Domain Roles](#data-structures-with-domain-roles)
-    - [Composability](#composability)
+  - [Data Structures with Domain Roles](#data-structures-with-domain-roles)
+  - [Composability](#composability)
 - [Testing](#testing)
 - [Benchmarks](#benchmarks)
 - [Contributing](#contributing)
@@ -168,12 +168,12 @@ what not to do with them. Two main points are discussed:
 - some data structures have restrictions on what operations can be performed in a single domain or a set of domains
 - the currently provided data structures are non-composable
 
-### Data Structures with Domain Roles
+## Data Structures with Domain Roles
 Some provided data structures are designed to work with specific domain configurations. These restrictions optimize their implementation, but failing to respect them may compromise safety properties. These limitations are clearly indicated in the documentation and often reflected in the name of the data structure itself. For instance, a single-consumer queue must have only one domain performing `pop` operations at any given time.
 
 To learn more about it, see this [document](doc/domain-role.md).
 
-### Composability 
+## Composability 
 
 Composability refers to the ability to combine functions while preserving their properties. For Saturn data structures, the expected properties include atomic consistency (or linearizability) and progress guarantees, such as lock-freedom. Unfortunately, Saturn's data structures are not composable.
 
