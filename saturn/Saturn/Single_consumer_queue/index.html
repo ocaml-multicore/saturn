@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>Single_consumer_queue (saturn.Saturn.Single_consumer_queue)</title><meta charset="utf-8"/><link rel="stylesheet" href="../../../odoc.support/odoc.css"/><meta name="generator" content="odoc 2.4.3"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><script src="../../../odoc.support/highlight.pack.js"></script><script>hljs.initHighlightingOnLoad();</script></head><body class="odoc"><nav class="odoc-nav"><a href="../index.html">Up</a> – <a href="../../index.html">saturn</a> &#x00BB; <a href="../index.html">Saturn</a> &#x00BB; Single_consumer_queue</nav><header class="odoc-preamble"><h1>Module <code><span>Saturn.Single_consumer_queue</span></code></h1><p>Lock-free multi-producer, single-consumer, domain-safe queue without support for cancellation.</p><p>This data structure is well-suited for use as a scheduler's run queue.</p><p><b>Warning</b>: This queue does not include safety mechanisms to prevent misuse. If consumer-only functions are called concurrently by multiple domains, the queue may enter an unexpected state, due to data races and a lack of linearizability.</p></header><nav class="odoc-toc"><ul><li><a href="#api">API</a><ul><li><a href="#producer-only-functions">Producer-only functions</a></li><li><a href="#consumer-only-functions">Consumer-only functions</a></li></ul></li><li><a href="#examples">Examples</a><ul><li><a href="#sequential-example">Sequential example</a></li><li><a href="#multicore-example">Multicore example</a></li></ul></li></ul></nav><div class="odoc-content"><h2 id="api"><a href="#api" class="anchor"></a>API</h2><div class="odoc-spec"><div class="spec type anchored" id="type-t"><a href="#type-t" class="anchor"></a><code><span><span class="keyword">type</span> <span>'a t</span></span></code></div><div class="spec-doc"><p>Represents a single-consumer queue of items of type <code>'a</code>.</p></div></div><div class="odoc-spec"><div class="spec exception anchored" id="exception-Closed"><a href="#exception-Closed" class="anchor"></a><code><span><span class="keyword">exception</span> </span><span><span class="exception">Closed</span></span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-create"><a href="#val-create" class="anchor"></a><code><span><span class="keyword">val</span> create : <span>unit <span class="arrow">&#45;&gt;</span></span> <span><span class="type-var">'a</span> <a href="#type-t">t</a></span></span></code></div><div class="spec-doc"><p><code>create ()</code> returns a new empty single-consumer queue.</p></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-of_list"><a href="#val-of_list" class="anchor"></a><code><span><span class="keyword">val</span> of_list : <span><span><span class="type-var">'a</span> list</span> <span class="arrow">&#45;&gt;</span></span> <span><span class="type-var">'a</span> <a href="#type-t">t</a></span></span></code></div><div class="spec-doc"><p><code>of_list l</code> creates a new single-consumer queue from list <code>l</code>.</p><p>🐌 This is a linear-time operation.</p><pre class="language-ocaml"><code># open Saturn.Single_consumer_queue
+# let t : int t = of_list [1; 2; 3]
+val t : int t = &lt;abstr&gt;
+# pop_opt t
+- : int option = Some 1
+# peek_opt t
+- : int option = Some 2
+# pop_opt t
+- : int option = Some 2
+# pop_opt t
+- : int option = Some 3</code></pre></div></div><h3 id="producer-only-functions"><a href="#producer-only-functions" class="anchor"></a>Producer-only functions</h3><div class="odoc-spec"><div class="spec value anchored" id="val-push"><a href="#val-push" class="anchor"></a><code><span><span class="keyword">val</span> push : <span><span><span class="type-var">'a</span> <a href="#type-t">t</a></span> <span class="arrow">&#45;&gt;</span></span> <span><span class="type-var">'a</span> <span class="arrow">&#45;&gt;</span></span> unit</span></code></div><div class="spec-doc"><p><code>push q v</code> adds the element <code>v</code> at the end of the queue <code>q</code>. This can be used safely by multiple producer domains, in parallel with the other operations.</p><ul class="at-tags"><li class="raises"><span class="at-tag">raises</span> <a href="#exception-Closed"><code>Closed</code></a> <p>if <code>q</code> is closed.</p></li></ul></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-push_all"><a href="#val-push_all" class="anchor"></a><code><span><span class="keyword">val</span> push_all : <span><span><span class="type-var">'a</span> <a href="#type-t">t</a></span> <span class="arrow">&#45;&gt;</span></span> <span><span><span class="type-var">'a</span> list</span> <span class="arrow">&#45;&gt;</span></span> unit</span></code></div><div class="spec-doc"><p><code>push_all q vs</code> adds all the elements <code>vs</code> at the end of the queue <code>q</code>. This can be used safely by multiple producer domains, in parallel with the other operations.</p><ul class="at-tags"><li class="raises"><span class="at-tag">raises</span> <a href="#exception-Closed"><code>Closed</code></a> <p>if <code>q</code> is closed.</p><p>🐌 This is a linear-time operation on the size of <code>vs</code>.</p><pre class="language-ocaml"><code># open Saturn.Single_consumer_queue
+# let t : int t = create ()
+val t : int t = &lt;abstr&gt;
+# push_all t [1; 2; 3]
+- : unit = ()
+# pop_opt t
+- : int option = Some 1
+# peek_opt t
+- : int option = Some 2
+# pop_opt t
+- : int option = Some 2
+# pop_opt t
+- : int option = Some 3
+# pop_exn t
+Exception: Saturn__Mpsc_queue.Empty.</code></pre></li></ul></div></div><h3 id="consumer-only-functions"><a href="#consumer-only-functions" class="anchor"></a>Consumer-only functions</h3><div class="odoc-spec"><div class="spec exception anchored" id="exception-Empty"><a href="#exception-Empty" class="anchor"></a><code><span><span class="keyword">exception</span> </span><span><span class="exception">Empty</span></span></code></div><div class="spec-doc"><p>Raised when <a href="#val-pop_exn"><code>pop_exn</code></a> or <a href="#val-peek_exn"><code>peek_exn</code></a> is applied to an empty queue.</p></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-is_empty"><a href="#val-is_empty" class="anchor"></a><code><span><span class="keyword">val</span> is_empty : <span><span><span class="type-var">'a</span> <a href="#type-t">t</a></span> <span class="arrow">&#45;&gt;</span></span> bool</span></code></div><div class="spec-doc"><p><code>is_empty q</code> is <code>true</code> if calling <code>pop_exn</code> would return <code>None</code>. This can only be used by the consumer.</p><ul class="at-tags"><li class="raises"><span class="at-tag">raises</span> <a href="#exception-Closed"><code>Closed</code></a> <p>if <code>q</code> is closed and empty.</p></li></ul></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-close"><a href="#val-close" class="anchor"></a><code><span><span class="keyword">val</span> close : <span><span><span class="type-var">'a</span> <a href="#type-t">t</a></span> <span class="arrow">&#45;&gt;</span></span> unit</span></code></div><div class="spec-doc"><p><code>close q</code> marks <code>q</code> as closed, preventing any further items from being pushed by the producers (i.e. with <a href="#val-push"><code>push</code></a>). This can only be used by the consumer.</p><ul class="at-tags"><li class="raises"><span class="at-tag">raises</span> <a href="#exception-Closed"><code>Closed</code></a> <p>if <code>q</code> has already been closed.</p></li></ul></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-pop_exn"><a href="#val-pop_exn" class="anchor"></a><code><span><span class="keyword">val</span> pop_exn : <span><span><span class="type-var">'a</span> <a href="#type-t">t</a></span> <span class="arrow">&#45;&gt;</span></span> <span class="type-var">'a</span></span></code></div><div class="spec-doc"><p><code>pop_exn q</code> removes and returns the first element in queue <code>q</code>. This can only be used by the consumer.</p><ul class="at-tags"><li class="raises"><span class="at-tag">raises</span> <a href="#exception-Empty"><code>Empty</code></a> <p>if <code>q</code> is empty.</p></li></ul><ul class="at-tags"><li class="raises"><span class="at-tag">raises</span> <a href="#exception-Closed"><code>Closed</code></a> <p>if <code>q</code> is closed and empty.</p></li></ul></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-pop_opt"><a href="#val-pop_opt" class="anchor"></a><code><span><span class="keyword">val</span> pop_opt : <span><span><span class="type-var">'a</span> <a href="#type-t">t</a></span> <span class="arrow">&#45;&gt;</span></span> <span><span class="type-var">'a</span> option</span></span></code></div><div class="spec-doc"><p><code>pop_opt q</code> removes and returns the first element in queue <code>q</code> or returns <code>None</code> if the queue is empty. This can only be used by the consumer.</p><ul class="at-tags"><li class="raises"><span class="at-tag">raises</span> <a href="#exception-Closed"><code>Closed</code></a> <p>if <code>q</code> is closed and empty.</p></li></ul></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-drop_exn"><a href="#val-drop_exn" class="anchor"></a><code><span><span class="keyword">val</span> drop_exn : <span><span><span class="type-var">'a</span> <a href="#type-t">t</a></span> <span class="arrow">&#45;&gt;</span></span> unit</span></code></div><div class="spec-doc"><p><code>drop_exn q</code> removes the first element in queue <code>q</code>. This can only be used by the consumer.</p><ul class="at-tags"><li class="raises"><span class="at-tag">raises</span> <a href="#exception-Empty"><code>Empty</code></a> <p>if <code>q</code> is empty.</p></li></ul><ul class="at-tags"><li class="raises"><span class="at-tag">raises</span> <a href="#exception-Closed"><code>Closed</code></a> <p>if <code>q</code> is closed and empty.</p></li></ul></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-peek_exn"><a href="#val-peek_exn" class="anchor"></a><code><span><span class="keyword">val</span> peek_exn : <span><span><span class="type-var">'a</span> <a href="#type-t">t</a></span> <span class="arrow">&#45;&gt;</span></span> <span class="type-var">'a</span></span></code></div><div class="spec-doc"><p><code>peek_exn q</code> returns the first element in queue <code>q</code>. This can only be used by the consumer</p><ul class="at-tags"><li class="raises"><span class="at-tag">raises</span> <a href="#exception-Empty"><code>Empty</code></a> <p>if <code>q</code> is empty.</p></li></ul><ul class="at-tags"><li class="raises"><span class="at-tag">raises</span> <a href="#exception-Closed"><code>Closed</code></a> <p>if <code>q</code> is closed and empty.</p></li></ul></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-peek_opt"><a href="#val-peek_opt" class="anchor"></a><code><span><span class="keyword">val</span> peek_opt : <span><span><span class="type-var">'a</span> <a href="#type-t">t</a></span> <span class="arrow">&#45;&gt;</span></span> <span><span class="type-var">'a</span> option</span></span></code></div><div class="spec-doc"><p><code>peek_opt q</code> returns the first element in queue <code>q</code> or returns <code>None</code> if the queue is empty. This can only be used by the consumer.</p><ul class="at-tags"><li class="raises"><span class="at-tag">raises</span> <a href="#exception-Closed"><code>Closed</code></a> <p>if <code>q</code> is closed and empty.</p></li></ul></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-push_head"><a href="#val-push_head" class="anchor"></a><code><span><span class="keyword">val</span> push_head : <span><span><span class="type-var">'a</span> <a href="#type-t">t</a></span> <span class="arrow">&#45;&gt;</span></span> <span><span class="type-var">'a</span> <span class="arrow">&#45;&gt;</span></span> unit</span></code></div><div class="spec-doc"><p><code>push_head q v</code> adds the element <code>v</code> at the head of the queue <code>q</code>. This can only be used by the consumer (if run in parallel with <a href="#val-pop_exn"><code>pop_exn</code></a>, the item might be skipped).</p><ul class="at-tags"><li class="raises"><span class="at-tag">raises</span> <a href="#exception-Closed"><code>Closed</code></a> <p>if <code>q</code> is closed and empty.</p></li></ul></div></div><h2 id="examples"><a href="#examples" class="anchor"></a>Examples</h2><h3 id="sequential-example"><a href="#sequential-example" class="anchor"></a>Sequential example</h3><p>An example top-level session:</p><pre class="language-ocaml"><code># open Saturn.Single_consumer_queue
+# let t : int t = create ()
+val t : int t = &lt;abstr&gt;
+# push t 1
+- : unit = ()
+# push t 42
+- : unit = ()
+# pop_opt t
+- : int option = Some 1
+# peek_opt t
+- : int option = Some 42
+# drop_exn t
+- : unit = ()
+# pop_exn t
+Exception: Saturn__Mpsc_queue.Empty.</code></pre><h3 id="multicore-example"><a href="#multicore-example" class="anchor"></a>Multicore example</h3><p><b>Note</b>: The barrier is used in this example solely to make the results more interesting by increasing the likelihood of parallelism. Spawning a domain is a costly operation, especially compared to the relatively small amount of work being performed here. In practice, using a barrier in this manner is unnecessary.</p><pre class="language-ocaml"><code># open Saturn.Single_consumer_queue
+# let t : (string * int) t = create ()
+val t : (string * int) t = &lt;abstr&gt;
+# let barrier = Atomic.make 3
+val barrier : int Atomic.t = &lt;abstr&gt;
+# let n = 10
+val n : int = 10
+
+# let work_consumer () = 
+    Atomic.decr barrier;
+    while Atomic.get barrier &lt;&gt; 0 do Domain.cpu_relax () done;
+    for i = 1 to n do
+      begin
+      match pop_opt t with
+      | None -&gt; Printf.printf &quot;Empty.\n%!&quot;
+      | Some (s, n) -&gt; 
+          Printf.printf &quot;Consumed ressource #%d from %s.\n%!&quot; n s
+      end;     
+      Domain.cpu_relax ()     
+    done;
+val work_consumer : unit -&gt; unit = &lt;fun&gt;
+
+# let work_producer id () =
+    Atomic.decr barrier;
+    while Atomic.get barrier &lt;&gt; 0 do Domain.cpu_relax () done;
+    List.init n Fun.id
+    |&gt;  List.iter (fun i -&gt; push t (id , i);
+                            Domain.cpu_relax ())
+val work_producer : string -&gt; unit -&gt; unit = &lt;fun&gt;
+
+# let consumer = Domain.spawn work_consumer
+val consumer : unit Domain.t = &lt;abstr&gt;
+# let producerA = Domain.spawn (work_producer &quot;A&quot;)
+val producerA : unit Domain.t = &lt;abstr&gt;
+# let producerB = Domain.spawn (work_producer &quot;B&quot;)
+Empty.
+Consumed ressource #0 from A.
+Consumed ressource #0 from B.
+Consumed ressource #1 from B.
+Consumed ressource #2 from B.
+Consumed ressource #3 from B.
+Consumed ressource #4 from B.
+Consumed ressource #5 from B.
+Consumed ressource #6 from B.
+Consumed ressource #7 from B.
+val producerB : unit Domain.t = &lt;abstr&gt;
+
+# Domain.join consumer
+- : unit = ()
+# Domain.join producerA
+- : unit = ()
+# Domain.join producerB
+- : unit = ()</code></pre></div></body></html>

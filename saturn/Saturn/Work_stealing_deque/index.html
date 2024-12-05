@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>Work_stealing_deque (saturn.Saturn.Work_stealing_deque)</title><meta charset="utf-8"/><link rel="stylesheet" href="../../../odoc.support/odoc.css"/><meta name="generator" content="odoc 2.4.3"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><script src="../../../odoc.support/highlight.pack.js"></script><script>hljs.initHighlightingOnLoad();</script></head><body class="odoc"><nav class="odoc-nav"><a href="../index.html">Up</a> – <a href="../../index.html">saturn</a> &#x00BB; <a href="../index.html">Saturn</a> &#x00BB; Work_stealing_deque</nav><header class="odoc-preamble"><h1>Module <code><span>Saturn.Work_stealing_deque</span></code></h1><p>Lock-free single-producer, multi-consumer dynamic-size double-ended queue (deque).</p><p>The main strength of a deque in a typical work-stealing setup with a per-core structure, is efficient work distribution. The owner uses <code>push</code> and <code>pop</code> methods to operate at one end of the deque, while other (free) cores can efficiently steal work from the other side.</p><p>This approach is great for throughput. Stealers and the owner working on different sides, reduce contention in work distribution. Further, the local LIFO order, running related tasks one after another, improves locality.</p><p>On the other hand, the local LIFO order does not offer any fairness guarantees. Thus, it is not the best choice when tail latency matters.</p></header><nav class="odoc-toc"><ul><li><a href="#api">API</a><ul><li><a href="#queue-owner-functions">Queue owner functions</a></li><li><a href="#stealer-functions">Stealer functions</a></li></ul></li><li><a href="#examples">Examples</a><ul><li><a href="#sequential-example">Sequential example</a></li><li><a href="#multicore-example">Multicore example</a></li></ul></li></ul></nav><div class="odoc-content"><h2 id="api"><a href="#api" class="anchor"></a>API</h2><div class="odoc-spec"><div class="spec type anchored" id="type-t"><a href="#type-t" class="anchor"></a><code><span><span class="keyword">type</span> <span>'a t</span></span></code></div><div class="spec-doc"><p>Type of work-stealing queue</p></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-create"><a href="#val-create" class="anchor"></a><code><span><span class="keyword">val</span> create : <span>unit <span class="arrow">&#45;&gt;</span></span> <span><span class="type-var">'a</span> <a href="#type-t">t</a></span></span></code></div><div class="spec-doc"><p><code>create ()</code> returns a new empty work-stealing queue.</p></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-of_list"><a href="#val-of_list" class="anchor"></a><code><span><span class="keyword">val</span> of_list : <span><span><span class="type-var">'a</span> list</span> <span class="arrow">&#45;&gt;</span></span> <span><span class="type-var">'a</span> <a href="#type-t">t</a></span></span></code></div><div class="spec-doc"><p><code>of_list list</code> creates a new work-stealing queue from <code>list</code>.</p><p>🐌 This is a linear-time operation.</p><pre class="language-ocaml"><code># open Saturn.Work_stealing_deque
+# let t : int t = of_list [1;2;3;4]
+val t : int t = &lt;abstr&gt;
+# pop_opt t
+- : int option = Some 4
+# pop_opt t 
+- : int option = Some 3</code></pre></div></div><div class="odoc-spec"><div class="spec exception anchored" id="exception-Empty"><a href="#exception-Empty" class="anchor"></a><code><span><span class="keyword">exception</span> </span><span><span class="exception">Empty</span></span></code></div></div><h3 id="queue-owner-functions"><a href="#queue-owner-functions" class="anchor"></a>Queue owner functions</h3><div class="odoc-spec"><div class="spec value anchored" id="val-push"><a href="#val-push" class="anchor"></a><code><span><span class="keyword">val</span> push : <span><span><span class="type-var">'a</span> <a href="#type-t">t</a></span> <span class="arrow">&#45;&gt;</span></span> <span><span class="type-var">'a</span> <span class="arrow">&#45;&gt;</span></span> unit</span></code></div><div class="spec-doc"><p><code>push queue element</code> adds <code>element</code> at the end of the <code>queue</code>. It should only be invoked by the domain that owns the <code>queue</code>.</p></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-pop_exn"><a href="#val-pop_exn" class="anchor"></a><code><span><span class="keyword">val</span> pop_exn : <span><span><span class="type-var">'a</span> <a href="#type-t">t</a></span> <span class="arrow">&#45;&gt;</span></span> <span class="type-var">'a</span></span></code></div><div class="spec-doc"><p><code>pop_exn queue</code> removes and returns the last element of the <code>queue</code>. It should only be invoked by the domain that owns the <code>queue</code>.</p><ul class="at-tags"><li class="raises"><span class="at-tag">raises</span> <a href="#exception-Empty"><code>Empty</code></a> <p>if the <code>queue</code> is empty.</p></li></ul></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-pop_opt"><a href="#val-pop_opt" class="anchor"></a><code><span><span class="keyword">val</span> pop_opt : <span><span><span class="type-var">'a</span> <a href="#type-t">t</a></span> <span class="arrow">&#45;&gt;</span></span> <span><span class="type-var">'a</span> option</span></span></code></div><div class="spec-doc"><p><code>pop_opt queue</code> removes and returns <code>Some</code> of the last element of the <code>queue</code>, or returns <code>None</code> if the <code>queue</code> is empty. It should only be invoked by the domain that owns the <code>queue</code>.</p></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-drop_exn"><a href="#val-drop_exn" class="anchor"></a><code><span><span class="keyword">val</span> drop_exn : <span><span><span class="type-var">'a</span> <a href="#type-t">t</a></span> <span class="arrow">&#45;&gt;</span></span> unit</span></code></div><div class="spec-doc"><p><code>drop_exn queue</code> removes the last element of the <code>queue</code>. It should only be invoked by the domain that owns the <code>queue</code>.</p><ul class="at-tags"><li class="raises"><span class="at-tag">raises</span> <a href="#exception-Empty"><code>Empty</code></a> <p>if the <code>queue</code> is empty.</p></li></ul></div></div><h3 id="stealer-functions"><a href="#stealer-functions" class="anchor"></a>Stealer functions</h3><div class="odoc-spec"><div class="spec value anchored" id="val-steal_exn"><a href="#val-steal_exn" class="anchor"></a><code><span><span class="keyword">val</span> steal_exn : <span><span><span class="type-var">'a</span> <a href="#type-t">t</a></span> <span class="arrow">&#45;&gt;</span></span> <span class="type-var">'a</span></span></code></div><div class="spec-doc"><p><code>steal_exn queue</code> removes and returns the first element of the <code>queue</code>.</p><ul class="at-tags"><li class="raises"><span class="at-tag">raises</span> <a href="#exception-Empty"><code>Empty</code></a> <p>if the <code>queue</code> is empty.</p></li></ul></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-steal_opt"><a href="#val-steal_opt" class="anchor"></a><code><span><span class="keyword">val</span> steal_opt : <span><span><span class="type-var">'a</span> <a href="#type-t">t</a></span> <span class="arrow">&#45;&gt;</span></span> <span><span class="type-var">'a</span> option</span></span></code></div><div class="spec-doc"><p><code>steal_opt queue</code> removes and returns <code>Some</code> of the first element of the <code>queue</code>, or returns <code>None</code> if the <code>queue</code> is empty.</p></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-steal_drop_exn"><a href="#val-steal_drop_exn" class="anchor"></a><code><span><span class="keyword">val</span> steal_drop_exn : <span><span><span class="type-var">'a</span> <a href="#type-t">t</a></span> <span class="arrow">&#45;&gt;</span></span> unit</span></code></div><div class="spec-doc"><p><code>steal_drop_exn queue</code> removes the first element of the <code>queue</code>.</p><ul class="at-tags"><li class="raises"><span class="at-tag">raises</span> <a href="#exception-Empty"><code>Empty</code></a> <p>if the <code>queue</code> is empty.</p></li></ul></div></div><h2 id="examples"><a href="#examples" class="anchor"></a>Examples</h2><h3 id="sequential-example"><a href="#sequential-example" class="anchor"></a>Sequential example</h3><p>An example top-level session:</p><pre class="language-ocaml"><code># open Saturn.Work_stealing_deque
+# let t : int t = of_list [1;2;3;4;5;6]
+val t : int t = &lt;abstr&gt;
+# pop_opt t
+- : int option = Some 6
+# steal_opt t
+- : int option = Some 1
+# drop_exn t
+- : unit = ()
+# pop_opt t
+- : int option = Some 4
+# steal_drop_exn t
+- : unit = ()
+# steal_exn t
+- : int = 3
+# steal_exn t
+Exception: Saturn__Ws_deque.Empty.</code></pre><h3 id="multicore-example"><a href="#multicore-example" class="anchor"></a>Multicore example</h3><p>Note: The barrier is used in this example solely to make the results more interesting by increasing the likelihood of parallelism. Spawning a domain is a costly operation, especially compared to the relatively small amount of work being performed here. In practice, using a barrier in this manner is unnecessary.</p><pre class="language-ocaml"><code># open Saturn.Work_stealing_deque
+# let t : int t = create ()
+val t : int t = &lt;abstr&gt;
+# let barrier = Atomic.make 3
+val barrier : int Atomic.t = &lt;abstr&gt;
+
+# let owner () = 
+      Atomic.decr barrier;
+      while Atomic.get barrier &lt;&gt; 0 do Domain.cpu_relax () done;
+      for i = 1 to 10 do push t i; Domain.cpu_relax () done
+val owner : unit -&gt; unit = &lt;fun&gt;
+
+# let stealer id () =
+      Atomic.decr barrier;
+      while Atomic.get barrier &lt;&gt; 0 do Domain.cpu_relax () done;
+
+      for _ = 1 to 5 do
+            match steal_opt t with
+            | None -&gt; ()
+            | Some v -&gt; Format.printf &quot;Stealer %s stole %d@.&quot; id v
+      done
+val stealer : string -&gt; unit -&gt; unit = &lt;fun&gt;
+
+# let stealerA = Domain.spawn (stealer &quot;A&quot;)
+val stealerA : unit Domain.t = &lt;abstr&gt;
+# let stealerB = Domain.spawn (stealer &quot;B&quot;)
+val stealerB : unit Domain.t = &lt;abstr&gt;
+# owner ()
+Stealer A stole 1
+Stealer B stole 2
+Stealer A stole 3
+Stealer B stole 4
+Stealer A stole 5
+Stealer A stole 7
+Stealer B stole 6
+Stealer A stole 8
+Stealer B stole 9
+Stealer B stole 10
+- : unit = ()
+# Domain.join stealerA; Domain.join stealerB
+- : unit = ()</code></pre></div></body></html>
