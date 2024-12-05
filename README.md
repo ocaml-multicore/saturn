@@ -27,7 +27,7 @@ You can learn more about the **motivation** behind `Saturn` through the implemen
 - [Saturn — Parallelism-Safe Data Structures for Multicore OCaml](#saturn--parallelism-safe-data-structures-for-multicore-ocaml)
 - [Contents](#contents)
 - [Installation](#installation)
-  - [Getting OCaml 5.0](#getting-ocaml-50)
+  - [Getting OCaml 5.2.0](#getting-ocaml-520)
   - [Getting Saturn](#getting-saturn)
 - [Provided data structures](#provided-data-structures)
     - [Treiber Lock-free Stack](#treiber-lock-free-stack)
@@ -50,11 +50,11 @@ You can learn more about the **motivation** behind `Saturn` through the implemen
 
 # Installation
 
-## Getting OCaml 5.0
+## Getting OCaml 5.2.0
 
-You’ll need OCaml 5.0.0 or later. Note that Saturn also works with OCaml 4.14, but only for compatibility reasons, as parallelism-safe data structures are not needed without OCaml 5.0. We also recommend using OCaml 5.2 or later, as some bugs in the `Atomic` module have been fixed.
+To use Saturn, you need OCaml 5.2.0 or later. While Saturn is compatible with OCaml 4.14, this is primarily for compatibility purposes, as parallelism-safe data structures are not required without OCaml 5. Note that versions of OCaml 5 prior to 5.2 are not supported due to bugs in the `Atomic` module that affect the functionality of some data structures.
 
-To install OCaml 5.0 yourself, first make sure you have opam 2.1 or later. You
+To install OCaml 5.2.0 yourself, first make sure you have opam 2.1 or later. You
 can run this command to check:
 
 ```sh
