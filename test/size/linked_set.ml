@@ -1,5 +1,5 @@
 (** Functorized lock-free linked set with [length] for testing and as an example
-    of using [Size].  The functorization is to allow the use of traced atomics
+    of using [Size]. The functorization is to allow the use of traced atomics
     with DSCheck. *)
 module Make (Atomic : sig
   type !'a t

@@ -100,9 +100,9 @@ let[@inline] is_marked = function
 
 (* *)
 
-(** [find_path t key preds succs lowest] tries to find the node with the specified
-    [key], updating [preds] and [succs] and removing nodes with marked
-    references along the way, and always descending down to [lowest] level.  The
+(** [find_path t key preds succs lowest] tries to find the node with the
+    specified [key], updating [preds] and [succs] and removing nodes with marked
+    references along the way, and always descending down to [lowest] level. The
     boolean return value is only meaningful when [lowest] is given as [0]. *)
 let rec find_path t key preds succs lowest =
   let prev = t.root in

@@ -53,16 +53,16 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 
 (** {2 Unsafe Data Structures}
 
-  Some data structures have both a normal and an {b unsafe} version. The 
-  {b unsafe} version uses `Obj.magic`, which can be unsafe, especially with 
-  flambda2 optimizations.
+    Some data structures have both a normal and an {b unsafe} version. The
+    {b unsafe} version uses `Obj.magic`, which can be unsafe, especially with
+    flambda2 optimizations.
 
-  The unsafe version is provided to explore performance optimizations that 
-  require features not currently available in OCaml, such as arrays of atomics 
-  or atomic fields in records. These versions give an indication of the 
-  potential performance improvements when such features become available. 
-  It is recommended to use the normal version unless the performance 
-  requirements justify the risks associated with the unsafe version. *)
+    The unsafe version is provided to explore performance optimizations that
+    require features not currently available in OCaml, such as arrays of atomics
+    or atomic fields in records. These versions give an indication of the
+    potential performance improvements when such features become available. It
+    is recommended to use the normal version unless the performance requirements
+    justify the risks associated with the unsafe version. *)
 
 (** {1 Data structures} *)
 
@@ -88,7 +88,7 @@ module Single_prod_single_cons_queue_unsafe = Spsc_queue_unsafe
 module Stack = Treiber_stack
 module Bounded_stack = Bounded_stack
 
-(** {2 Work Stealing Deque }*)
+(** {2 Work Stealing Deque}*)
 
 module Work_stealing_deque = Ws_deque
 

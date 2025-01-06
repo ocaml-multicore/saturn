@@ -146,9 +146,8 @@ let rec fix_tail tail new_tail =
 
 type _ mono = Bool : bool mono | Unit : unit mono
 
-let rec push_as :
-    type r. 'a t -> ('a, [ `Node ]) node -> ('a, [ `Node ]) node -> r mono -> r
-    =
+let rec push_as : type r.
+    'a t -> ('a, [ `Node ]) node -> ('a, [ `Node ]) node -> r mono -> r =
  fun t new_node old_tail mono ->
   let capacity = get_capacity old_tail in
   if capacity = 0 then begin
