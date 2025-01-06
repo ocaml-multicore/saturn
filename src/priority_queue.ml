@@ -44,6 +44,7 @@ type 'k compare = 'k -> 'k -> int
 
 type ('k, 'v) t = { compare : 'k compare; root : ('k, 'v) links; size : Size.t }
 
+exception Empty
 (* *)
 
 (** [get_random_height max_height] gives a random value [n] in the range from
@@ -293,6 +294,8 @@ let length t = Size.get t.size
 
 (* *)
 
+type ('a, _) poly = Option : ('a, 'a option) poly | Value : ('a, 'a) poly
+
 let rec find_min t : (_, _, [< `Node | `Null ]) node =
   let root = t.root in
   let root_at_level0 = Array.unsafe_get root 0 in
@@ -336,15 +339,16 @@ let rec try_remove t key next level link = function
           try_remove t key next level link (Atomic.get link)
       else try_remove t key next level link (Atomic.get link)
 
-let remove_min_opt t =
-  let rec loop t =
-    match find_min t with
-    | Null -> None
-    | Node { next; key; value; _ } ->
-        let level = Array.length next - 1 in
-        let link = Array.unsafe_get next level in
-        if try_remove t key next level link (Atomic.get link) then
-          Some (key, value)
-        else loop t
-  in
-  loop t
+let rec remove_min_as : type p v r. (p, v) t -> (p * v, r) poly -> r =
+ fun t poly ->
+  match find_min t with
+  | Null -> ( match poly with Value -> raise Empty | Option -> None)
+  | Node { next; key; value; _ } ->
+      let level = Array.length next - 1 in
+      let link = Array.unsafe_get next level in
+      if try_remove t key next level link (Atomic.get link) then
+        match poly with Value -> (key, value) | Option -> Some (key, value)
+      else remove_min_as t poly
+
+let remove_min_opt t = remove_min_as t Option
+let remove_min_exn t = remove_min_as t Value

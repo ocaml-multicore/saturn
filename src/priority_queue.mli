@@ -38,8 +38,17 @@ val add : ('p, 'v) t -> 'p -> 'v -> unit
 val remove_min_opt : ('p, 'v) t -> ('p * 'v) option
 (** [remove_min_opt s] removes and returns [Some] of the element with the
     smallest priority from the priority queue [pq]. If the priority queue [pq]
-    was empty [None] is returned. The elements with the same priority are
+    was empty, [None] is returned. The elements with the same priority are
     removed in fifo order. *)
+
+exception Empty
+
+val remove_min_exn : ('p, 'v) t -> 'p * 'v
+(** [remove_min_exn s] removes and returns the element with the smallest
+    priority from the priority queue [pq]. The elements with the same priority
+    are removed in fifo order.
+
+    @raise Empty if the priority queue [pq] is empty.*)
 
 val length : ('k, 'v) t -> int
 (** [length pq] computes and returns the number of elements in the priority
