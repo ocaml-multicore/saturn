@@ -30,26 +30,27 @@ Copyright (c) 2017, Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 
 (** {1 Useful Information}
 
-  {2 Domain-Specific Data Structures}
-  Some data structures are optimized for specific domain configurations. These 
-  restrictions enhance performance but must be adhered to for maintaining safety 
-  properties. These limitations are documented and often reflected in the data 
-  structure's name. For example, a single-consumer queue should only have one 
-  domain performing `pop` operations at any time.
+    {2 Domain-Specific Data Structures}
+    Some data structures are optimized for specific domain configurations. These
+    restrictions enhance performance but must be adhered to for maintaining
+    safety properties. These limitations are documented and often reflected in
+    the data structure's name. For example, a single-consumer queue should only
+    have one domain performing `pop` operations at any time.
 
-  For more details, refer to this 
-  {{: https://github.com/ocaml-multicore/saturn/blob/main/doc/domain-role.md}{document}}.
+    For more details, refer to this
+    {{:https://github.com/ocaml-multicore/saturn/blob/main/doc/domain-role.md}
+     document}.
 
-  {2 Composability}
+    {2 Composability}
 
-  Composability is the ability to combine functions while preserving their 
-  properties, such as atomic consistency (linearizability) and progress 
-  guarantees (e.g., lock-freedom). Saturn's data structures, however, are not 
-  composable.
+    Composability is the ability to combine functions while preserving their
+    properties, such as atomic consistency (linearizability) and progress
+    guarantees (e.g., lock-freedom). Saturn's data structures, however, are not
+    composable.
 
-  For more details, refer to this 
-  {{: https://github.com/ocaml-multicore/saturn/blob/main/doc/composability.md}{document}}.
-*)
+    For more details, refer to this
+    {{:https://github.com/ocaml-multicore/saturn/blob/main/doc/composability.md}
+     document}. *)
 
 (** {2 Unsafe Data Structures}
 
