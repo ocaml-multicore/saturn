@@ -24,8 +24,11 @@ module Snapshot = struct
   (** We use an optimized flat representation where the first element of the
       array holds the status of the snapshot.
 
-      +--------+---------+---------+---------+- - - | status | counter | counter
-      | counter | ... +--------+---------+---------+---------+- - -
+      +--------+---------+---------+---------+- - -
+
+      | status | counter | counter | counter | ...
+
+      +--------+---------+---------+---------+- - -
 
       The status is either {!collecting}, {!computing}, or a non-negative value.
 
@@ -102,8 +105,11 @@ type t = tx Atomic.t array Atomic.t
 (** We use an optimized flat representation where the first element of the array
     holds a reference to the snapshot and the other elements are the counters.
 
-    +----------+------+------+------+------+- - - | snapshot | decr | incr |
-    decr | incr | ... +----------+------+------+------+------+- - -
+    +----------+------+------+------+------+- - -
+
+    | snapshot | decr | incr | decr | incr | ...
+
+    +----------+------+------+------+------+- - -
 
     Counters at odd numbered indices are for [decr]ements and the counters at
     even numbered indices are for [incr]ements.
