@@ -1,16 +1,16 @@
 (** Wait-free size counter for lock-free data structures
 
-    This is inspired by the paper {{:https://arxiv.org/pdf/2209.07100.pdf}
-    Concurrent Size} by Gal Sela and Erez Petrank and users may find the paper
-    and, in particular, the figure 3 of a transformed data structure in the
-    paper enlightening.
+    This is inspired by the paper
+    {{:https://arxiv.org/pdf/2209.07100.pdf} Concurrent Size} by Gal Sela and
+    Erez Petrank and users may find the paper and, in particular, the figure 3
+    of a transformed data structure in the paper enlightening.
 
     The algorithm used by this module differs from
     {{:https://arxiv.org/pdf/2209.07100.pdf} the paper} in some important ways.
     First of all, unlike in the paper, the algorithm does not require the number
     of threads to be limited and given unique integer indices to ensure
-    correctness.  Instead, the algorithm uses a lock-free transactional approach
-    to performing the counter {{!update_once} updates at most once}.  Another
+    correctness. Instead, the algorithm uses a lock-free transactional approach
+    to performing the counter {{!update_once} updates at most once}. Another
     difference is that the algorithm is also designed to give correct answer in
     case of internal counter overflow.
 
@@ -20,17 +20,10 @@
     {[
       type 'a node =
         | Null
-        | Node of {
-            next : 'a node Atomic.t;
-            datum : 'a;
-          }
-        | Mark of {
-            node : 'a node;
-          }
+        | Node of { next : 'a node Atomic.t; datum : 'a }
+        | Mark of { node : 'a node }
 
-      type 'a t = {
-        head : 'a node Atomic.t;
-      }
+      type 'a t = { head : 'a node Atomic.t }
 
       let rec try_find t prev datum = function
         | Mark _ -> try_find t t.head datum (Atomic.get t.head)
@@ -42,9 +35,7 @@
                   try_find t prev datum r.node
                 else try_find t prev datum (Atomic.get prev)
             | (Null | Node _) as next ->
-                if r.datum == datum then
-                  node
-                else try_find t r.next datum next
+                if r.datum == datum then node else try_find t r.next datum next
           end
     ]}
 
@@ -61,15 +52,9 @@
             datum : 'a;
             mutable incr : Size.once; (* ADDED *)
           }
-        | Mark of {
-            node : 'a node;
-            decr : Size.once; (* ADDED *)
-          }
+        | Mark of { node : 'a node; decr : Size.once (* ADDED *) }
 
-      type 'a t = {
-        head : 'a node Atomic.t;
-        size : Size.t; (* ADDED *)
-      }
+      type 'a t = { head : 'a node Atomic.t; size : Size.t (* ADDED *) }
 
       let rec try_find t prev datum = function
         | Mark _ -> try_find t t.head datum (Atomic.get t.head)
@@ -77,14 +62,16 @@
         | Node r as node -> begin
             match Atomic.get r.next with
             | Mark r ->
-                Size.update_once t.size r.decr; (* ADDED *)
+                Size.update_once t.size r.decr;
+                (* ADDED *)
                 if Atomic.compare_and_set prev node r.node then
                   try_find t prev datum r.node
                 else try_find t prev datum (Atomic.get prev)
             | (Null | Node _) as next ->
                 if r.datum == datum then begin
                   if r.incr != Size.used_once then begin
-                    Size.update_once t.size r.incr; (* ADDED *)
+                    Size.update_once t.size r.incr;
+                    (* ADDED *)
                     r.incr <- Size.used_once
                   end;
                   node
@@ -94,13 +81,13 @@
     ]}
 
     Notice how the mutable [incr] field is tested against and overwritten with
-    {!used_once} after being performed.  This can improve performance as nodes
+    {!used_once} after being performed. This can improve performance as nodes
     are potentially witnessed many times over their lifetime unlike the marked
     links which are removed as soon as possible.
 
     All operations that witness a particular node or the removal of a node must
-    perform the updates of the size counter.  This ensures that the commit point
-    of the operations becomes the update of the size counter.  This approach is
+    perform the updates of the size counter. This ensures that the commit point
+    of the operations becomes the update of the size counter. This approach is
     general enough to enhance many kinds of lock-free data structures with a
     correct (linearizable) size. *)
 
@@ -108,7 +95,7 @@ type t
 (** The type of a size counter. *)
 
 val create : unit -> t
-(** [create ()] allocates a new size counter.  The initial value of the size
+(** [create ()] allocates a new size counter. The initial value of the size
     counter will be [0]. *)
 
 type once
@@ -144,7 +131,7 @@ val max_value : int
 (** [max_value] is the maximum value of a counter. *)
 
 val get : t -> int
-(** [get size] computes and returns the current value of the size counter.  The
+(** [get size] computes and returns the current value of the size counter. The
     value will always be a non-negative value between [0] and [max_value].
 
     The computation is done in a wait-free manner, which means that parallel

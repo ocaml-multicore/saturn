@@ -24,9 +24,11 @@ module Snapshot = struct
   (** We use an optimized flat representation where the first element of the
       array holds the status of the snapshot.
 
-        +--------+---------+---------+---------+- - -
-        | status | counter | counter | counter | ...
-        +--------+---------+---------+---------+- - -
+      +--------+---------+---------+---------+- - -
+
+      | status | counter | counter | counter | ...
+
+      +--------+---------+---------+---------+- - -
 
       The status is either {!collecting}, {!computing}, or a non-negative value.
 
@@ -48,7 +50,8 @@ module Snapshot = struct
     let before = Atomic.get snap in
     if
       before = collecting
-      || (* NOTE: The condition below accounts for overflow. *)
+      ||
+      (* NOTE: The condition below accounts for overflow. *)
       (after - before - 1) land max_value < max_value / 2
     then Atomic.compare_and_set snap before after |> ignore
 
@@ -58,7 +61,8 @@ module Snapshot = struct
     while
       let before = Atomic.get snap in
       (before = collecting
-      || (* NOTE: The condition below accounts for overflow. *)
+      ||
+      (* NOTE: The condition below accounts for overflow. *)
       (after - before - 1) land max_value < max_value / 2)
       && not (Atomic.compare_and_set snap before after)
     do
@@ -101,9 +105,11 @@ type t = tx Atomic.t array Atomic.t
 (** We use an optimized flat representation where the first element of the array
     holds a reference to the snapshot and the other elements are the counters.
 
-      +----------+------+------+------+------+- - -
-      | snapshot | decr | incr | decr | incr | ...
-      +----------+------+------+------+------+- - -
+    +----------+------+------+------+------+- - -
+
+    | snapshot | decr | incr | decr | incr | ...
+
+    +----------+------+------+------+------+- - -
 
     Counters at odd numbered indices are for [decr]ements and the counters at
     even numbered indices are for [incr]ements.

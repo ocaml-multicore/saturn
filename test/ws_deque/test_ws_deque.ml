@@ -79,8 +79,10 @@ let test_concurrent_workload () =
             (* Choose between pushing and popping; then continue. *)
             if Random.bool () then push () else ignore (pop ());
             loop ())
-          else if (* No more pushes are allowed. Pop and continue. *)
-                  pop () then loop ()
+          else if
+            (* No more pushes are allowed. Pop and continue. *)
+            pop ()
+          then loop ()
         in
         loop ())
   in

@@ -65,7 +65,7 @@ let of_list_exn ~size_exponent values =
   let head_cache = ref 0 |> Multicore_magic.copy_as_padded in
   { array; tail; tail_cache; head; head_cache }
 
-(*  *)
+(* *)
 
 type _ mono = Unit : unit mono | Bool : bool mono
 

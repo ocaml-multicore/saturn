@@ -61,7 +61,7 @@ let of_list l =
   let top_cache = ref 0 |> Multicore_magic.copy_as_padded in
   { top; bottom; top_cache; tab } |> Multicore_magic.copy_as_padded
 
-(*  *)
+(* *)
 
 let realloc a t b sz new_sz =
   let new_a = Array.make new_sz (Obj.magic ()) in

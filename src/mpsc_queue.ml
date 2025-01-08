@@ -101,7 +101,7 @@ let rec pop_as : type a r. a t -> (a, r) poly -> r =
           t.head <- rev_append tail Open;
           pop_as t poly)
 
-(*  *)
+(* *)
 
 type ('a, _) poly2 = Option : ('a, 'a option) poly2 | Value : ('a, 'a) poly2
 

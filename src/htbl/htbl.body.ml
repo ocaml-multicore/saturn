@@ -50,7 +50,7 @@ type ('k, 'v) state = {
   max_buckets : int;
 }
 (** This record is [7 + 1] words and should be aligned on such a boundary on the
-    second generation heap.  It is probably not worth it to pad it further. *)
+    second generation heap. It is probably not worth it to pad it further. *)
 
 type ('k, 'v) t = ('k, 'v) state Atomic.t
 
@@ -409,11 +409,10 @@ type ('k, 'v, _) poly =
   | Value : ('k, 'v, 'v) poly
   | Option : ('k, 'v, 'v option) poly
 
-let rec find_as :
-    type k v r. (k, v) state -> k -> (k, v) bucket -> (k, v, r) poly -> r =
+let rec find_as : type k v r.
+    (k, v) state -> k -> (k, v) bucket -> (k, v, r) poly -> r =
  fun r key bucket poly ->
-  let rec assoc :
-      type k v r.
+  let rec assoc : type k v r.
       (k -> k -> bool) ->
       k ->
       (k, v, [ `Nil | `Cons ]) tdt ->
@@ -529,8 +528,8 @@ let rec assoc eq key = function
   | Nil -> raise_notrace Not_found
   | Cons r -> if eq r.key key then r.value else assoc eq key r.rest
 
-let rec try_reassoc :
-    type v c r. (_, v) t -> _ -> c -> v -> (v, c, r) op -> _ -> r =
+let rec try_reassoc : type v c r.
+    (_, v) t -> _ -> c -> v -> (v, c, r) op -> _ -> r =
  fun t key present future op backoff ->
   let r = Atomic.get t in
   let h = r.hash key in
@@ -577,20 +576,20 @@ let rec try_reassoc :
           else try_reassoc t key present future op (Backoff.once backoff)
         else not_found op
       else
-        let[@tail_mod_cons] rec reassoc :
-            type v c r.
+        let[@tail_mod_cons] rec reassoc : type v c r.
             _ -> _ -> c -> v -> (v, c, r) op -> (_, v, 't) tdt -> (_, v, 't) tdt
             =
          fun t key present future op -> function
-          | Nil -> raise_notrace Not_found
-          | Cons r ->
-              if t key r.key then
-                match op with
-                | Exists | Return -> Cons { r with value = future }
-                | Compare ->
-                    if r.value == present then Cons { r with value = future }
-                    else raise_notrace Not_found
-              else Cons { r with rest = reassoc t key present future op r.rest }
+           | Nil -> raise_notrace Not_found
+           | Cons r ->
+               if t key r.key then
+                 match op with
+                 | Exists | Return -> Cons { r with value = future }
+                 | Compare ->
+                     if r.value == present then Cons { r with value = future }
+                     else raise_notrace Not_found
+               else
+                 Cons { r with rest = reassoc t key present future op r.rest }
         in
         match reassoc r.equal key present future op cons_r.rest with
         | rest ->
@@ -682,19 +681,18 @@ let rec try_dissoc : type v c r. (_, v) t -> _ -> c -> (v, c, r) op -> _ -> r =
           else try_dissoc t key present op (Backoff.once backoff)
         else not_found op
       else
-        let[@tail_mod_cons] rec dissoc :
-            type v c r.
+        let[@tail_mod_cons] rec dissoc : type v c r.
             _ -> _ -> c -> (v, c, r) op -> (_, v, 't) tdt -> (_, v, 't) tdt =
          fun t key present op -> function
-          | Nil -> raise_notrace Not_found
-          | Cons r ->
-              if t key r.key then
-                match op with
-                | Exists | Return -> r.rest
-                | Compare ->
-                    if r.value == present then r.rest
-                    else raise_notrace Not_found
-              else Cons { r with rest = dissoc t key present op r.rest }
+           | Nil -> raise_notrace Not_found
+           | Cons r ->
+               if t key r.key then
+                 match op with
+                 | Exists | Return -> r.rest
+                 | Compare ->
+                     if r.value == present then r.rest
+                     else raise_notrace Not_found
+               else Cons { r with rest = dissoc t key present op r.rest }
         in
         match dissoc r.equal key present op cons_r.rest with
         | (Nil | Cons _) as rest ->

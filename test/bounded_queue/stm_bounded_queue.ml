@@ -1,4 +1,5 @@
-(** Sequential and Parallel model-based tests of (bounded queue) Bounded_queue. *)
+(** Sequential and Parallel model-based tests of (bounded queue) Bounded_queue.
+*)
 
 open QCheck
 open STM

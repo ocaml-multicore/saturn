@@ -52,8 +52,8 @@ type ('a, _) poly =
   | Value : ('a, 'a) poly
   | Unit : ('a, unit) poly
 
-let rec pop_as :
-    type a r. a node Atomic.t Atomic.t -> Backoff.t -> (a, r) poly -> r =
+let rec pop_as : type a r.
+    a node Atomic.t Atomic.t -> Backoff.t -> (a, r) poly -> r =
  fun head backoff poly ->
   let old_head = Atomic.get head in
   match Atomic.get old_head with

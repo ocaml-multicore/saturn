@@ -20,70 +20,72 @@ module type BOUNDED_QUEUE = sig
   (** Represents a lock-free bounded queue holding elements of type ['a]. *)
 
   val create : ?capacity:int -> unit -> 'a t
-  (** [create ~capacity ()] creates a new empty bounded queue with a maximum 
-    capacity of [capacity]. The default [capacity] value is [Int.max_int].*)
+  (** [create ~capacity ()] creates a new empty bounded queue with a maximum
+      capacity of [capacity]. The default [capacity] value is [Int.max_int].*)
 
   val of_list_exn : ?capacity:int -> 'a list -> 'a t
   (** [of_list_exn ~capacity list] creates a new queue from a list.
-    
-    @raises Full if the length of [list] is greater than [capacity]. 
-  
-    🐌 This is a linear-time operation.
-      
-    {[
-      # open Saturn.Bounded_queue
-      # let t : int t = of_list_exn [1;2;3;4]
-      val t : int t = <abstr>
-      # pop_opt t
-      - : int option = Some 1
-      # pop_opt t 
-      - : int option = Some 2
-      # length t
-      - : int = 2
-    ]}
-    *)
+
+      @raise Full if the length of [list] is greater than [capacity].
+
+      🐌 This is a linear-time operation.
+
+      {[
+        # open Saturn.Bounded_queue
+        # let t : int t = of_list_exn [1;2;3;4]
+        val t : int t = <abstr>
+        # pop_opt t
+        - : int option = Some 1
+        # pop_opt t
+        - : int option = Some 2
+        # length t
+        - : int = 2
+      ]} *)
 
   val length : 'a t -> int
   (** [length queue] returns the number of elements currently in the [queue]. *)
 
   val capacity_of : 'a t -> int
-  (** [capacity_of queue] returns the maximum number of elements that the [queue]
-      can hold. *)
+  (** [capacity_of queue] returns the maximum number of elements that the
+      [queue] can hold. *)
 
   val is_empty : 'a t -> bool
-  (** [is_empty queue] returns [true] if the [queue] is empty, otherwise [false]. *)
+  (** [is_empty queue] returns [true] if the [queue] is empty, otherwise
+      [false]. *)
 
   val is_full : 'a t -> bool
-  (** [is_full queue] returns [true] if the [queue] is full, otherwise [false]. *)
+  (** [is_full queue] returns [true] if the [queue] is full, otherwise [false].
+  *)
 
   (** {2 Consumer functions} *)
 
   exception Empty
   (** Raised when {!pop_exn}, {!peek_exn}, or {!drop_exn} is applied to an empty
-   stack. *)
+      stack. *)
 
   val peek_exn : 'a t -> 'a
-  (** [peek_exn queue] returns the first element of the [queue] without removing it.
-      
-    @raises Empty if the [queue] is empty. *)
+  (** [peek_exn queue] returns the first element of the [queue] without removing
+      it.
+
+      @raise Empty if the [queue] is empty. *)
 
   val peek_opt : 'a t -> 'a option
-  (** [peek_opt queue] returns [Some] of the first element of the [queue] without
-      removing it, or [None] if the [queue] is empty. *)
+  (** [peek_opt queue] returns [Some] of the first element of the [queue]
+      without removing it, or [None] if the [queue] is empty. *)
 
   val pop_exn : 'a t -> 'a
   (** [pop_exn queue] removes and returns the first element of the [queue].
-   
-    @raises Empty if the [queue] is empty. *)
+
+      @raise Empty if the [queue] is empty. *)
 
   val pop_opt : 'a t -> 'a option
-  (** [pop_opt queue] removes and returns [Some] of the first element of the [queue],
-      or [None] if the [queue] is empty. *)
+  (** [pop_opt queue] removes and returns [Some] of the first element of the
+      [queue], or [None] if the [queue] is empty. *)
 
   val drop_exn : 'a t -> unit
-  (** [drop_exn queue] removes the top element of the [queue]. 
-  
-    @raises Empty if the [queue] is empty. *)
+  (** [drop_exn queue] removes the top element of the [queue].
+
+      @raise Empty if the [queue] is empty. *)
 
   (** {2 Producer functions} *)
 
@@ -92,8 +94,8 @@ module type BOUNDED_QUEUE = sig
 
   val push_exn : 'a t -> 'a -> unit
   (** [push_exn queue element] adds [element] at the end of the [queue].
-      
-    @raises Full if the [queue] is full. *)
+
+      @raise Full if the [queue] is full. *)
 
   val try_push : 'a t -> 'a -> bool
   (** [try_push queue element] tries to add [element] at the end of the [queue].
@@ -117,7 +119,7 @@ end
       - : unit = ()
       # push_exn t 4
       Exception: Saturn__Bounded_queue.Full.
-      # try_push t 4 
+      # try_push t 4
       - : bool = false
       # pop_exn t
       - : int = 1
@@ -130,15 +132,16 @@ end
       # pop_opt t
       - : int option = None
       # pop_exn t
-      Exception: Saturn__Bounded_queue.Empty.]}
-*)
+      Exception: Saturn__Bounded_queue.Empty.
+    ]} *)
 
 (** {2 Multicore example}
 
-  Note: The barrier is used in this example solely to make the results more
-   interesting by increasing the likelihood of parallelism. Spawning a domain is 
-   a costly operation, especially compared to the relatively small amount of work
-   being performed here. In practice, using a barrier in this manner is unnecessary.
+    Note: The barrier is used in this example solely to make the results more
+    interesting by increasing the likelihood of parallelism. Spawning a domain
+    is a costly operation, especially compared to the relatively small amount of
+    work being performed here. In practice, using a barrier in this manner is
+    unnecessary.
 
     {@ocaml non-deterministic=command[
       # open Saturn.Bounded_queue
@@ -148,16 +151,16 @@ end
       # let barrier =  Atomic.make 2
       val barrier : int Atomic.t = <abstr>
 
-      # let pusher () = 
+      # let pusher () =
           Atomic.decr barrier;
           while Atomic.get barrier != 0 do Domain.cpu_relax () done;
           List.init 8 (fun i -> i)
           |> List.map (fun i -> Domain.cpu_relax (); try_push t i)
       val pusher : unit -> bool list = <fun>
 
-      # let popper () = 
+      # let popper () =
           Atomic.decr barrier;
-          while Atomic.get barrier != 0 do Domain.cpu_relax () done; 
+          while Atomic.get barrier != 0 do Domain.cpu_relax () done;
           List.init 8 (fun i -> Domain.cpu_relax (); pop_opt t)
       val popper : unit -> int option list = <fun>
 
@@ -171,6 +174,4 @@ end
       - : bool list = [true; true; true; true; true; false; true; true]
       # Domain.join domain_popper
       - : int option list = [None; None; Some 0; None; Some 1; Some 2; Some 3; Some 4]
-      ]}
- 
-    *)
+    ]} *)
