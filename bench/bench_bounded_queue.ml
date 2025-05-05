@@ -9,7 +9,7 @@ module Make (Bounded_queue : Bounded_queue_intf.BOUNDED_QUEUE) : BENCH = struct
     let t = Bounded_queue.create () in
 
     let op push =
-      if push then Bounded_queue.try_push t 101 |> ignore
+      if push then Bounded_queue.try_push t (ref push) |> ignore
       else Bounded_queue.pop_opt t |> ignore
     in
 
@@ -43,7 +43,7 @@ module Make (Bounded_queue : Bounded_queue_intf.BOUNDED_QUEUE) : BENCH = struct
           let n = Util.alloc n_msgs_to_add in
           if 0 < n then begin
             for i = 1 to n do
-              Bounded_queue.try_push t i |> ignore
+              Bounded_queue.try_push t (ref i) |> ignore
             done;
             work ()
           end

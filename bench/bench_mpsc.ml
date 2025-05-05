@@ -4,7 +4,9 @@ module Queue = Saturn.Single_consumer_queue
 let run_one_domain ~budgetf ?(n_msgs = 50 * Util.iter_factor) () =
   let t = Queue.create () in
 
-  let op push = if push then Queue.push t 101 else Queue.pop_opt t |> ignore in
+  let op push =
+    if push then Queue.push t (ref push) else Queue.pop_opt t |> ignore
+  in
 
   let init _ =
     assert (Queue.is_empty t);
@@ -35,7 +37,7 @@ let run_one ~budgetf ?(n_adders = 2) ?(n_takers = 2)
         let n = Util.alloc n_msgs_to_add in
         if 0 < n then begin
           for i = 1 to n do
-            Queue.push t i
+            Queue.push t (ref i)
           done;
           work ()
         end

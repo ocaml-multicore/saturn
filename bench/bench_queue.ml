@@ -9,7 +9,7 @@ module Make (Queue : Michael_scott_queue_intf.MS_QUEUE) : BENCH = struct
     let t = Queue.create () in
 
     let op push =
-      if push then Queue.push t 101 else Queue.pop_opt t |> ignore
+      if push then Queue.push t (ref push) else Queue.pop_opt t |> ignore
     in
 
     let init _ =
@@ -42,7 +42,7 @@ module Make (Queue : Michael_scott_queue_intf.MS_QUEUE) : BENCH = struct
           let n = Util.alloc n_msgs_to_add in
           if 0 < n then begin
             for i = 1 to n do
-              Queue.push t i
+              Queue.push t (ref i)
             done;
             work ()
           end

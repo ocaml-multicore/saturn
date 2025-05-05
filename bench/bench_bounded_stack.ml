@@ -5,7 +5,8 @@ let run_one_domain ~budgetf ?(n_msgs = 50 * Util.iter_factor) () =
   let t = Stack.create () in
 
   let op push =
-    if push then Stack.try_push t 101 |> ignore else Stack.pop_opt t |> ignore
+    if push then Stack.try_push t (ref push) |> ignore
+    else Stack.pop_opt t |> ignore
   in
 
   let init _ =
@@ -37,7 +38,7 @@ let run_one ~budgetf ?(n_adders = 2) ?(n_takers = 2)
         let n = Util.alloc n_msgs_to_add in
         if 0 < n then begin
           for i = 1 to n do
-            Stack.try_push t i |> ignore
+            Stack.try_push t (ref i) |> ignore
           done;
           work ()
         end
