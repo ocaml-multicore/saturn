@@ -89,11 +89,11 @@ let run_as_one_domain ~budgetf ?(n_msgs = 150 * Util.iter_factor) order =
   let t = Ws_deque.create () in
 
   let op_lifo push =
-    if push then Ws_deque.push t 101
+    if push then Ws_deque.push t (ref push)
     else
       match Ws_deque.pop_exn t with _ -> () | exception Ws_deque.Empty -> ()
   and op_fifo push =
-    if push then Ws_deque.push t 101
+    if push then Ws_deque.push t (ref push)
     else
       match Ws_deque.steal_exn t with _ -> () | exception Ws_deque.Empty -> ()
   in
@@ -151,7 +151,7 @@ let run_as_spmc ~budgetf ~n_thiefs () =
       work ()
     else
       for i = 1 to n_msgs do
-        Ws_deque.push t i
+        Ws_deque.push t (ref i)
       done
   in
 
