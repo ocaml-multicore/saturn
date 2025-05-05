@@ -17,14 +17,14 @@ module Make (Queue : Spsc_queue_intf.SPSC_queue) : BENCH = struct
         done;
         let n = Random.int ((1 lsl size_exponent) + 1) in
         for i = 1 to n do
-          Queue.push_exn t i
+          Queue.push_exn t (ref i)
         done
       in
       let work i () =
         if i = 0 then
           let rec loop n =
             if 0 < n then
-              if Queue.try_push t n then loop (n - 1)
+              if Queue.try_push t (ref n) then loop (n - 1)
               else begin
                 Domain.cpu_relax ();
                 loop n
