@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         ocaml-compiler:
-          - ocaml.5.2.0,ocaml-option-mingw
+          - ocaml.5.3.0,ocaml-option-mingw
 
     runs-on: windows-latest
 
@@ -27,10 +27,9 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Set up OCaml
-        uses: ocaml/setup-ocaml@v2
+        uses: ocaml/setup-ocaml@v3.3.2
         with:
           opam-pin: false
-          opam-depext: false
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
           opam-repositories: |
             dra27: https://github.com/dra27/opam-repository.git#windows-5.0
