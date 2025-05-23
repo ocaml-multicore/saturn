@@ -161,39 +161,6 @@ module STM_htbl (Htbl : Htbls.Htbl_tests) = struct
   end
 
   let run () = Stm_run.run ~name:"Htbl" (module Spec) |> exit
-
-  (* let test () =
-       let open Htbl in
-       let h = create ~hashed_type:(module Int) () in
-       let t1 = try_add h 1 1 in
-       let t2 = try Some (set_exn h 1 2) with Not_found -> None in
-       let t3 = try_add h 1 1 in
-       let t4 = try Some (set_exn h 1 3) with Not_found -> None in
-       (t1, t2, t3, t4)
-
-     let test_m () =
-       let module State = Map.Make (Int) in
-       let m = State.empty in
-       let t1 = State.mem 1 m in
-       let m = State.add 1 1 m in
-       let t2 = State.find_opt 1 m in
-       let m = State.add 1 2 m in
-       let t3 = State.mem 1 m in
-       let m = if t3 then m else State.add 1 1 m in
-       let t4 = State.find_opt 1 m in
-       (t1, t2, t3, t4)
-
-     let run test n =
-       let count = ref 0 in
-       let res = ref [] in
-       let expected = (true, Some 1, false, Some 2) in
-       for _ = 1 to n do
-         let r = test () in
-         if r <> expected then (
-           res := r :: !res;
-           incr count)
-       done;
-       (!count, !res) *)
 end
 
 let () =

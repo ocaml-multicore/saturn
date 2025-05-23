@@ -1,0 +1,22 @@
+(rule
+ (action
+  (progn
+   (copy ../../src/priority_queue.ml priority_queue.ml)
+   (copy ../../src/size.ml size.ml)))
+ (package saturn))
+
+(test
+ (package saturn)
+ (name dscheck_priority_queue)
+ (modules priority_queue size dscheck_priority_queue)
+ (build_if
+  (>= %{ocaml_version} 5))
+ (libraries alcotest dscheck multicore-magic-dscheck)
+ (flags
+  (:standard -open Multicore_magic_dscheck)))
+
+(test
+ (package saturn)
+ (name stm_priority_queue)
+ (modules stm_priority_queue)
+ (libraries saturn qcheck-core qcheck-stm.stm stm_run))
