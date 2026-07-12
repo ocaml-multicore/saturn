@@ -79,7 +79,7 @@ let tests_two_domains =
       (* TEST 1 - two domains doing multiple times one push then one pop.
          Parallel [push] and [pop].
       *)
-      Test.make ~name:"parallel_pop_push" (pair small_nat small_nat)
+      Test.make ~name:"parallel_pop_push" (pair nat_small nat_small)
         (fun (npush1, npush2) ->
           (* Initialization *)
           let stack = create () in
@@ -126,7 +126,7 @@ let tests_two_domains =
            Two domains randomly pushs and pops in parallel. They stop as
            soon as they have finished pushing a list of element to
            push. *)
-      Test.make ~name:"parallel_pop_push_random" (pair small_nat small_nat)
+      Test.make ~name:"parallel_pop_push_random" (pair nat_small nat_small)
         (fun (npush1, npush2) ->
           (* Initialization *)
           let stack = create () in

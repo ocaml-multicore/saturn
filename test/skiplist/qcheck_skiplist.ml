@@ -81,7 +81,7 @@ let tests_two_domains =
   QCheck.
     [
       (* TEST 1: Two domains doing multiple adds *)
-      Test.make ~name:"parallel_add" (pair small_nat small_nat)
+      Test.make ~name:"parallel_add" (pair nat_small nat_small)
         (fun (npush1, npush2) ->
           let sl = Skiplist.create ~compare:Int.compare () in
           let barrier = Barrier.create 2 in
@@ -109,7 +109,7 @@ let tests_two_domains =
           compare_all_true popped1 && compare_all_true popped2);
       (* TEST 2: Two domains doing multiple one push and one pop in parallel *)
       Test.make ~count:10000 ~name:"parallel_add_remove"
-        (pair small_nat small_nat) (fun (npush1, npush2) ->
+        (pair nat_small nat_small) (fun (npush1, npush2) ->
           let sl = Skiplist.create ~compare:Int.compare () in
           let barrier = Barrier.create 2 in
 

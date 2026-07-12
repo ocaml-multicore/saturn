@@ -1,3 +1,9 @@
+### 1.0.1
+
+- Fix test suite build against recent qcheck: rename the deprecated
+  `small_nat`/`small_int`/`small_list` generators to `nat_small`/`list_small`
+  and require `qcheck`, `qcheck-core` and `qcheck-alcotest` `>= 0.90` (@lyrm)
+
 ### 1.0.0
 
 - Add lockfree Bag (@lyrm, @polytypic)

@@ -148,7 +148,7 @@ module Qcheck_ms_queue (Queue : Ms_queues.MS_queue_tests) = struct
         (* TEST 1 - two domains doing multiple times one push then one pop_opt.
            Parallel [push] and [pop_opt].
         *)
-        Test.make ~name:"parallel_pop_opt_push" (pair small_nat small_nat)
+        Test.make ~name:"parallel_pop_opt_push" (pair nat_small nat_small)
           (fun (npush1, npush2) ->
             (* Initialization *)
             let queue = Queue.create () in
@@ -207,7 +207,7 @@ module Qcheck_ms_queue (Queue : Ms_queues.MS_queue_tests) = struct
            soon as they have finished pushing a list of element to
            push. *)
         Test.make ~name:"parallel_pop_opt_push_random"
-          (pair small_nat small_nat) (fun (npush1, npush2) ->
+          (pair nat_small nat_small) (fun (npush1, npush2) ->
             (* Initialization *)
             let queue = Queue.create () in
             let barrier = Barrier.create 2 in

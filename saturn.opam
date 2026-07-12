@@ -18,9 +18,9 @@ depends: [
   "mdx" {>= "0.4" & with-test}
   "multicore-bench" {>= "0.1.7" & with-test}
   "multicore-magic-dscheck" {>= "2.3.0" & with-test}
-  "qcheck" {>= "0.21.3" & with-test}
-  "qcheck-alcotest" {>= "0.21.3" & with-test}
-  "qcheck-core" {>= "0.21.3" & with-test}
+  "qcheck" {>= "0.90" & with-test}
+  "qcheck-alcotest" {>= "0.90" & with-test}
+  "qcheck-core" {>= "0.90" & with-test}
   "qcheck-stm" {>= "0.4" & with-test}
   "qcheck-multicoretests-util" {>= "0.4" & with-test}
   "yojson" {>= "2.0.2" & with-test}

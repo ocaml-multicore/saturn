@@ -10,7 +10,7 @@ let tests =
   QCheck.
     [
       Test.make ~name:"sequential"
-        (pair small_nat (list int))
+        (pair nat_small (list int))
         (fun (npop, lpush) ->
           let bag = Bag.create () in
           List.iter (Bag.push bag) lpush;
@@ -26,7 +26,7 @@ let tests =
           && List.sort Int.compare (popped @ remaining)
              = List.sort Int.compare lpush);
       Test.make ~name:"parallel"
-        (pair small_nat (list int))
+        (pair nat_small (list int))
         (fun (npop, lpush) ->
           let bag = Bag.create () in
           let barrier = Barrier.create 2 in

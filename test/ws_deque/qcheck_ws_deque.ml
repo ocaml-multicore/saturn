@@ -40,7 +40,7 @@ let tests_one_producer =
        forall q of size n, forall m > n,  poping m times raises Empty (m-n) times. *)
     QCheck.(
       Test.make ~name:"pop_on_empty_deque_raises_empty" ~count:1
-        (pair (list int) small_nat)
+        (pair (list int) nat_small)
         (fun (l, m) ->
           assume (m > 0);
           let n = List.length l in
@@ -67,7 +67,7 @@ let tests_one_producer_one_stealer =
        - Empty is raised only when the deque is empty *)
     QCheck.(
       Test.make ~name:"steals_are_in_order"
-        (pair (list int) small_nat)
+        (pair (list int) nat_small)
         (fun (l, n) ->
           (* Main domain pushes all elements of [l] in order. *)
           let deque = deque_of_list l in
@@ -112,7 +112,7 @@ let tests_one_producer_one_stealer =
        - Empty is raised only when the deque is empty *)
     QCheck.(
       Test.make ~name:"parallel_pushes_and_steals"
-        (pair (list small_int) (int_bound 200))
+        (pair (list nat_small) (int_bound 200))
         (fun (l, n) ->
           (* Initialization *)
           let deque = Ws_deque.create () in
@@ -168,7 +168,7 @@ let tests_one_producer_one_stealer =
        stolen_values @ (List.rev popped_values) = pushed_values *)
     QCheck.(
       Test.make ~name:"parallel_pops_and_steals"
-        (pair (list small_int) (pair small_nat small_nat))
+        (pair (list nat_small) (pair nat_small nat_small))
         (fun (l, (nsteal, npop)) ->
           assume (nsteal + npop > List.length l);
           (* Initialization - sequential pushes*)
@@ -229,7 +229,7 @@ let tests_one_producer_two_stealers =
        - Empty is raised only when the deque is empty *)
     QCheck.(
       Test.make ~name:"parallel_steals"
-        (pair (list small_int) (pair small_nat small_nat))
+        (pair (list nat_small) (pair nat_small nat_small))
         (fun (l, (ns1, ns2)) ->
           (* Initialization *)
           let deque = deque_of_list l in

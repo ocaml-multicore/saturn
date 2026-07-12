@@ -31,7 +31,7 @@ module Qcheck_spsc (Spsc_queue : Spsc_queues.SPSC_tests) = struct
          one of a FIFO queue. *)
       QCheck.(
         Test.make ~name:"seq_pop_opt_push"
-          (pair (list int) small_nat)
+          (pair (list int) nat_small)
           (fun (l, npop) ->
             (* Making sure we do not create a too big queue. Other
                tests are checking the behaviour of a full queue.*)
@@ -63,7 +63,7 @@ module Qcheck_spsc (Spsc_queue : Spsc_queues.SPSC_tests) = struct
          Same than previous with pop instead of pop_opt *)
       QCheck.(
         Test.make ~name:"seq_pop_push"
-          (pair (list int) small_nat)
+          (pair (list int) nat_small)
           (fun (l, npop) ->
             (* Making sure we do not create a too big queue. Other
                tests are checking the behaviour of a full queue.*)
@@ -95,7 +95,7 @@ module Qcheck_spsc (Spsc_queue : Spsc_queues.SPSC_tests) = struct
          Same than TEST1 with try_push instead of push *)
       QCheck.(
         Test.make ~name:"seq_pop_try_push"
-          (pair (list int) small_nat)
+          (pair (list int) nat_small)
           (fun (l, npop) ->
             (* Making sure we do not create a too big queue. Other
                tests are checking the behaviour of a full queue.*)
@@ -123,7 +123,7 @@ module Qcheck_spsc (Spsc_queue : Spsc_queues.SPSC_tests) = struct
          one of a FIFO queue. *)
       QCheck.(
         Test.make ~name:"par_pop_push"
-          (pair (pair (list int) (list int)) small_nat)
+          (pair (pair (list int) (list int)) nat_small)
           (fun ((l, l'), npop) ->
             (* Making sure we do not create a too big queue. Other
                  tests are checking the behaviour of a full queue.*)

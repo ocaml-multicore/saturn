@@ -24,7 +24,7 @@ struct
             && Bounded_queue.length queue = List.length lpush);
         (* TEST 1bis: push *)
         Test.make ~name:"of_list_exn_raise_full"
-          (pair (list int) small_nat)
+          (pair (list int) nat_small)
           (fun (lpush, capacity) ->
             assume (lpush <> []);
             (* Building a random Bounded_queue *)
@@ -186,7 +186,7 @@ struct
         (* TEST 1 - two domains doing multiple times one push then one pop_opt.
            Parallel [push] and [pop_opt].
         *)
-        Test.make ~name:"parallel_pop_opt_push" (pair small_nat small_nat)
+        Test.make ~name:"parallel_pop_opt_push" (pair nat_small nat_small)
           (fun (npush1, npush2) ->
             (* Initialization *)
             let queue = Bounded_queue.create () in
@@ -245,7 +245,7 @@ struct
            soon as they have finished pushing a list of element to
            push. *)
         Test.make ~name:"parallel_pop_opt_push_random"
-          (pair small_nat small_nat) (fun (npush1, npush2) ->
+          (pair nat_small nat_small) (fun (npush1, npush2) ->
             (* Initialization *)
             let queue = Bounded_queue.create () in
             let barrier = Barrier.create 2 in

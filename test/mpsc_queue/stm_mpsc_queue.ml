@@ -37,7 +37,7 @@ module Spec = struct
       (Gen.oneof
          [
            Gen.map (fun i -> Push i) int_gen;
-           Gen.map (fun l -> Push_all l) (Gen.small_list int_gen);
+           Gen.map (fun l -> Push_all l) (Gen.list_small int_gen);
            (* Gen.return Is_empty; *)
            (* Gen.return Close; *)
          ])

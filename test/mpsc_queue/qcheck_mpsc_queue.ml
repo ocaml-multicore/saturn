@@ -260,7 +260,7 @@ let tests_one_consumer =
          - [pop_opt] on a [close]d and empty queue raises [Closed]
       *)
       Test.make ~name:"pop_opt_order"
-        (pair (list int) (pair small_nat small_nat))
+        (pair (list int) (pair nat_small nat_small))
         (fun (lpush, (npop, when_close)) ->
           (* Initialisation*)
           let npush = List.length lpush in
@@ -295,7 +295,7 @@ let tests_one_consumer =
          - order of [pop_opt] and [push_head] -> LIFO
       *)
       Test.make ~name:"seq_push_pop_opt"
-        (pair small_nat (pair (list int) (list int)))
+        (pair nat_small (pair (list int) (list int)))
         (fun (npop, (lpush1, lpush2)) ->
           (* Initialisation*)
           let queue = Mpsc_queue.create () in
@@ -370,7 +370,7 @@ let tests_one_consumer_one_producer =
          Sequential [push] then several [peek_opt] followed by [pop_opt].
          Checks [peek_opt] and [pop_opt] are in FIFO order. *)
       Test.make ~name:"seq_push_pop_opt_peek_opt"
-        (pair (list int) small_nat)
+        (pair (list int) nat_small)
         (fun (lpush, npop) ->
           (* Initialization *)
           let queue = Mpsc_queue.create () in
@@ -394,7 +394,7 @@ let tests_one_consumer_one_producer =
       (* TEST 2 - one consumer one producer:
          Parallel [push], [pop_opt], [peek_opt]. *)
       Test.make ~name:"par_push_pop"
-        (pair (list int) small_nat)
+        (pair (list int) nat_small)
         (fun (lpush, npop) ->
           (* Initialization *)
           let queue = Mpsc_queue.create () in
