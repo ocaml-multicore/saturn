@@ -57,13 +57,16 @@ let rec pop_as : type a r.
  fun head backoff poly ->
   let old_head = Atomic.get head in
   match Atomic.get old_head with
-  | Nil -> begin
-      match poly with Value | Unit -> raise Empty | Option -> None
-    end
-  | Next (value, next) ->
-      if Atomic.compare_and_set head old_head next then begin
-        match poly with Value -> value | Option -> Some value | Unit -> ()
+  | Nil ->
+      begin match poly with Value | Unit -> raise Empty | Option -> None
       end
+  | Next (value, next) ->
+      if Atomic.compare_and_set head old_head next then
+        begin match poly with
+        | Value -> value
+        | Option -> Some value
+        | Unit -> ()
+        end
       else
         let backoff = Backoff.once backoff in
         pop_as head backoff poly
@@ -78,9 +81,9 @@ let peek_as : type a r. a node Atomic.t Atomic.t -> (a, r) poly -> r =
  fun head poly ->
   let old_head = Atomic.get head in
   match Atomic.get old_head with
-  | Nil -> begin
-      match poly with Value | Unit -> raise Empty | Option -> None
-    end
+  | Nil ->
+      begin match poly with Value | Unit -> raise Empty | Option -> None
+      end
   | Next (value, _) -> (
       match poly with Value -> value | Option -> Some value | Unit -> ())
 
@@ -107,10 +110,10 @@ let push { tail; _ } value =
   let new_tail = Atomic.make Nil in
   let newnode = Next (value, new_tail) in
   let old_tail = Atomic.get tail in
-  if not (Atomic.compare_and_set old_tail Nil newnode) then begin
-    match Atomic.get old_tail with
+  if not (Atomic.compare_and_set old_tail Nil newnode) then
+    begin match Atomic.get old_tail with
     | Nil -> find_tail_and_enq old_tail newnode
     | Next (_, n) -> find_tail_and_enq n newnode
-  end;
+    end;
   if not (Atomic.compare_and_set tail old_tail new_tail) then
     fix_tail tail new_tail

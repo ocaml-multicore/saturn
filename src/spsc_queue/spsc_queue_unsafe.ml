@@ -114,12 +114,11 @@ let[@inline never] pop_or_peek_as (type a r) t op (poly : (a, r) poly) : r =
   else
     let index = head land (Array.length t.array - 1) in
     let v = Array.unsafe_get t.array index |> Obj.magic in
-    begin
-      match op with
-      | Pop ->
-          Array.unsafe_set t.array index (Obj.magic ());
-          Atomic.incr t.head
-      | Peek -> ()
+    begin match op with
+    | Pop ->
+        Array.unsafe_set t.array index (Obj.magic ());
+        Atomic.incr t.head
+    | Peek -> ()
     end;
     match poly with Value -> v | Option -> Some v | Unit -> ()
 

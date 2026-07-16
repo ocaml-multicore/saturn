@@ -24,10 +24,9 @@ module Dscheck_ms_queue (Queue : Michael_scott_queue_intf.MS_QUEUE) = struct
         let popped = ref [] in
         Atomic.spawn (fun () ->
             for _ = 1 to items_total do
-              begin
-                match Queue.pop_opt queue with
-                | None -> ()
-                | Some v -> popped := v :: !popped
+              begin match Queue.pop_opt queue with
+              | None -> ()
+              | Some v -> popped := v :: !popped
               end;
               (* Ensure is_empty does not interfere with other functions *)
               Queue.is_empty queue |> ignore
@@ -123,10 +122,9 @@ module Dscheck_ms_queue (Queue : Michael_scott_queue_intf.MS_QUEUE) = struct
         let popped = ref [] in
         Atomic.spawn (fun () ->
             for _ = 1 to items_total do
-              begin
-                match Queue.pop_opt cue with
-                | None -> ()
-                | Some v -> popped := v :: !popped
+              begin match Queue.pop_opt cue with
+              | None -> ()
+              | Some v -> popped := v :: !popped
               end
             done);
 

@@ -3,7 +3,7 @@ open Skiplist
 module Atomic = Dscheck.TracedAtomic
 (** This is needed in this order as the skiplist.ml file contains
     {[
-      module Atomic = Multicore_magic.Transparent_atomic
+    module Atomic = Multicore_magic.Transparent_atomic
     ]}
     which is in multicore-magic-dscheck library only a subset of
     [Dscheck.TracedAtomic] function. *)

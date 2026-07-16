@@ -45,10 +45,9 @@ let run_as_scheduler ~budgetf ?(n_domains = 1) () =
   let rec await own promise =
     let x = !promise in
     if x == Obj.magic exit then begin
-      begin
-        match try_own own with
-        | exception Ws_deque.Empty -> Domain.cpu_relax ()
-        | work -> work own
+      begin match try_own own with
+      | exception Ws_deque.Empty -> Domain.cpu_relax ()
+      | work -> work own
       end;
       await own promise
     end
@@ -167,7 +166,7 @@ let run_suite ~budgetf =
     [
       [ 1; 2; 4; 8 ]
       |> List.concat_map (fun n_domains ->
-             run_as_scheduler ~budgetf ~n_domains ());
+          run_as_scheduler ~budgetf ~n_domains ());
       [ 1; 2; 4 ]
       |> List.concat_map (fun n_thiefs -> run_as_spmc ~budgetf ~n_thiefs ());
       run_as_one_domain ~budgetf `FIFO;

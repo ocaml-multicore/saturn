@@ -57,8 +57,8 @@ end = struct
   let rec find_node t prev value : _ -> (_, [< `Null | `Node ]) node = function
     | Link (Mark _) -> find_node t t.head value (Atomic.get t.head)
     | Link Null -> Null
-    | Link (Node r as node) as before -> begin
-        match Atomic.get r.next with
+    | Link (Node r as node) as before ->
+        begin match Atomic.get r.next with
         | Link (Mark r) ->
             Size.update_once t.size r.decr;
             if Atomic.compare_and_set prev before (Link r.node) then
@@ -73,7 +73,7 @@ end = struct
               node
             end
             else find_node t r.next value next
-      end
+        end
 
   let mem t value = find_node t t.head value (Atomic.get t.head) != Null
 
@@ -98,8 +98,8 @@ end = struct
   let rec try_remove t value =
     match find_node t t.head value (Atomic.get t.head) with
     | Null -> false
-    | Node r -> begin
-        match Atomic.get r.next with
+    | Node r ->
+        begin match Atomic.get r.next with
         | Link (Mark r) ->
             Size.update_once t.size r.decr;
             false
@@ -111,5 +111,5 @@ end = struct
               true
             end
             else try_remove t value
-      end
+        end
 end

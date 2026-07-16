@@ -116,12 +116,11 @@ let pop_or_peek_as (type a r) (t : a t) op (poly : (a, r) poly) : r =
   else
     let index = head land (Array.length t.array - 1) in
     let v = Array.get t.array index in
-    begin
-      match op with
-      | Pop ->
-          Array.set t.array index None;
-          Atomic.incr t.head
-      | Peek -> ()
+    begin match op with
+    | Pop ->
+        Array.set t.array index None;
+        Atomic.incr t.head
+    | Peek -> ()
     end;
     match poly with Value -> Option.get v | Option -> v | Unit -> ()
 

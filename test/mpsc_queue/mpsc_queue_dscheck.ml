@@ -24,10 +24,9 @@ let push_pop () =
       let popped = ref [] in
       Atomic.spawn (fun () ->
           for _ = 1 to items_total do
-            begin
-              match Queue.pop_opt queue with
-              | None -> ()
-              | Some v -> popped := v :: !popped
+            begin match Queue.pop_opt queue with
+            | None -> ()
+            | Some v -> popped := v :: !popped
             end;
             (* Ensure is_empty does not interfere with other functions *)
             Queue.is_empty queue |> ignore

@@ -32,7 +32,9 @@ type ('a, _) poly1 = Option : ('a, 'a option) poly1 | Value : ('a, 'a) poly1
 let peek_as : type a r. a t -> (a, r) poly1 -> r =
  fun t poly ->
   match Atomic.get t.head with
-  | _, [] -> begin match poly with Option -> None | Value -> raise Empty end
+  | _, [] ->
+      begin match poly with Option -> None | Value -> raise Empty
+      end
   | _, value :: _ -> ( match poly with Option -> Some value | Value -> value)
 
 let peek_exn t = peek_as t Value
@@ -47,12 +49,12 @@ type ('a, _) poly2 =
 let rec pop_as : type a r. a t -> Backoff.t -> (a, r) poly2 -> r =
  fun t backoff poly ->
   match Atomic.get t.head with
-  | _, [] -> begin
-      match poly with
+  | _, [] ->
+      begin match poly with
       | Option -> None
       | Value -> raise Empty
       | Unit -> raise Empty
-    end
+      end
   | (len, hd :: tl) as old_head ->
       if Atomic.compare_and_set t.head old_head (len - 1, tl) then
         match poly with Option -> Some hd | Value -> hd | Unit -> ()

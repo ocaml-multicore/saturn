@@ -78,10 +78,11 @@ let push_pop_with_capacity () =
               try
                 Array.iteri
                   (fun i elt ->
-                    if elt then begin
-                      if not @@ xor (List.mem i remaining) (List.mem i popped)
+                    if elt then
+                      begin if
+                        not @@ xor (List.mem i remaining) (List.mem i popped)
                       then raise Exit
-                    end
+                      end
                     else if List.mem i remaining || List.mem i popped then
                       raise Exit)
                   pushed;

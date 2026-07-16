@@ -28,10 +28,9 @@ let push_pop () =
       let popped = ref [] in
       Atomic.spawn (fun () ->
           for _ = 1 to items_total do
-            begin
-              match Cue.pop_opt cue with
-              | None -> ()
-              | Some v -> popped := v :: !popped
+            begin match Cue.pop_opt cue with
+            | None -> ()
+            | Some v -> popped := v :: !popped
             end;
             (* Ensure is_empty does not interfere with other functions *)
             Cue.is_empty cue |> ignore
@@ -183,10 +182,11 @@ let push_pop_with_capacity () =
               try
                 Array.iteri
                   (fun i elt ->
-                    if elt then begin
-                      if not @@ xor (List.mem i remaining) (List.mem i popped)
+                    if elt then
+                      begin if
+                        not @@ xor (List.mem i remaining) (List.mem i popped)
                       then raise Exit
-                    end
+                      end
                     else if List.mem i remaining || List.mem i popped then
                       raise Exit)
                   pushed;
@@ -254,10 +254,9 @@ let push_pop_of_list () =
       let popped = ref [] in
       Atomic.spawn (fun () ->
           for _ = 1 to items_total do
-            begin
-              match Cue.pop_opt cue with
-              | None -> ()
-              | Some v -> popped := v :: !popped
+            begin match Cue.pop_opt cue with
+            | None -> ()
+            | Some v -> popped := v :: !popped
             end
           done);
 

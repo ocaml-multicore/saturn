@@ -105,23 +105,22 @@ let max_buckets_of t = (Atomic.get t).max_buckets
 
 let rec take_at backoff size bs i =
   let (B old_bucket) = Atomic_array.unsafe_fenceless_get bs i in
-  begin
-    (* Make sure size_modifier has been updated. *)
-    match old_bucket with
-    | Nil_with_size { size_modifier } | Cons_with_size { size_modifier; _ } ->
-        if size_modifier != Size.used_once then
-          Size.update_once size size_modifier
-    | _ -> ()
+  (* Make sure size_modifier has been updated. *)
+  begin match old_bucket with
+  | Nil_with_size { size_modifier } | Cons_with_size { size_modifier; _ } ->
+      if size_modifier != Size.used_once then
+        Size.update_once size size_modifier
+  | _ -> ()
   end;
 
   match old_bucket with
-  | (Nil_with_size _ | Cons_with_size _ | Nil) as spine -> begin
-      if
+  | (Nil_with_size _ | Cons_with_size _ | Nil) as spine ->
+      begin if
         Atomic_array.unsafe_compare_and_set bs i (B spine)
           (B (Resize { spine }))
       then spine
       else take_at (Backoff.once backoff) size bs i
-    end
+      end
   | Resize spine_r -> spine_r.spine
 
 let rec copy_all r target i t step =
@@ -133,15 +132,14 @@ let rec copy_all r target i t step =
      [compare_and_set] below does not disrupt the next resize. *)
   Atomic.get t == r
   && begin
-       begin
-         match before with
-         | Resize _ ->
-             Atomic_array.unsafe_compare_and_set target i (B before) (B spine)
-             |> ignore
-         | Nil_with_size _ | Cons_with_size _ | Nil -> ()
-       end;
-       i = 0 || copy_all r target i t step
-     end
+    begin match before with
+    | Resize _ ->
+        Atomic_array.unsafe_compare_and_set target i (B before) (B spine)
+        |> ignore
+    | Nil_with_size _ | Cons_with_size _ | Nil -> ()
+    end;
+    i = 0 || copy_all r target i t step
+  end
 
 (* *)
 
@@ -169,11 +167,11 @@ let filter t mask chk :
     ('a, 'b, [ `Cons_with_size | `Nil_with_size | `Nil ]) tdt ->
     ('a, 'b, [> `Cons_with_size | `Nil_with_size | `Nil ]) tdt = function
   | Nil_with_size s -> Nil_with_size s
-  | Cons_with_size r -> begin
-      if t r.key land mask = chk then
+  | Cons_with_size r ->
+      begin if t r.key land mask = chk then
         Cons_with_size { r with rest = filter_ t mask chk r.rest }
       else filter_fst t mask chk r.rest
-    end
+      end
   | Nil -> Nil
 
 let rec split_all r target i t step =
@@ -190,24 +188,21 @@ let rec split_all r target i t step =
      resize. *)
   Atomic.get t == r
   && begin
-       begin
-         match before_lo with
-         | Resize _ ->
-             Atomic_array.unsafe_compare_and_set target i (B before_lo)
-               (B after_lo)
-             |> ignore
-         | Nil_with_size _ | Cons_with_size _ | Nil -> ()
-       end;
-       begin
-         match before_hi with
-         | Resize _ ->
-             Atomic_array.unsafe_compare_and_set target (i + high) (B before_hi)
-               (B after_hi)
-             |> ignore
-         | Nil_with_size _ | Cons_with_size _ | Nil -> ()
-       end;
-       i = 0 || split_all r target i t step
-     end
+    begin match before_lo with
+    | Resize _ ->
+        Atomic_array.unsafe_compare_and_set target i (B before_lo) (B after_lo)
+        |> ignore
+    | Nil_with_size _ | Cons_with_size _ | Nil -> ()
+    end;
+    begin match before_hi with
+    | Resize _ ->
+        Atomic_array.unsafe_compare_and_set target (i + high) (B before_hi)
+          (B after_hi)
+        |> ignore
+    | Nil_with_size _ | Cons_with_size _ | Nil -> ()
+    end;
+    i = 0 || split_all r target i t step
+  end
 
 (* *)
 
@@ -226,13 +221,11 @@ let merge size
       rest
   | Nil -> rest
   | Cons_with_size r -> begin
-      begin
-        match rest with
-        | Nil_with_size { size_modifier } | Cons_with_size { size_modifier; _ }
-          ->
-            if size_modifier != Size.used_once then
-              Size.update_once size size_modifier
-        | Nil -> ()
+      begin match rest with
+      | Nil_with_size { size_modifier } | Cons_with_size { size_modifier; _ } ->
+          if size_modifier != Size.used_once then
+            Size.update_once size size_modifier
+      | Nil -> ()
       end;
       match rest with
       | Nil_with_size _ -> Cons_with_size r
@@ -262,15 +255,14 @@ let rec merge_all r target i t step =
      [compare_and_set] below does not disrupt the next resize. *)
   Atomic.get t == r
   && begin
-       begin
-         match before with
-         | Resize _ ->
-             Atomic_array.unsafe_compare_and_set target i (B before) (B after)
-             |> ignore
-         | Nil_with_size _ | Cons_with_size _ | Nil -> ()
-       end;
-       i = 0 || merge_all r target i t step
-     end
+    begin match before with
+    | Resize _ ->
+        Atomic_array.unsafe_compare_and_set target i (B before) (B after)
+        |> ignore
+    | Nil_with_size _ | Cons_with_size _ | Nil -> ()
+    end;
+    i = 0 || merge_all r target i t step
+  end
 
 (* *)
 
@@ -323,24 +315,23 @@ let[@inline never] try_resize t r new_capacity ~clear =
   in
   Atomic.compare_and_set t r new_r
   && begin
-       finish t new_r |> ignore;
-       true
-     end
+    finish t new_r |> ignore;
+    true
+  end
 
 let adjust_size t r node mask result =
-  begin
-    match node with
-    | Nil_with_size nil_r ->
-        if nil_r.size_modifier != Size.used_once then begin
-          Size.update_once r.size nil_r.size_modifier;
-          nil_r.size_modifier <- Size.used_once
-        end
-    | Cons_with_size cons_r ->
-        if cons_r.size_modifier != Size.used_once then begin
-          Size.update_once r.size cons_r.size_modifier;
-          cons_r.size_modifier <- Size.used_once
-        end
-    | _ -> ()
+  begin match node with
+  | Nil_with_size nil_r ->
+      if nil_r.size_modifier != Size.used_once then begin
+        Size.update_once r.size nil_r.size_modifier;
+        nil_r.size_modifier <- Size.used_once
+      end
+  | Cons_with_size cons_r ->
+      if cons_r.size_modifier != Size.used_once then begin
+        Size.update_once r.size cons_r.size_modifier;
+        cons_r.size_modifier <- Size.used_once
+      end
+  | _ -> ()
   end;
 
   if
@@ -376,13 +367,11 @@ let rec exists t key = function
       if result then result else exists t key r.rest
 
 let rec mem r key bucket =
-  begin
-    match bucket with
-    | B (Nil_with_size { size_modifier } | Cons_with_size { size_modifier; _ })
-      ->
-        if size_modifier != Size.used_once then
-          Size.update_once r.size size_modifier
-    | _ -> ()
+  begin match bucket with
+  | B (Nil_with_size { size_modifier } | Cons_with_size { size_modifier; _ }) ->
+      if size_modifier != Size.used_once then
+        Size.update_once r.size size_modifier
+  | _ -> ()
   end;
 
   match bucket with
@@ -427,13 +416,11 @@ let rec find_as : type k v r.
           match poly with Value -> r.value | Option -> Some r.value
         else assoc eq key r.rest poly
   in
-  begin
-    match bucket with
-    | B (Nil_with_size { size_modifier } | Cons_with_size { size_modifier; _ })
-      ->
-        if size_modifier != Size.used_once then
-          Size.update_once r.size size_modifier
-    | _ -> ()
+  begin match bucket with
+  | B (Nil_with_size { size_modifier } | Cons_with_size { size_modifier; _ }) ->
+      if size_modifier != Size.used_once then
+        Size.update_once r.size size_modifier
+  | _ -> ()
   end;
 
   match bucket with
@@ -470,13 +457,12 @@ let rec try_add t key value backoff =
   let mask = Atomic_array.length r.buckets - 1 in
   let i = h land mask in
   let (B old_bucket) = Atomic_array.unsafe_fenceless_get r.buckets i in
-  begin
-    (* Make sure size_modifier has been updated. *)
-    match old_bucket with
-    | Nil_with_size { size_modifier } | Cons_with_size { size_modifier; _ } ->
-        if size_modifier != Size.used_once then
-          Size.update_once r.size size_modifier
-    | _ -> ()
+  (* Make sure size_modifier has been updated. *)
+  begin match old_bucket with
+  | Nil_with_size { size_modifier } | Cons_with_size { size_modifier; _ } ->
+      if size_modifier != Size.used_once then
+        Size.update_once r.size size_modifier
+  | _ -> ()
   end;
 
   match old_bucket with
@@ -545,21 +531,19 @@ let rec try_reassoc : type v c r.
   let old_bucket : (_, v) bucket =
     Atomic_array.unsafe_fenceless_get r.buckets i
   in
-  begin
-    (* Make sure size_modifier has been updated. *)
-    match old_bucket with
-    | B (Nil_with_size { size_modifier } | Cons_with_size { size_modifier; _ })
-      ->
-        if size_modifier != Size.used_once then begin
-          Size.update_once r.size size_modifier
-        end
-    | _ -> ()
+  (* Make sure size_modifier has been updated. *)
+  begin match old_bucket with
+  | B (Nil_with_size { size_modifier } | Cons_with_size { size_modifier; _ }) ->
+      if size_modifier != Size.used_once then begin
+        Size.update_once r.size size_modifier
+      end
+  | _ -> ()
   end;
 
   match old_bucket with
   | B (Nil | Nil_with_size _) -> not_found op
-  | B (Cons_with_size cons_r as before) -> begin
-      if r.equal cons_r.key key then
+  | B (Cons_with_size cons_r as before) ->
+      begin if r.equal cons_r.key key then
         if
           match op with
           | Exists | Return -> true
@@ -604,7 +588,7 @@ let rec try_reassoc : type v c r.
               | Return -> assoc r.equal key cons_r.rest
             else try_reassoc t key present future op (Backoff.once backoff)
         | exception Not_found -> not_found op
-    end
+      end
   | B (Resize _) ->
       let _ = finish t (Atomic.get t) in
       try_reassoc t key present future op Backoff.default
@@ -635,15 +619,13 @@ let rec try_dissoc : type v c r. (_, v) t -> _ -> c -> (v, c, r) op -> _ -> r =
   let old_bucket : (_, v) bucket =
     Atomic_array.unsafe_fenceless_get r.buckets i
   in
-  begin
-    (* Make sure size_modifier has been updated. *)
-    match old_bucket with
-    | B (Nil_with_size { size_modifier } | Cons_with_size { size_modifier; _ })
-      ->
-        if size_modifier != Size.used_once then begin
-          Size.update_once r.size size_modifier
-        end
-    | _ -> ()
+  (* Make sure size_modifier has been updated. *)
+  begin match old_bucket with
+  | B (Nil_with_size { size_modifier } | Cons_with_size { size_modifier; _ }) ->
+      if size_modifier != Size.used_once then begin
+        Size.update_once r.size size_modifier
+      end
+  | _ -> ()
   end;
 
   match old_bucket with
@@ -769,21 +751,19 @@ let find_random_exn t =
     let seed = Int64.to_int (Random.bits64 ()) in
     let rec try_find_random_non_empty_bucket buckets seed i =
       let (B old_bucket) = Atomic_array.unsafe_fenceless_get buckets i in
-      begin
-        match old_bucket with
-        | Nil_with_size { size_modifier } | Cons_with_size { size_modifier; _ }
-          ->
-            if size_modifier != Size.used_once then
-              Size.update_once r.size size_modifier
-        | Resize
-            {
-              spine =
-                ( Nil_with_size { size_modifier }
-                | Cons_with_size { size_modifier; _ } );
-            } ->
-            if size_modifier != Size.used_once then
-              Size.update_once r.size size_modifier
-        | _ -> ()
+      begin match old_bucket with
+      | Nil_with_size { size_modifier } | Cons_with_size { size_modifier; _ } ->
+          if size_modifier != Size.used_once then
+            Size.update_once r.size size_modifier
+      | Resize
+          {
+            spine =
+              ( Nil_with_size { size_modifier }
+              | Cons_with_size { size_modifier; _ } );
+          } ->
+          if size_modifier != Size.used_once then
+            Size.update_once r.size size_modifier
+      | _ -> ()
       end;
 
       match old_bucket with

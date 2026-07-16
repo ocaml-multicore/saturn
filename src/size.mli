@@ -18,24 +18,24 @@
     [try_find] operation:
 
     {[
-      type 'a node =
-        | Null
-        | Node of { next : 'a node Atomic.t; datum : 'a }
-        | Mark of { node : 'a node }
+    type 'a node =
+      | Null
+      | Node of { next : 'a node Atomic.t; datum : 'a }
+      | Mark of { node : 'a node }
 
-      type 'a t = { head : 'a node Atomic.t }
+    type 'a t = { head : 'a node Atomic.t }
 
-      let rec try_find t prev datum = function
-        | Mark _ -> try_find t t.head datum (Atomic.get t.head)
-        | Null -> Null
-        | Node r as node -> begin
-            match Atomic.get r.next with
-            | Mark r ->
-                if Atomic.compare_and_set prev node r.node then
-                  try_find t prev datum r.node
-                else try_find t prev datum (Atomic.get prev)
-            | (Null | Node _) as next ->
-                if r.datum == datum then node else try_find t r.next datum next
+    let rec try_find t prev datum = function
+      | Mark _ -> try_find t t.head datum (Atomic.get t.head)
+      | Null -> Null
+      | Node r as node ->
+          begin match Atomic.get r.next with
+          | Mark r ->
+              if Atomic.compare_and_set prev node r.node then
+                try_find t prev datum r.node
+              else try_find t prev datum (Atomic.get prev)
+          | (Null | Node _) as next ->
+              if r.datum == datum then node else try_find t r.next datum next
           end
     ]}
 
@@ -45,38 +45,38 @@
     once after witnessing the updates while traversing the data structure:
 
     {[
-      type 'a node =
-        | Null
-        | Node of {
-            next : 'a node Atomic.t;
-            datum : 'a;
-            mutable incr : Size.once; (* ADDED *)
-          }
-        | Mark of { node : 'a node; decr : Size.once (* ADDED *) }
+    type 'a node =
+      | Null
+      | Node of {
+          next : 'a node Atomic.t;
+          datum : 'a;
+          mutable incr : Size.once; (* ADDED *)
+        }
+      | Mark of { node : 'a node; decr : Size.once (* ADDED *) }
 
-      type 'a t = { head : 'a node Atomic.t; size : Size.t (* ADDED *) }
+    type 'a t = { head : 'a node Atomic.t; size : Size.t (* ADDED *) }
 
-      let rec try_find t prev datum = function
-        | Mark _ -> try_find t t.head datum (Atomic.get t.head)
-        | Null -> Null
-        | Node r as node -> begin
-            match Atomic.get r.next with
-            | Mark r ->
-                Size.update_once t.size r.decr;
-                (* ADDED *)
-                if Atomic.compare_and_set prev node r.node then
-                  try_find t prev datum r.node
-                else try_find t prev datum (Atomic.get prev)
-            | (Null | Node _) as next ->
-                if r.datum == datum then begin
-                  if r.incr != Size.used_once then begin
-                    Size.update_once t.size r.incr;
-                    (* ADDED *)
-                    r.incr <- Size.used_once
-                  end;
-                  node
-                end
-                else try_find t r.next datum next
+    let rec try_find t prev datum = function
+      | Mark _ -> try_find t t.head datum (Atomic.get t.head)
+      | Null -> Null
+      | Node r as node ->
+          begin match Atomic.get r.next with
+          | Mark r ->
+              Size.update_once t.size r.decr;
+              (* ADDED *)
+              if Atomic.compare_and_set prev node r.node then
+                try_find t prev datum r.node
+              else try_find t prev datum (Atomic.get prev)
+          | (Null | Node _) as next ->
+              if r.datum == datum then begin
+                if r.incr != Size.used_once then begin
+                  Size.update_once t.size r.incr;
+                  (* ADDED *)
+                  r.incr <- Size.used_once
+                end;
+                node
+              end
+              else try_find t r.next datum next
           end
     ]}
 

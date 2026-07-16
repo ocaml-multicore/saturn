@@ -144,11 +144,11 @@ module STM_htbl (Htbl : Htbls.Htbl_tests) = struct
           with _ -> false)
       | Length, Res ((Int, _), res) -> res = State.cardinal s
       | Find_opt k, Res ((Option Int, _), res) -> State.find_opt k s = res
-      | Set_exn k, Res ((Result (Int, Exn), _), res) -> begin
-          match State.find_opt k s with
+      | Set_exn k, Res ((Result (Int, Exn), _), res) ->
+          begin match State.find_opt k s with
           | Some v -> res = Ok v
           | None -> res = Error Not_found
-        end
+          end
       | Try_compare_and_remove k, Res ((Bool, _), res) -> (
           match State.find_opt k s with
           | Some v' when v' = k -> res = true

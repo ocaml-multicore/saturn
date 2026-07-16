@@ -54,13 +54,13 @@ module Make (Bounded_queue : Bounded_queue_intf.BOUNDED_QUEUE) : BENCH = struct
           let n = Util.alloc n_msgs_to_take in
           if n <> 0 then
             let rec loop n =
-              if 0 < n then begin
-                match Bounded_queue.pop_opt t with
+              if 0 < n then
+                begin match Bounded_queue.pop_opt t with
                 | None ->
                     Domain.cpu_relax ();
                     loop n
                 | Some _ -> loop (n - 1)
-              end
+                end
               else work ()
             in
             loop n

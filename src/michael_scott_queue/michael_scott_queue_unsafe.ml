@@ -56,9 +56,9 @@ let rec pop_as : type a r.
  fun head backoff poly ->
   let old_head = Atomic.get head in
   match Atomic.get (Node.as_atomic old_head) with
-  | Nil -> begin
-      match poly with Value | Unit -> raise Empty | Option -> None
-    end
+  | Nil ->
+      begin match poly with Value | Unit -> raise Empty | Option -> None
+      end
   | Next r as new_head ->
       if Atomic.compare_and_set head old_head new_head then begin
         let value = r.value in
@@ -79,9 +79,9 @@ let rec peek_as : type a r. (a, [ `Next ]) Node.t Atomic.t -> (a, r) poly -> r =
  fun head poly ->
   let old_head = Atomic.get head in
   match Atomic.get (Node.as_atomic old_head) with
-  | Nil -> begin
-      match poly with Value | Unit -> raise Empty | Option -> None
-    end
+  | Nil ->
+      begin match poly with Value | Unit -> raise Empty | Option -> None
+      end
   | Next r ->
       let value = r.value in
       if Atomic.get head == old_head then

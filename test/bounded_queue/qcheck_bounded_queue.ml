@@ -326,7 +326,8 @@ let () =
       ("two_domains_" ^ name, to_alcotest Safe.tests_two_domains);
     ]
   in
-  let module Unsafe = Qcheck_bounded_queue (Bounded_queues.Bounded_queue_unsafe) in
+  let module Unsafe = Qcheck_bounded_queue (Bounded_queues.Bounded_queue_unsafe)
+  in
   let name = "unsafe" in
   let unsafe_tests =
     [

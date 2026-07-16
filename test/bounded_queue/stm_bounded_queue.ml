@@ -107,5 +107,6 @@ let () =
     let module Safe = STM_Bounded_queue (Bounded_queues.Bounded_queue) in
     Safe.run () |> exit
   else
-    let module Unsafe = STM_Bounded_queue (Bounded_queues.Bounded_queue_unsafe) in
+    let module Unsafe = STM_Bounded_queue (Bounded_queues.Bounded_queue_unsafe)
+    in
     Unsafe.run () |> exit

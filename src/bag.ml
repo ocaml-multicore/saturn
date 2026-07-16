@@ -24,11 +24,11 @@ type ('a, _) poly = Option : ('a, 'a option) poly | Value : ('a, 'a) poly
 let rec pop_as : type a r. a t -> (a, r) poly -> r =
  fun t poly ->
   match Htbl.find_random_exn t with
-  | key -> begin
-      match Htbl.remove_exn t key with
+  | key ->
+      begin match Htbl.remove_exn t key with
       | value -> ( match poly with Option -> Some value | Value -> value)
       | exception Not_found -> pop_as t poly
-    end
+      end
   | exception Not_found -> (
       match poly with Option -> None | Value -> raise Empty)
 

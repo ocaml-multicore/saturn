@@ -11,10 +11,10 @@
 
     If you try this :
     {[
-      let example nb_domain =
-        let printer i () = Format.printf "Domain spawn in %dth position@." i in
-        let domains = List.init nb_domain (fun i -> Domain.spawn (printer i)) in
-        List.iter Domain.join domains
+    let example nb_domain =
+      let printer i () = Format.printf "Domain spawn in %dth position@." i in
+      let domains = List.init nb_domain (fun i -> Domain.spawn (printer i)) in
+      List.iter Domain.join domains
     ]}
 
     you are most likely going to get the number in order (or almost), because
@@ -22,17 +22,17 @@
 
     Whereas with the barrier, you should get a random order :
     {[
-      let example_with_barrier nb_domain =
-        let barrier = Barrier.create nb_domain in
+    let example_with_barrier nb_domain =
+      let barrier = Barrier.create nb_domain in
 
-        let printer i () =
-          Barrier.await barrier;
-          Format.printf "Domain spawn in %dth position@." i
-        in
+      let printer i () =
+        Barrier.await barrier;
+        Format.printf "Domain spawn in %dth position@." i
+      in
 
-        let domains = List.init nb_domain (fun i -> Domain.spawn (printer i)) in
+      let domains = List.init nb_domain (fun i -> Domain.spawn (printer i)) in
 
-        List.iter Domain.join domains
+      List.iter Domain.join domains
     ]}
 
     It also enables to have rounds such as a domain can not begin a new round
@@ -41,11 +41,11 @@
     one :
 
     {[
-      let printer i () =
-        Barrier.await barrier;
-        Format.printf "First round - Domain spawn in %dth position@." i;
-        Barrier.await barrier;
-        Format.printf "Second round - Domain spawn in %dth position@." i
+    let printer i () =
+      Barrier.await barrier;
+      Format.printf "First round - Domain spawn in %dth position@." i;
+      Barrier.await barrier;
+      Format.printf "Second round - Domain spawn in %dth position@." i
     ]} *)
 
 type t
