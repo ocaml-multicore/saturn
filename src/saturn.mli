@@ -83,6 +83,7 @@ module Bounded_queue_unsafe = Bounded_queue_unsafe
 module Single_consumer_queue = Mpsc_queue
 module Single_prod_single_cons_queue = Spsc_queue
 module Single_prod_single_cons_queue_unsafe = Spsc_queue_unsafe
+module Priority_queue = Priority_queue
 
 (** {2 Stacks} *)
 
